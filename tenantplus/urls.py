@@ -25,4 +25,5 @@ urlpatterns = [
     path('api/users', user_directory),
     path('api/profile', ProfileView.as_view()),
     path('api/accounts/', include('accounts.urls')),
+    path('api/properties/', include('properties.urls')),
 ]

@@ -1,0 +1,256 @@
+{
+  "info": {
+    "name": "TenantPlus Properties API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List Properties",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Property",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Cozy Studio Apartment\",\n  \"description\": \"A bright studio near the city center\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"123 Main Street\",\n  \"room_type\": \"flat\",\n  \"furnishing_status\": \"furnished\",\n  \"rent_amount\": \"18000.00\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Property Detail",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "{{property_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Property",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Updated Cozy Studio Apartment\",\n  \"description\": \"Updated description\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"123 Main Street\",\n  \"room_type\": \"flat\",\n  \"furnishing_status\": \"semi_furnished\",\n  \"rent_amount\": \"20000.00\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "{{property_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "My Listings",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/my-listings/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "my-listings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Toggle Availability",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/toggle-availability/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "{{property_id}}",
+            "toggle-availability"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Photos",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/photos/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "{{property_id}}",
+            "photos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upload Photo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"photo_url\": \"https://example.com/photo.jpg\",\n  \"sort_order\": 1\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/photos/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "{{property_id}}",
+            "photos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Save Property",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/save/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "{{property_id}}",
+            "save"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Saved Properties",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/properties/saved/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "saved"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "property_id",
+      "value": ""
+    }
+  ]
+}

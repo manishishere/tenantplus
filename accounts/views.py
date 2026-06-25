@@ -28,24 +28,24 @@ User = get_user_model()
 
 
 def _build_token_response(user, status_code=status.HTTP_200_OK):
-    """Issue access and refresh tokens and attach the refresh token to an httpOnly cookie."""
+    """Issue an access token and store the refresh token in an httpOnly cookie."""
     refresh = RefreshToken.for_user(user)
     response = Response(
         {
             'tokens': {
                 'access': str(refresh.access_token),
-                'refresh': str(refresh),
             },
             'user': UserProfileSerializer(user).data,
         },
         status=status_code,
     )
+    # Store the refresh token in an httpOnly cookie so the browser can reuse it without exposing it to JavaScript.
     response.set_cookie(
         'refresh_token',
         str(refresh),
         httponly=True,
         samesite='Lax',
-        secure=False,
+        secure=settings.COOKIE_SECURE,
         max_age=7 * 24 * 60 * 60,
     )
     return response
@@ -84,15 +84,15 @@ class LoginView(APIView):
         return _build_token_response(user)
 
 
-class RefreshTokenView(APIView):
-    """Issue a new access token from a valid refresh token."""
+class TokenRefreshCookieView(APIView):
+    """Issue a new access token from the refresh token stored in an httpOnly cookie."""
 
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        refresh_token = request.data.get('refresh') or request.COOKIES.get('refresh_token')
+        refresh_token = request.COOKIES.get('refresh_token')
         if not refresh_token:
-            return Response({'detail': 'Refresh token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Refresh token not found.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             refresh = RefreshToken(refresh_token)
@@ -100,43 +100,43 @@ class RefreshTokenView(APIView):
         except (TokenError, KeyError, User.DoesNotExist):
             return Response({'detail': 'Refresh token is invalid or expired.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        new_refresh = RefreshToken.for_user(user)
         response = Response(
             {
-                'tokens': {
-                    'access': str(new_refresh.access_token),
-                    'refresh': str(new_refresh),
-                },
-                'user': UserProfileSerializer(user).data,
+                'access': str(refresh.access_token),
             },
             status=status.HTTP_200_OK,
         )
+        # Replace the rotated refresh token in the cookie so the browser keeps a valid session token.
         response.set_cookie(
             'refresh_token',
-            str(new_refresh),
+            str(refresh),
             httponly=True,
             samesite='Lax',
-            secure=False,
+            secure=settings.COOKIE_SECURE,
             max_age=7 * 24 * 60 * 60,
         )
         return response
 
 
 class LogoutView(APIView):
-    """Allow a logged-in user to blacklist their refresh token."""
+    """Allow a logged-in user to blacklist their refresh token and clear the cookie."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        """Blacklist a refresh token so the session cannot be reused."""
-        refresh_token = request.data.get('refresh')
+        """Blacklist the refresh token from the cookie so the session cannot be reused."""
+        refresh_token = request.COOKIES.get('refresh_token')
         if not refresh_token:
-            return Response({'detail': 'Refresh token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Refresh token not found.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             RefreshToken(refresh_token).blacklist()
         except TokenError:
             return Response({'detail': 'Token is invalid or already blacklisted.'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'detail': 'Successfully logged out.'}, status=status.HTTP_205_RESET_CONTENT)
+
+        response = Response({'detail': 'Successfully logged out.'}, status=status.HTTP_205_RESET_CONTENT)
+        # Remove the refresh cookie from the browser once the server has invalidated it.
+        response.delete_cookie('refresh_token')
+        return response
 
 
 class ProfileView(APIView):
