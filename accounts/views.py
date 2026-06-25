@@ -3,6 +3,7 @@ import secrets
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.core.mail import send_mail
+from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -10,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .middleware import authorizeRoles
 from .models import PasswordResetToken, UserDocument
 from .serializers import (
     ChangePasswordSerializer,
@@ -25,6 +27,30 @@ from .serializers import (
 User = get_user_model()
 
 
+def _build_token_response(user, status_code=status.HTTP_200_OK):
+    """Issue access and refresh tokens and attach the refresh token to an httpOnly cookie."""
+    refresh = RefreshToken.for_user(user)
+    response = Response(
+        {
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            },
+            'user': UserProfileSerializer(user).data,
+        },
+        status=status_code,
+    )
+    response.set_cookie(
+        'refresh_token',
+        str(refresh),
+        httponly=True,
+        samesite='Lax',
+        secure=False,
+        max_age=7 * 24 * 60 * 60,
+    )
+    return response
+
+
 class RegisterView(APIView):
     """Allow any visitor to register a new tenant or landlord account."""
 
@@ -35,17 +61,7 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        return Response(
-            {
-                'tokens': {
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh),
-                },
-                'user': UserProfileSerializer(user).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return _build_token_response(user, status_code=status.HTTP_201_CREATED)
 
 
 class LoginView(APIView):
@@ -65,17 +81,45 @@ class LoginView(APIView):
         if not user.is_active:
             return Response({'detail': 'Account is disabled.'}, status=status.HTTP_403_FORBIDDEN)
 
-        refresh = RefreshToken.for_user(user)
-        return Response(
+        return _build_token_response(user)
+
+
+class RefreshTokenView(APIView):
+    """Issue a new access token from a valid refresh token."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.data.get('refresh') or request.COOKIES.get('refresh_token')
+        if not refresh_token:
+            return Response({'detail': 'Refresh token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            user = User.objects.get(id=refresh.payload['user_id'])
+        except (TokenError, KeyError, User.DoesNotExist):
+            return Response({'detail': 'Refresh token is invalid or expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        new_refresh = RefreshToken.for_user(user)
+        response = Response(
             {
                 'tokens': {
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh),
+                    'access': str(new_refresh.access_token),
+                    'refresh': str(new_refresh),
                 },
                 'user': UserProfileSerializer(user).data,
             },
             status=status.HTTP_200_OK,
         )
+        response.set_cookie(
+            'refresh_token',
+            str(new_refresh),
+            httponly=True,
+            samesite='Lax',
+            secure=False,
+            max_age=7 * 24 * 60 * 60,
+        )
+        return response
 
 
 class LogoutView(APIView):
@@ -187,6 +231,19 @@ class PasswordResetConfirmView(APIView):
         reset_token.save()
         PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
         return Response({'detail': 'Password reset successful. You can now log in.'}, status=status.HTTP_200_OK)
+
+
+@authorizeRoles('admin')
+def admin_dashboard(request):
+    """Return a simple admin-only dashboard payload."""
+    return JsonResponse({'detail': 'Welcome to the admin dashboard.', 'role': request.user.role})
+
+
+@authorizeRoles('moderator', 'admin')
+def user_directory(request):
+    """Return the list of non-admin users visible to moderators and admins."""
+    users = User.objects.filter(role__in=['user', 'moderator']).values('id', 'full_name', 'email', 'role')
+    return JsonResponse(list(users), safe=False)
 
 
 class DocumentListCreateView(APIView):

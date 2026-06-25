@@ -1,25 +1,25 @@
 from rest_framework.permissions import BasePermission
 
 
-class IsLandlord(BasePermission):
-    """Allow access only to users with role='landlord'."""
+class IsUser(BasePermission):
+    """Allow access only to users with role='user'."""
 
     def has_permission(self, request, view):
         return (
             request.user and
             request.user.is_authenticated and
-            request.user.role == 'landlord'
+            request.user.role == 'user'
         )
 
 
-class IsTenant(BasePermission):
-    """Allow access only to users with role='tenant'."""
+class IsModerator(BasePermission):
+    """Allow access only to users with role='moderator' or 'admin'."""
 
     def has_permission(self, request, view):
         return (
             request.user and
             request.user.is_authenticated and
-            request.user.role == 'tenant'
+            request.user.role in {'moderator', 'admin'}
         )
 
 
