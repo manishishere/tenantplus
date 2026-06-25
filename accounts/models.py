@@ -35,11 +35,11 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    """Represent a tenant, landlord, or admin user in TenantPlus."""
+    """Represent a regular user, moderator, or admin in TenantPlus."""
 
     ROLE_CHOICES = (
-        ('landlord', 'Landlord'),
-        ('tenant', 'Tenant'),
+        ('user', 'User'),
+        ('moderator', 'Moderator'),
         ('admin', 'Admin'),
     )
 
@@ -47,7 +47,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, blank=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -55,7 +55,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['full_name', 'role']
+    REQUIRED_FIELDS = ['full_name']
 
     objects = UserManager()
 

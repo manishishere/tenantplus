@@ -3,6 +3,7 @@ import secrets
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.core.mail import send_mail
+from django.http import JsonResponse
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -10,6 +11,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .middleware import authorizeRoles
 from .models import PasswordResetToken, UserDocument
 from .serializers import (
     ChangePasswordSerializer,
@@ -25,6 +27,30 @@ from .serializers import (
 User = get_user_model()
 
 
+def _build_token_response(user, status_code=status.HTTP_200_OK):
+    """Issue an access token and store the refresh token in an httpOnly cookie."""
+    refresh = RefreshToken.for_user(user)
+    response = Response(
+        {
+            'tokens': {
+                'access': str(refresh.access_token),
+            },
+            'user': UserProfileSerializer(user).data,
+        },
+        status=status_code,
+    )
+    # Store the refresh token in an httpOnly cookie so the browser can reuse it without exposing it to JavaScript.
+    response.set_cookie(
+        'refresh_token',
+        str(refresh),
+        httponly=True,
+        samesite='Lax',
+        secure=settings.COOKIE_SECURE,
+        max_age=7 * 24 * 60 * 60,
+    )
+    return response
+
+
 class RegisterView(APIView):
     """Allow any visitor to register a new tenant or landlord account."""
 
@@ -35,17 +61,7 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        return Response(
-            {
-                'tokens': {
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh),
-                },
-                'user': UserProfileSerializer(user).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return _build_token_response(user, status_code=status.HTTP_201_CREATED)
 
 
 class LoginView(APIView):
@@ -65,34 +81,62 @@ class LoginView(APIView):
         if not user.is_active:
             return Response({'detail': 'Account is disabled.'}, status=status.HTTP_403_FORBIDDEN)
 
-        refresh = RefreshToken.for_user(user)
-        return Response(
+        return _build_token_response(user)
+
+
+class TokenRefreshCookieView(APIView):
+    """Issue a new access token from the refresh token stored in an httpOnly cookie."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get('refresh_token')
+        if not refresh_token:
+            return Response({'detail': 'Refresh token not found.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            user = User.objects.get(id=refresh.payload['user_id'])
+        except (TokenError, KeyError, User.DoesNotExist):
+            return Response({'detail': 'Refresh token is invalid or expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        response = Response(
             {
-                'tokens': {
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh),
-                },
-                'user': UserProfileSerializer(user).data,
+                'access': str(refresh.access_token),
             },
             status=status.HTTP_200_OK,
         )
+        # Replace the rotated refresh token in the cookie so the browser keeps a valid session token.
+        response.set_cookie(
+            'refresh_token',
+            str(refresh),
+            httponly=True,
+            samesite='Lax',
+            secure=settings.COOKIE_SECURE,
+            max_age=7 * 24 * 60 * 60,
+        )
+        return response
 
 
 class LogoutView(APIView):
-    """Allow a logged-in user to blacklist their refresh token."""
+    """Allow a logged-in user to blacklist their refresh token and clear the cookie."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        """Blacklist a refresh token so the session cannot be reused."""
-        refresh_token = request.data.get('refresh')
+        """Blacklist the refresh token from the cookie so the session cannot be reused."""
+        refresh_token = request.COOKIES.get('refresh_token')
         if not refresh_token:
-            return Response({'detail': 'Refresh token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Refresh token not found.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             RefreshToken(refresh_token).blacklist()
         except TokenError:
             return Response({'detail': 'Token is invalid or already blacklisted.'}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'detail': 'Successfully logged out.'}, status=status.HTTP_205_RESET_CONTENT)
+
+        response = Response({'detail': 'Successfully logged out.'}, status=status.HTTP_205_RESET_CONTENT)
+        # Remove the refresh cookie from the browser once the server has invalidated it.
+        response.delete_cookie('refresh_token')
+        return response
 
 
 class ProfileView(APIView):
@@ -187,6 +231,19 @@ class PasswordResetConfirmView(APIView):
         reset_token.save()
         PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
         return Response({'detail': 'Password reset successful. You can now log in.'}, status=status.HTTP_200_OK)
+
+
+@authorizeRoles('admin')
+def admin_dashboard(request):
+    """Return a simple admin-only dashboard payload."""
+    return JsonResponse({'detail': 'Welcome to the admin dashboard.', 'role': request.user.role})
+
+
+@authorizeRoles('moderator', 'admin')
+def user_directory(request):
+    """Return the list of non-admin users visible to moderators and admins."""
+    users = User.objects.filter(role__in=['user', 'moderator']).values('id', 'full_name', 'email', 'role')
+    return JsonResponse(list(users), safe=False)
 
 
 class DocumentListCreateView(APIView):

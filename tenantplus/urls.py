@@ -17,7 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from accounts.views import ProfileView, admin_dashboard, user_directory
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('admin/dashboard', admin_dashboard),
+    path('api/users', user_directory),
+    path('api/profile', ProfileView.as_view()),
     path('api/accounts/', include('accounts.urls')),
+    path('api/properties/', include('properties.urls')),
 ]

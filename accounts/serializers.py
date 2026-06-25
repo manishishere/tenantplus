@@ -25,10 +25,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_role(self, value):
         if value == 'admin':
             raise ValidationError('You cannot register as admin.')
-        return value
+        if value not in {'user', 'moderator', None}:
+            raise ValidationError('Only the user or moderator roles are allowed during registration.')
+        return value or 'user'
 
     def create(self, validated_data):
         validated_data.pop('password2', None)
+        validated_data.setdefault('role', 'user')
         password = validated_data.pop('password')
         return User.objects.create_user(password=password, **validated_data)
 
