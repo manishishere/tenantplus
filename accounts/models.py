@@ -35,11 +35,11 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    """Represent a regular user, moderator, or admin in TenantPlus."""
+    """Represent a tenant, landlord, or admin in TenantPlus."""
 
     ROLE_CHOICES = (
-        ('user', 'User'),
-        ('moderator', 'Moderator'),
+        ('tenant', 'Tenant'),
+        ('landlord', 'Landlord'),
         ('admin', 'Admin'),
     )
 
@@ -47,7 +47,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, blank=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='tenant')
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -108,3 +108,20 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"Reset token for {self.user.email}"
+
+
+class EmailVerificationOTP(models.Model):
+    """Store short-lived OTP codes for email verification."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_verification_otps')
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def is_expired(self):
+        """Return True when the OTP has exceeded its 10-minute lifetime."""
+        return timezone.now() > self.created_at + timedelta(minutes=10)
+
+    def __str__(self):
+        return f"Email verification OTP for {self.user.email}"

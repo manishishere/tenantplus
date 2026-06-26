@@ -1,3 +1,6 @@
+import logging
+import random
+import smtplib
 import secrets
 
 from django.conf import settings
@@ -12,7 +15,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .middleware import authorizeRoles
-from .models import PasswordResetToken, UserDocument
+from .models import EmailVerificationOTP, PasswordResetToken, UserDocument
 from .serializers import (
     ChangePasswordSerializer,
     LoginSerializer,
@@ -25,6 +28,28 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
+
+
+def _send_verification_otp_email(user, otp):
+    """Send the email verification OTP without blocking the caller on failure."""
+    try:
+        send_mail(
+            'Verify your TenantPlus account',
+            f'Your verification code is: {otp}. Expires in 10 minutes.',
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception('Failed to send email verification OTP for user %s', user.email)
+
+
+def _create_email_verification_otp(user):
+    """Create and persist a new 6-digit email verification OTP for a user."""
+    otp = f"{random.randint(100000, 999999)}"
+    EmailVerificationOTP.objects.create(user=user, otp=otp)
+    return otp
 
 
 def _build_token_response(user, status_code=status.HTTP_200_OK):
@@ -61,6 +86,8 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        otp = _create_email_verification_otp(user)
+        _send_verification_otp_email(user, otp)
         return _build_token_response(user, status_code=status.HTTP_201_CREATED)
 
 
@@ -187,21 +214,43 @@ class PasswordResetRequestView(APIView):
             PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
             token = PasswordResetToken.objects.create(user=user, token=secrets.token_urlsafe(32))
             reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token.token}"
-            send_mail(
-                'TenantPlus — Password Reset Request',
-                (
-                    f"Hello {user.full_name},\n\n"
-                    "You requested a password reset for your TenantPlus account.\n\n"
-                    "Click the link below to reset your password.\n"
-                    "This link expires in 30 minutes.\n\n"
-                    f"{reset_url}\n\n"
-                    "If you did not request this, please ignore this email.\n\n"
-                    "— The TenantPlus Team"
-                ),
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=True,
-            )
+            try:
+                send_mail(
+                    'TenantPlus — Password Reset Request',
+                    (
+                        f"Hello {user.full_name},\n\n"
+                        "You requested a password reset for your TenantPlus account.\n\n"
+                        "Click the link below to reset your password.\n"
+                        "This link expires in 30 minutes.\n\n"
+                        f"{reset_url}\n\n"
+                        "If you did not request this, please ignore this email.\n\n"
+                        "— The TenantPlus Team"
+                    ),
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+            except smtplib.SMTPAuthenticationError:
+                token.delete()
+                return Response(
+                    {
+                        'detail': (
+                            'Gmail rejected the SMTP login. Use a Google app password in EMAIL_HOST_PASSWORD '
+                            'or configure a different SMTP sender.'
+                        )
+                    },
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+            except smtplib.SMTPException:
+                token.delete()
+                return Response(
+                    {
+                        'detail': (
+                            'Email delivery failed. Check your SMTP host, port, TLS settings, and sender credentials.'
+                        )
+                    },
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
         return Response({'detail': 'If this email is registered, a reset link has been sent.'}, status=status.HTTP_200_OK)
 
 
@@ -233,16 +282,55 @@ class PasswordResetConfirmView(APIView):
         return Response({'detail': 'Password reset successful. You can now log in.'}, status=status.HTTP_200_OK)
 
 
+class VerifyEmailView(APIView):
+    """Verify the authenticated user's email using a one-time OTP."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        """Validate the supplied OTP and mark the user as verified when it matches."""
+        otp = request.data.get('otp')
+        verification_otp = (
+            EmailVerificationOTP.objects.filter(user=request.user, is_used=False)
+            .order_by('-created_at')
+            .first()
+        )
+        if verification_otp is None or verification_otp.is_expired() or str(verification_otp.otp) != str(otp):
+            return Response({'detail': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        verification_otp.is_used = True
+        verification_otp.save(update_fields=['is_used'])
+        request.user.is_verified = True
+        request.user.save(update_fields=['is_verified'])
+        return Response({'detail': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+
+
+class ResendOTPView(APIView):
+    """Resend a fresh email verification OTP for the authenticated user."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        """Invalidate unused OTPs, generate a new one, and send it to the user's email."""
+        if request.user.is_verified:
+            return Response({'detail': 'Email is already verified.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        EmailVerificationOTP.objects.filter(user=request.user, is_used=False).update(is_used=True)
+        otp = _create_email_verification_otp(request.user)
+        _send_verification_otp_email(request.user, otp)
+        return Response({'detail': 'OTP sent to your email.'}, status=status.HTTP_200_OK)
+
+
 @authorizeRoles('admin')
 def admin_dashboard(request):
     """Return a simple admin-only dashboard payload."""
     return JsonResponse({'detail': 'Welcome to the admin dashboard.', 'role': request.user.role})
 
 
-@authorizeRoles('moderator', 'admin')
+@authorizeRoles('admin')
 def user_directory(request):
-    """Return the list of non-admin users visible to moderators and admins."""
-    users = User.objects.filter(role__in=['user', 'moderator']).values('id', 'full_name', 'email', 'role')
+    """Return the list of non-admin users visible to admins."""
+    users = User.objects.filter(role__in=['tenant', 'landlord']).values('id', 'full_name', 'email', 'role')
     return JsonResponse(list(users), safe=False)
 
 
