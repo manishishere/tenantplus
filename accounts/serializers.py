@@ -8,10 +8,11 @@ User = get_user_model()
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    """Validate and create a new user account for public registration."""
+    """Validate and create a new tenant or landlord account for public registration."""
 
     password = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
+    role = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
@@ -23,15 +24,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def validate_role(self, value):
+        if value == 'tentant':
+            value = 'tenant'
         if value == 'admin':
             raise ValidationError('You cannot register as admin.')
-        if value not in {'user', 'moderator', None}:
-            raise ValidationError('Only the user or moderator roles are allowed during registration.')
-        return value or 'user'
+        if value not in {'tenant', 'landlord', None}:
+            raise ValidationError('Only the tenant or landlord roles are allowed during registration.')
+        return value or 'tenant'
 
     def create(self, validated_data):
         validated_data.pop('password2', None)
-        validated_data.setdefault('role', 'user')
+        validated_data.setdefault('role', 'tenant')
         password = validated_data.pop('password')
         return User.objects.create_user(password=password, **validated_data)
 
