@@ -1,23 +1,85 @@
 {
   "info": {
     "name": "TenantPlus Properties API",
+    "description": "Complete API collection for TenantPlus Properties endpoints",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "property_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "photo_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
   "item": [
     {
       "name": "List Properties",
       "request": {
         "method": "GET",
+        "header": [],
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/",
+          "raw": "{{base_url}}/api/properties/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
             "properties"
+          ],
+          "query": [
+            {
+              "key": "search",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "ordering",
+              "value": "-created_at",
+              "disabled": true
+            },
+            {
+              "key": "room_type",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "furnishing_status",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "district",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "rent_amount__gte",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "rent_amount__lte",
+              "value": "",
+              "disabled": true
+            }
           ]
-        }
+        },
+        "description": "Retrieve a paginated list of available properties with optional filtering and search"
       }
     },
     {
@@ -27,44 +89,49 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{access_token}}"
+            "value": "Bearer {{access_token}}",
+            "type": "text"
           },
           {
             "key": "Content-Type",
-            "value": "application/json"
+            "value": "application/json",
+            "type": "text"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"Cozy Studio Apartment\",\n  \"description\": \"A bright studio near the city center\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"123 Main Street\",\n  \"room_type\": \"flat\",\n  \"furnishing_status\": \"furnished\",\n  \"rent_amount\": \"18000.00\"\n}"
+          "raw": "{\n  \"title\": \"Cozy Studio Apartment\",\n  \"description\": \"A bright studio near the city center with natural lighting\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"123 Main Street, Thamel\",\n  \"room_type\": \"flat\",\n  \"furnishing_status\": \"furnished\",\n  \"rent_amount\": \"18000.00\"\n}"
         },
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/",
+          "raw": "{{base_url}}/api/properties/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
             "properties"
           ]
-        }
+        },
+        "description": "Create a new property listing (Landlord only). Returns the created property details."
       }
     },
     {
       "name": "Get Property Detail",
       "request": {
         "method": "GET",
+        "header": [],
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/",
+          "raw": "{{base_url}}/api/properties/{{property_id}}/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
             "properties",
             "{{property_id}}"
           ]
-        }
+        },
+        "description": "Retrieve detailed information for a specific property including photos and landlord details"
       }
     },
     {
@@ -74,28 +141,56 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{access_token}}"
+            "value": "Bearer {{access_token}}",
+            "type": "text"
           },
           {
             "key": "Content-Type",
-            "value": "application/json"
+            "value": "application/json",
+            "type": "text"
           }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"Updated Cozy Studio Apartment\",\n  \"description\": \"Updated description\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"123 Main Street\",\n  \"room_type\": \"flat\",\n  \"furnishing_status\": \"semi_furnished\",\n  \"rent_amount\": \"20000.00\"\n}"
+          "raw": "{\n  \"title\": \"Updated Cozy Studio Apartment\",\n  \"description\": \"A bright studio near the city center with updated details\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"123 Main Street, Thamel\",\n  \"room_type\": \"flat\",\n  \"furnishing_status\": \"furnished\",\n  \"rent_amount\": \"20000.00\"\n}"
         },
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/",
+          "raw": "{{base_url}}/api/properties/{{property_id}}/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
             "properties",
             "{{property_id}}"
           ]
-        }
+        },
+        "description": "Update a property listing (Landlord only, must own the property)"
+      }
+    },
+    {
+      "name": "Delete Property",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/properties/{{property_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "{{property_id}}"
+          ]
+        },
+        "description": "Delete a property (Landlord only, must own the property, cannot delete if active tenancies exist)"
       }
     },
     {
@@ -105,36 +200,44 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{access_token}}"
+            "value": "Bearer {{access_token}}",
+            "type": "text"
           }
         ],
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/my-listings/",
+          "raw": "{{base_url}}/api/properties/my-listings/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
             "properties",
             "my-listings"
           ]
-        }
+        },
+        "description": "Retrieve all listings owned by the authenticated landlord (Landlord only)"
       }
     },
     {
-      "name": "Toggle Availability",
+      "name": "Toggle Property Availability",
       "request": {
         "method": "PATCH",
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{access_token}}"
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
           }
         ],
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/toggle-availability/",
+          "raw": "{{base_url}}/api/properties/{{property_id}}/toggle-availability/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
@@ -142,17 +245,19 @@
             "{{property_id}}",
             "toggle-availability"
           ]
-        }
+        },
+        "description": "Toggle the availability status of a property (Landlord only, must own the property)"
       }
     },
     {
-      "name": "List Photos",
+      "name": "List Property Photos",
       "request": {
         "method": "GET",
+        "header": [],
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/photos/",
+          "raw": "{{base_url}}/api/properties/{{property_id}}/photos/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
@@ -160,31 +265,40 @@
             "{{property_id}}",
             "photos"
           ]
-        }
+        },
+        "description": "Retrieve all photos for a property, ordered by sort_order"
       }
     },
     {
-      "name": "Upload Photo",
+      "name": "Upload Property Photo",
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{access_token}}"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+            "value": "Bearer {{access_token}}",
+            "type": "text"
           }
         ],
         "body": {
-          "mode": "raw",
-          "raw": "{\n  \"photo_url\": \"https://example.com/photo.jpg\",\n  \"sort_order\": 1\n}"
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "photo_url",
+              "value": "https://example.com/photo.jpg",
+              "type": "text"
+            },
+            {
+              "key": "sort_order",
+              "value": "1",
+              "type": "text"
+            }
+          ]
         },
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/photos/",
+          "raw": "{{base_url}}/api/properties/{{property_id}}/photos/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
@@ -192,23 +306,82 @@
             "{{property_id}}",
             "photos"
           ]
-        }
+        },
+        "description": "Upload a new photo for a property (Landlord only, must own the property)"
       }
     },
     {
-      "name": "Save Property",
+      "name": "Delete Property Photo",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/properties/{{property_id}}/photos/{{photo_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "{{property_id}}",
+            "photos",
+            "{{photo_id}}"
+          ]
+        },
+        "description": "Delete a photo from a property (Landlord only, must own the property)"
+      }
+    },
+    {
+      "name": "List Saved Properties",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/properties/saved/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "properties",
+            "saved"
+          ]
+        },
+        "description": "Retrieve all properties saved by the authenticated tenant (Tenant only)"
+      }
+    },
+    {
+      "name": "Toggle Save Property",
       "request": {
         "method": "POST",
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{access_token}}"
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
           }
         ],
         "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/{{property_id}}/save/",
+          "raw": "{{base_url}}/api/properties/{{property_id}}/save/",
           "host": [
-            "http://127.0.0.1:8000"
+            "{{base_url}}"
           ],
           "path": [
             "api",
@@ -216,41 +389,9 @@
             "{{property_id}}",
             "save"
           ]
-        }
+        },
+        "description": "Toggle saving/unsaving a property for the authenticated tenant (Tenant only)"
       }
-    },
-    {
-      "name": "Saved Properties",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{access_token}}"
-          }
-        ],
-        "url": {
-          "raw": "http://127.0.0.1:8000/api/properties/saved/",
-          "host": [
-            "http://127.0.0.1:8000"
-          ],
-          "path": [
-            "api",
-            "properties",
-            "saved"
-          ]
-        }
-      }
-    }
-  ],
-  "variable": [
-    {
-      "key": "access_token",
-      "value": ""
-    },
-    {
-      "key": "property_id",
-      "value": ""
     }
   ]
 }
