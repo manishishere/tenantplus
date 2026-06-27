@@ -1,6 +1,8 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.mixins import ListModelMixin
+from rest_framework.pagination import BasePagination
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -48,9 +50,15 @@ class PropertyListCreateView(APIView):
         else:
             queryset = queryset.order_by('-created_at')
 
-        page = self.paginate_queryset(queryset)
-        serializer = PropertyListSerializer(page, many=True)
-        return self.get_paginated_response(serializer.data)
+        # Paginate the queryset
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        if page is not None:
+            serializer = PropertyListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
+        serializer = PropertyListSerializer(queryset, many=True)
+        return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
         """Create a new property listing for the authenticated landlord."""
