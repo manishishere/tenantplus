@@ -1,0 +1,302 @@
+{
+  "info": {
+    "name": "TenantPlus Accounts API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"full_name\": \"Ramesh Thapa\",\n  \"email\": \"ramesh@example.com\",\n  \"phone\": \"9800000000\",\n  \"password\": \"StrongPass123!\",\n  \"password2\": \"StrongPass123!\",\n  \"role\": \"tenant\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/register/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"ramesh@example.com\",\n  \"password\": \"StrongPass123!\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/login/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/profile/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "profile"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Profile",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"full_name\": \"Ramesh Kumar Thapa\",\n  \"phone\": \"9800000001\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/profile/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "profile"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Change Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"old_password\": \"StrongPass123!\",\n  \"new_password\": \"NewPass456!\",\n  \"new_password2\": \"NewPass456!\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/change-password/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "change-password"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Password Reset Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"ramesh@example.com\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/password-reset/request/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "password-reset",
+            "request"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Password Reset Confirm",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"new_password\": \"NewPass456!\",\n  \"new_password2\": \"NewPass456!\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/password-reset/confirm/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "password-reset",
+            "confirm"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Documents",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/documents/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "documents"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upload Document",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"doc_type\": \"citizenship\",\n  \"doc_url\": \"https://example.com/docs/citizenship.pdf\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/documents/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "documents"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/logout/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "logout"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "reset_token",
+      "value": ""
+    }
+  ]
+}
