@@ -1,0 +1,261 @@
+{
+  "info": {
+    "name": "TenantPlus Agreements API",
+    "description": "Production-style Postman collection for agreements endpoints, organized by backend feature and actor flow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "tenant_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "landlord_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agreement_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Backend API",
+      "description": "Backend-only collection for agreements. In a production setup, frontend tests would live in a separate collection or runner and call the same endpoints through environment variables.",
+      "item": [
+        {
+          "name": "Tenant Flow",
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{tenant_access_token}}",
+                "type": "string"
+              }
+            ]
+          },
+          "item": [
+            {
+              "name": "List My Agreements",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements"
+                  ]
+                },
+                "description": "List agreements visible to the authenticated tenant."
+              }
+            },
+            {
+              "name": "Get Agreement Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}"
+                  ]
+                },
+                "description": "Retrieve an agreement as the tenant."
+              }
+            },
+            {
+              "name": "Acknowledge Agreement",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/acknowledge/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}",
+                    "acknowledge"
+                  ]
+                },
+                "description": "Mark the agreement acknowledged as the tenant."
+              }
+            },
+            {
+              "name": "Terminate Agreement",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"termination_reason\": \"Ending tenancy at lease expiry.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/terminate/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}",
+                    "terminate"
+                  ]
+                },
+                "description": "Terminate an active agreement as the tenant."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Landlord Flow",
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{landlord_access_token}}",
+                "type": "string"
+              }
+            ]
+          },
+          "item": [
+            {
+              "name": "List My Agreements",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements"
+                  ]
+                },
+                "description": "List agreements visible to the authenticated landlord."
+              }
+            },
+            {
+              "name": "Get Agreement Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}"
+                  ]
+                },
+                "description": "Retrieve an agreement as the landlord."
+              }
+            },
+            {
+              "name": "Acknowledge Agreement",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/acknowledge/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}",
+                    "acknowledge"
+                  ]
+                },
+                "description": "Mark the agreement acknowledged as the landlord."
+              }
+            },
+            {
+              "name": "Terminate Agreement",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"termination_reason\": \"Property needs to be listed again.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/terminate/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}",
+                    "terminate"
+                  ]
+                },
+                "description": "Terminate an active agreement as the landlord."
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
