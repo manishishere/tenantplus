@@ -9,7 +9,9 @@ from .views import (
     PasswordResetRequestView,
     ProfileView,
     RegisterView,
+    ResendOTPView,
     TokenRefreshCookieView,
+    VerifyEmailView,
     admin_dashboard,
     user_directory,
 )
@@ -17,6 +19,10 @@ from .views import (
 urlpatterns = [
     path('register', RegisterView.as_view()),
     path('register/', RegisterView.as_view(), name='register'),
+    path('verify-email', VerifyEmailView.as_view()),
+    path('verify-email/', VerifyEmailView.as_view()),
+    path('resend-otp', ResendOTPView.as_view()),
+    path('resend-otp/', ResendOTPView.as_view()),
     path('login', LoginView.as_view()),
     path('login/', LoginView.as_view(), name='login'),
     path('token/refresh', TokenRefreshCookieView.as_view()),

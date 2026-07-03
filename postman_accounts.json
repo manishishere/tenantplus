@@ -59,6 +59,60 @@
       }
     },
     {
+      "name": "Verify Email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/verify-email/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "verify-email"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Resend OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/accounts/resend-otp/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "resend-otp"
+          ]
+        }
+      }
+    },
+    {
       "name": "Profile",
       "request": {
         "method": "GET",

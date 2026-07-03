@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "TenantPlus Rent Payments API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List Rent Payments",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/rent-payments/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "rent-payments"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Rent Payments For Agreement",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/rent-payments/?agreement_id={{agreement_id}}",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "rent-payments"
+          ],
+          "query": [
+            {
+              "key": "agreement_id",
+              "value": "{{agreement_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Rent Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"payment_month\": \"2026-07-01\",\n  \"amount\": \"15000.00\",\n  \"notes\": \"July rent payment\"\n}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/rent-payments/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "rent-payments"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Rent Payment Detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/rent-payments/{{rent_payment_id}}/",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "rent-payments",
+            "{{rent_payment_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rent Payment Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://127.0.0.1:8000/api/rent-payments/summary/?agreement_id={{agreement_id}}",
+          "host": [
+            "http://127.0.0.1:8000"
+          ],
+          "path": [
+            "api",
+            "rent-payments",
+            "summary"
+          ],
+          "query": [
+            {
+              "key": "agreement_id",
+              "value": "{{agreement_id}}"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "agreement_id",
+      "value": ""
+    },
+    {
+      "key": "rent_payment_id",
+      "value": ""
+    }
+  ]
+}
