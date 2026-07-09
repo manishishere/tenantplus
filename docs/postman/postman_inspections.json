@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "TenantPlus Inspections API",
+    "description": "Postman collection for move-out inspections, deduction logs, and lease closure verification in TenantPlus.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agreement_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "inspection_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Inspections",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/inspections/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "inspections"
+          ]
+        },
+        "description": "List inspections visible to the authenticated tenant or landlord."
+      }
+    },
+    {
+      "name": "Create Inspection",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"inspection_date\": \"2026-07-09\",\n  \"structural_condition\": \"good\",\n  \"utility_status\": \"cleared\",\n  \"total_deductions\": \"0.00\",\n  \"deduction_reason\": \"No deductions required.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/inspections/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "inspections"
+          ]
+        },
+        "description": "Create a move-out inspection report. Landlords or admins only."
+      }
+    },
+    {
+      "name": "Get Inspection Detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/inspections/{{inspection_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "inspections",
+            "{{inspection_id}}"
+          ]
+        },
+        "description": "Retrieve a single inspection report if the authenticated user is related to the agreement."
+      }
+    },
+    {
+      "name": "Update Inspection",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"structural_condition\": \"fair\",\n  \"utility_status\": \"pending_bills\",\n  \"total_deductions\": \"2500.00\",\n  \"deduction_reason\": \"Minor wall damage and unpaid utility bill.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/inspections/{{inspection_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "inspections",
+            "{{inspection_id}}"
+          ]
+        },
+        "description": "Update an inspection report before finalization. Landlords or admins only."
+      }
+    },
+    {
+      "name": "Finalize Inspection",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"is_finalized\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/inspections/{{inspection_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "inspections",
+            "{{inspection_id}}"
+          ]
+        },
+        "description": "Finalize the inspection. Finalization should trigger the agreement transition workflow."
+      }
+    }
+  ]
+}
