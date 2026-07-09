@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'properties',
     'applications',
     'agreements',
+    'rent_payments',
 ]
 
 MIDDLEWARE = [
@@ -167,6 +168,10 @@ EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=False)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
+ESEWA_MERCHANT_ID = env('ESEWA_MERCHANT_ID', default='EPAYTEST')
+ESEWA_SECRET_KEY = env('ESEWA_SECRET_KEY', default='8gBm/:&EnhH.1/q')
+ESEWA_PAYMENT_URL = env('ESEWA_PAYMENT_URL', default='https://rc-epay.esewa.com.np/api/epay/main/v2/form')
+ESEWA_VERIFY_URL = env('ESEWA_VERIFY_URL', default='https://rc-epay.esewa.com.np/api/epay/transaction/status/')
 
 # Allow browser-based clients to send credentials for the refresh cookie.
 CORS_ALLOWED_ORIGINS = [
