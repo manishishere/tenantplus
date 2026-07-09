@@ -1,0 +1,214 @@
+{
+  "info": {
+    "name": "TenantPlus Maintenance API",
+    "description": "Postman collection for maintenance request logging, image uploads, and landlord updates in TenantPlus.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "maintenance_request_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "property_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Maintenance Requests",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/maintenance/?status=pending",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "maintenance"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "pending",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "List maintenance requests visible to the authenticated tenant or landlord. Optional status filter."
+      }
+    },
+    {
+      "name": "Create Maintenance Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "property",
+              "value": "{{property_id}}",
+              "type": "text"
+            },
+            {
+              "key": "title",
+              "value": "Leaking bathroom pipe",
+              "type": "text"
+            },
+            {
+              "key": "description",
+              "value": "Water is leaking under the sink and needs urgent repair.",
+              "type": "text"
+            },
+            {
+              "key": "priority",
+              "value": "high",
+              "type": "text"
+            },
+            {
+              "key": "images",
+              "type": "file",
+              "src": []
+            },
+            {
+              "key": "images",
+              "type": "file",
+              "src": []
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/maintenance/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "maintenance"
+          ]
+        },
+        "description": "Create a maintenance request as a tenant. Supports uploading multiple images using repeated images fields."
+      }
+    },
+    {
+      "name": "Get Maintenance Request Detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/maintenance/{{maintenance_request_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "maintenance",
+            "{{maintenance_request_id}}"
+          ]
+        },
+        "description": "Retrieve a single maintenance ticket if the authenticated user has access."
+      }
+    },
+    {
+      "name": "Update Maintenance Request",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Leaking bathroom pipe - updated\",\n  \"description\": \"The leak has worsened and needs urgent attention.\",\n  \"priority\": \"high\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/maintenance/{{maintenance_request_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "maintenance",
+            "{{maintenance_request_id}}"
+          ]
+        },
+        "description": "Tenants can update pending requests; landlords can update status and priority."
+      }
+    },
+    {
+      "name": "Landlord Update Status / Priority",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/maintenance/{{maintenance_request_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "maintenance",
+            "{{maintenance_request_id}}"
+          ]
+        },
+        "description": "Landlords can move a ticket through pending, in_progress, resolved, or cancelled and adjust priority."
+      }
+    }
+  ]
+}

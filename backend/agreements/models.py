@@ -39,6 +39,7 @@ class Agreement(models.Model):
     )
     property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='agreements')
     rent_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     start_date = models.DateField()
     end_date = models.DateField()
