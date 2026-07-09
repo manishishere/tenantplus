@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'agreements',
     'rent_payments',
     'maintenance',
+    'inspections',
 ]
 
 MIDDLEWARE = [
