@@ -1,9 +1,10 @@
 import base64
 import json
-from datetime import date
 from decimal import Decimal
 from uuid import UUID
-import uuid as uuid_module
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.db import transaction
@@ -22,8 +23,8 @@ from .models import EsewaPaymentLog
 from .models import RentPayment
 from .pagination import RentPaymentPagination
 from .serializers import (
+    EsewaCallbackSerializer,
     EsewaInitiateSerializer,
-    EsewaPaymentLogSerializer,
     RentPaymentCreateSerializer,
     RentPaymentDetailSerializer,
     RentPaymentListSerializer,
@@ -48,6 +49,49 @@ def _serializer_detail_error(serializer):
     if isinstance(errors, list) and errors:
         return str(errors[0])
     return 'Invalid input.'
+
+
+def _decode_esewa_payload(encoded_data):
+    try:
+        padded_data = encoded_data + '=' * (-len(encoded_data) % 4)
+        decoded = base64.b64decode(padded_data).decode('utf-8')
+        return json.loads(decoded)
+    except Exception:
+        return None
+
+
+def _call_esewa_verification(payload):
+    request_payload = urlencode(payload).encode('utf-8')
+    http_request = Request(
+        settings.ESEWA_VERIFY_URL,
+        data=request_payload,
+        headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        method='POST',
+    )
+    try:
+        with urlopen(http_request, timeout=15) as response:
+            body = response.read().decode('utf-8')
+    except (HTTPError, URLError) as exc:
+        raise RuntimeError(str(exc)) from exc
+
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError:
+        return {'raw_response': body}
+
+
+def _decimal_value(value):
+    return Decimal(str(value))
+
+
+def _extract_callback_data(request):
+    if request.method == 'POST':
+        data_value = getattr(request, 'data', {}).get('data') if hasattr(request, 'data') else None
+        return data_value or request.query_params.get('data')
+    data_value = request.query_params.get('data')
+    if data_value:
+        return data_value
+    return getattr(request, 'data', {}).get('data') if hasattr(request, 'data') else None
 
 
 class RentPaymentListCreateView(APIView):
@@ -161,30 +205,20 @@ class EsewaInitiateView(APIView):
         if not serializer.is_valid():
             return Response({'detail': _serializer_detail_error(serializer)}, status=status.HTTP_400_BAD_REQUEST)
 
-        validated_data = serializer.validated_data
-        payment_month = validated_data['payment_month']
-        amount = validated_data['amount']
-        due_date = payment_month.replace(day=7)
-        if date.today() > due_date:
-            late_fee = Decimal('500.00')
-        else:
-            late_fee = Decimal('0.00')
-        total_amount = amount + late_fee
+        payment = serializer.validated_data['payment']
 
-        transaction_uuid = str(uuid_module.uuid4())
-        signature = generate_esewa_signature(
-            str(total_amount),
-            transaction_uuid,
-            settings.ESEWA_MERCHANT_ID,
-        )
+        with transaction.atomic():
+            log = EsewaPaymentLog.objects.create(payment=payment)
 
-        log = EsewaPaymentLog.objects.create(
-            agreement=validated_data['agreement'],
-            payment_month=payment_month,
-            amount=amount,
-            transaction_uuid=transaction_uuid,
-            status=EsewaPaymentLog.STATUS_PENDING,
+        amount = payment.amount
+        total_amount = payment.amount + payment.late_fee
+        signed_field_names = 'total_amount,transaction_uuid,product_code'
+        signature_message = (
+            f"total_amount={total_amount},"
+            f"transaction_uuid={log.transaction_uuid},"
+            f"product_code={settings.ESEWA_MERCHANT_ID}"
         )
+        signature = generate_esewa_signature(settings.ESEWA_SECRET_KEY, signature_message)
 
         return Response(
             {
@@ -193,68 +227,85 @@ class EsewaInitiateView(APIView):
                     'amount': str(amount),
                     'tax_amount': '0',
                     'total_amount': str(total_amount),
-                    'transaction_uuid': transaction_uuid,
+                    'transaction_uuid': log.transaction_uuid,
                     'product_code': settings.ESEWA_MERCHANT_ID,
                     'product_service_charge': '0',
                     'product_delivery_charge': '0',
                     'success_url': f"{settings.FRONTEND_URL}/payment/esewa/verify/",
                     'failure_url': f"{settings.FRONTEND_URL}/payment/esewa/failure/",
-                    'signed_field_names': 'total_amount,transaction_uuid,product_code',
+                    'signed_field_names': signed_field_names,
                     'signature': signature,
                 },
-                'log_id': str(log.id),
             },
             status=status.HTTP_200_OK,
         )
 
 
 class EsewaVerifyView(APIView):
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
-        raw = request.GET.get('data', '')
-        try:
-            decoded = json.loads(base64.b64decode(raw).decode())
-        except Exception:
+        return self._handle_callback(request)
+
+    def post(self, request, *args, **kwargs):
+        return self._handle_callback(request)
+
+    def _handle_callback(self, request):
+        raw_data = _extract_callback_data(request)
+        callback_serializer = EsewaCallbackSerializer(data={'data': raw_data})
+        if not callback_serializer.is_valid():
+            return Response({'detail': _serializer_detail_error(callback_serializer)}, status=status.HTTP_400_BAD_REQUEST)
+
+        decoded = _decode_esewa_payload(callback_serializer.validated_data['data'])
+        if not decoded or not decoded.get('transaction_uuid'):
             return Response({'detail': 'Invalid payment data.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        valid = verify_esewa_signature(
-            {
-                'total_amount': decoded.get('total_amount'),
-                'transaction_uuid': decoded.get('transaction_uuid'),
-                'product_code': decoded.get('product_code'),
-            },
-            decoded.get('signature', ''),
-        )
-        if not valid:
-            return Response({'detail': 'Invalid payment signature.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if decoded.get('status') != 'COMPLETE':
-            return Response({'detail': 'Payment was not completed.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            log = EsewaPaymentLog.objects.get(transaction_uuid=decoded['transaction_uuid'])
-        except EsewaPaymentLog.DoesNotExist:
-            return Response({'detail': 'Payment record not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if log.status == EsewaPaymentLog.STATUS_COMPLETED:
-            return Response({'detail': 'Payment already processed.'}, status=status.HTTP_400_BAD_REQUEST)
-
         with transaction.atomic():
-            log.status = EsewaPaymentLog.STATUS_COMPLETED
-            log.esewa_ref_id = decoded.get('transaction_code', '')
-            log.save()
-            payment = RentPayment(
-                agreement=log.agreement,
-                amount=log.amount,
-                payment_month=log.payment_month,
-                notes=(
-                    f"eSewa payment. "
-                    f"Ref: {decoded.get('transaction_code', '')}"
-                ),
-            )
-            payment.save()
-            log.rent_payment = payment
-            log.save()
+            try:
+                log = EsewaPaymentLog.objects.select_for_update().select_related('payment', 'payment__agreement').get(
+                    transaction_uuid=decoded['transaction_uuid']
+                )
+            except EsewaPaymentLog.DoesNotExist:
+                return Response({'detail': 'Payment record not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response(RentPaymentDetailSerializer(payment).data, status=status.HTTP_201_CREATED)
+            if not verify_esewa_signature(settings.ESEWA_SECRET_KEY, decoded):
+                log.status = EsewaPaymentLog.STATUS_TAMPERED
+                log.raw_response = {'callback': decoded}
+                log.save(update_fields=['status', 'raw_response', 'updated_at'])
+                return Response({'detail': 'Invalid payment signature.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                verification_response = _call_esewa_verification(
+                    {
+                        'transaction_uuid': decoded['transaction_uuid'],
+                        'product_code': decoded.get('product_code', settings.ESEWA_MERCHANT_ID),
+                        'total_amount': decoded.get('total_amount'),
+                        'transaction_code': decoded.get('transaction_code', ''),
+                    }
+                )
+            except RuntimeError:
+                log.status = EsewaPaymentLog.STATUS_FAILED
+                log.raw_response = {'callback': decoded, 'error': 'Unable to verify payment with eSewa.'}
+                log.save(update_fields=['status', 'raw_response', 'updated_at'])
+                return Response({'detail': 'Unable to verify payment with eSewa.'}, status=status.HTTP_502_BAD_GATEWAY)
+
+            server_status = str(
+                verification_response.get('status')
+                or verification_response.get('transaction_status')
+                or ''
+            ).upper()
+            server_total_amount = verification_response.get('total_amount') or decoded.get('total_amount') or '0'
+            expected_total_amount = log.payment.amount + log.payment.late_fee
+
+            if server_status != 'COMPLETE' or _decimal_value(server_total_amount) != expected_total_amount:
+                log.status = EsewaPaymentLog.STATUS_FAILED
+                log.raw_response = {'callback': decoded, 'verification': verification_response}
+                log.save(update_fields=['status', 'raw_response', 'updated_at'])
+                return Response({'detail': 'Payment verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            log.status = EsewaPaymentLog.STATUS_COMPLETE
+            log.transaction_code = verification_response.get('transaction_code') or decoded.get('transaction_code')
+            log.raw_response = {'callback': decoded, 'verification': verification_response}
+            log.save(update_fields=['status', 'transaction_code', 'raw_response', 'updated_at'])
+
+        return Response({'detail': 'Payment verified successfully'}, status=status.HTTP_200_OK)

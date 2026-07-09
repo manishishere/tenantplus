@@ -2,41 +2,28 @@ import base64
 import hashlib
 import hmac
 
-from django.conf import settings
+
+def generate_esewa_signature(secret_key, message):
+    digest = hmac.new(
+        secret_key.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256,
+    ).digest()
+    return base64.b64encode(digest).decode('utf-8')
 
 
-def generate_esewa_signature(total_amount, transaction_uuid, product_code):
-    """
-    Generate HMAC-SHA256 signature for eSewa v2 API.
-    message = "total_amount=<amount>,transaction_uuid=<uuid>,
-               product_code=<merchant_id>"
-    signature = base64(hmac_sha256(secret_key, message))
-    """
-    secret_key = settings.ESEWA_SECRET_KEY
-    message = (
-        f"total_amount={total_amount},"
-        f"transaction_uuid={transaction_uuid},"
-        f"product_code={product_code}"
-    )
-    signature = base64.b64encode(
-        hmac.new(
-            secret_key.encode('utf-8'),
-            message.encode('utf-8'),
-            hashlib.sha256,
-        ).digest()
-    ).decode('utf-8')
-    return signature
+def _build_signed_message(data_dict):
+    signed_field_names = data_dict.get('signed_field_names', '')
+    field_names = [field.strip() for field in signed_field_names.split(',') if field.strip()]
+    message_parts = []
+    for field_name in field_names:
+        if field_name == 'signature':
+            continue
+        if field_name in data_dict:
+            message_parts.append(f"{field_name}={data_dict[field_name]}")
+    return ','.join(message_parts)
 
 
-def verify_esewa_signature(data, received_signature):
-    """
-    Verify the signature returned by eSewa after payment.
-    data must be a dict with total_amount, transaction_uuid,
-    product_code.
-    """
-    expected = generate_esewa_signature(
-        data['total_amount'],
-        data['transaction_uuid'],
-        data['product_code'],
-    )
-    return expected == received_signature
+def verify_esewa_signature(secret_key, data_dict):
+    expected_signature = generate_esewa_signature(secret_key, _build_signed_message(data_dict))
+    return expected_signature == data_dict.get('signature', '')
