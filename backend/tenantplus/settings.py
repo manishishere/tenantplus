@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'applications',
     'agreements',
     'notices',
+    'disputes',
     'rent_payments',
     'maintenance',
     'inspections',
