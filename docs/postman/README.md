@@ -8,3 +8,6 @@ This folder stores Postman collections for TenantPlus API testing.
 - `postman_agreements.json`
 - `postman_rent_payments.json`
 - `postman_maintenance.json`
+- `postman_inspections.json`
+- `postman_notices.json`
+- `postman_disputes.json`

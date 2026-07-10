@@ -28,6 +28,8 @@ urlpatterns = [
     path('api/properties/', include('properties.urls')),
     path('api/applications/', include('applications.urls')),
     path('api/agreements/', include('agreements.urls')),
+    path('api/notices/', include('notices.urls')),
+    path('api/disputes/', include('disputes.urls')),
     path('api/rent-payments/', include('rent_payments.urls')),
     path('api/maintenance/', include('maintenance.urls')),
     path('api/inspections/', include('inspections.urls')),

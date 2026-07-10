@@ -81,59 +81,21 @@ class RentPaymentCreateSerializer(serializers.ModelSerializer):
 
 
 class EsewaInitiateSerializer(serializers.ModelSerializer):
-    agreement = serializers.PrimaryKeyRelatedField(queryset=Agreement.objects.select_related('tenant', 'landlord', 'property'))
-
-    class Meta:
-        model = RentPayment
-        fields = ('agreement', 'payment_month', 'amount', 'notes')
-
-    def validate_agreement(self, value):
-        request = self.context.get('request')
-        user = getattr(request, 'user', None)
-        if user != value.tenant:
-            raise serializers.ValidationError('You can only initiate payments for your own agreements.')
-        if value.status != Agreement.STATUS_ACTIVE:
-            raise serializers.ValidationError('This agreement is not active.')
-        return value
-
-    def validate_payment_month(self, value):
-        normalized_value = value.replace(day=1)
-        if normalized_value > date.today().replace(day=1):
-            raise serializers.ValidationError('Cannot initiate payment for a future month.')
-        return normalized_value
-
-    def validate_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError('Payment amount must be greater than zero.')
-        return value
-
-    def validate(self, attrs):
-        agreement = attrs.get('agreement')
-        payment_month = attrs.get('payment_month')
-        if agreement and payment_month and RentPayment.objects.filter(agreement=agreement, payment_month=payment_month).exists():
-            raise serializers.ValidationError('A payment has already been recorded for this month.')
-
-        if agreement and payment_month and EsewaPaymentLog.objects.filter(
-            agreement=agreement,
-            payment_month=payment_month,
-            status=EsewaPaymentLog.STATUS_PENDING,
-        ).exists():
-            raise serializers.ValidationError('A payment is already in progress for this month.')
-        return attrs
-
-
-class EsewaPaymentLogSerializer(serializers.ModelSerializer):
-    agreement = AgreementSummarySerializer(read_only=True)
+    payment = serializers.PrimaryKeyRelatedField(queryset=RentPayment.objects.select_related('agreement', 'agreement__tenant'))
 
     class Meta:
         model = EsewaPaymentLog
-        fields = (
-            'id',
-            'agreement',
-            'payment_month',
-            'amount',
-            'transaction_uuid',
-            'esewa_ref_id',
-            'status',
-            'created_at',
-        )
+        fields = ('payment',)
+
+    def validate_payment(self, value):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user != value.agreement.tenant:
+            raise serializers.ValidationError('You can only initiate payments for your own agreements.')
+        if value.esewa_logs.filter(status=EsewaPaymentLog.STATUS_COMPLETE).exists():
+            raise serializers.ValidationError('This payment already has a completed eSewa log.')
+        return value
+
+
+class EsewaCallbackSerializer(serializers.Serializer):
+    data = serializers.CharField()

@@ -1,0 +1,259 @@
+{
+  "info": {
+    "name": "TenantPlus Notices API",
+    "description": "Postman collection for notices between tenants and landlords in TenantPlus.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agreement_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notice_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Notices",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/notices/?agreement_id={{agreement_id}}&notice_type=termination",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "notices"
+          ],
+          "query": [
+            {
+              "key": "agreement_id",
+              "value": "{{agreement_id}}",
+              "disabled": true
+            },
+            {
+              "key": "notice_type",
+              "value": "termination",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "List notices visible to the authenticated user. Optional agreement_id and notice_type filters can be enabled in the query string."
+      }
+    },
+    {
+      "name": "Create Termination Notice",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"notice_type\": \"termination\",\n  \"subject\": \"Termination notice for tenancy agreement\",\n  \"body\": \"This notice is served to formally terminate the tenancy agreement in accordance with the agreement terms and applicable law.\",\n  \"notice_period_days\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/notices/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "notices"
+          ]
+        },
+        "description": "Create a termination notice as the tenant or landlord for an active agreement."
+      }
+    },
+    {
+      "name": "Create Eviction Notice",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"notice_type\": \"eviction\",\n  \"subject\": \"Eviction notice\",\n  \"body\": \"This notice is issued due to a tenancy violation and serves as a formal eviction warning.\",\n  \"notice_period_days\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/notices/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "notices"
+          ]
+        },
+        "description": "Create an eviction notice as a landlord for an active agreement."
+      }
+    },
+    {
+      "name": "Create Rent Arrears Warning",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"notice_type\": \"rent_arrears\",\n  \"subject\": \"Rent arrears warning\",\n  \"body\": \"Your rent payment is overdue. Please clear the outstanding balance within the notice period.\",\n  \"notice_period_days\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/notices/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "notices"
+          ]
+        },
+        "description": "Create a rent arrears warning as a landlord for an active agreement."
+      }
+    },
+    {
+      "name": "Create General Notice",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"notice_type\": \"general\",\n  \"subject\": \"General notice\",\n  \"body\": \"This is a general formal communication regarding the tenancy.\",\n  \"notice_period_days\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/notices/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "notices"
+          ]
+        },
+        "description": "Create a general notice as the tenant or landlord for an active agreement."
+      }
+    },
+    {
+      "name": "Get Notice Detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/notices/{{notice_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "notices",
+            "{{notice_id}}"
+          ]
+        },
+        "description": "Retrieve a notice detail if the authenticated user has access."
+      }
+    },
+    {
+      "name": "Acknowledge Notice",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/notices/{{notice_id}}/acknowledge/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "notices",
+            "{{notice_id}}",
+            "acknowledge"
+          ]
+        },
+        "description": "Acknowledge a notice as the tenant or landlord, but not as the issuer."
+      }
+    }
+  ]
+}

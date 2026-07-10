@@ -5,6 +5,10 @@ from decimal import Decimal
 from django.db import models
 
 
+def generate_esewa_transaction_uuid():
+    return f"PAY-{uuid.uuid4()}"
+
+
 class RentPayment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     agreement = models.ForeignKey('agreements.Agreement', on_delete=models.CASCADE, related_name='rent_payments')
@@ -15,6 +19,7 @@ class RentPayment(models.Model):
     is_late = models.BooleanField(default=False)
     late_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     notes = models.TextField(blank=True)
+    esewa_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -50,34 +55,30 @@ class RentPayment(models.Model):
 class EsewaPaymentLog(models.Model):
     """Track eSewa payment attempts and their outcomes."""
 
-    STATUS_PENDING = 'pending'
-    STATUS_COMPLETED = 'completed'
-    STATUS_FAILED = 'failed'
+    STATUS_PENDING = 'PENDING'
+    STATUS_COMPLETE = 'COMPLETE'
+    STATUS_FAILED = 'FAILED'
+    STATUS_TAMPERED = 'TAMPERED'
 
     STATUS_CHOICES = (
         (STATUS_PENDING, 'Pending'),
-        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_COMPLETE, 'Complete'),
         (STATUS_FAILED, 'Failed'),
+        (STATUS_TAMPERED, 'Tampered'),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    agreement = models.ForeignKey(
-        'agreements.Agreement',
+    payment = models.ForeignKey(
+        RentPayment,
         on_delete=models.CASCADE,
         related_name='esewa_logs',
-    )
-    payment_month = models.DateField()
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    transaction_uuid = models.CharField(max_length=100, unique=True)
-    esewa_ref_id = models.CharField(max_length=200, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
-    rent_payment = models.OneToOneField(
-        RentPayment,
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
-        related_name='esewa_log',
     )
+    transaction_uuid = models.CharField(max_length=100, unique=True, default=generate_esewa_transaction_uuid)
+    transaction_code = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    raw_response = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -86,7 +87,18 @@ class EsewaPaymentLog(models.Model):
 
     def __str__(self):
         return (
-            f"{self.agreement.tenant.email} — "
-            f"{self.payment_month.strftime('%B %Y')} — "
+            f"{self.payment.agreement.tenant.email} — "
+            f"{self.transaction_uuid} — "
             f"{self.status}"
         )
+
+    def save(self, *args, **kwargs):
+        previous_status = None
+        if self.pk:
+            previous_status = EsewaPaymentLog.objects.filter(pk=self.pk).values_list('status', flat=True).first()
+
+        super().save(*args, **kwargs)
+
+        if self.status == self.STATUS_COMPLETE and previous_status != self.STATUS_COMPLETE and self.payment_id:
+            if not self.payment.esewa_verified:
+                RentPayment.objects.filter(pk=self.payment_id).update(esewa_verified=True)

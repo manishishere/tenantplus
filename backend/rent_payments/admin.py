@@ -10,4 +10,4 @@ class RentPaymentAdmin(admin.ModelAdmin):
 
 @admin.register(EsewaPaymentLog)
 class EsewaPaymentLogAdmin(admin.ModelAdmin):
-    list_display = ('agreement', 'payment_month', 'amount', 'transaction_uuid', 'status', 'created_at')
+    list_display = ('payment', 'transaction_uuid', 'transaction_code', 'status', 'created_at')
