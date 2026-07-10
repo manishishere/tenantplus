@@ -1,0 +1,155 @@
+{
+  "info": {
+    "name": "TenantPlus Disputes API",
+    "description": "Postman collection for tenant and landlord disputes plus admin resolution in TenantPlus.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agreement_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "dispute_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "List Disputes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/disputes/?status=open",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "disputes"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "open",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "List disputes visible to the authenticated user. Admins can see all disputes; tenants and landlords see disputes tied to their agreements."
+      }
+    },
+    {
+      "name": "Create Dispute",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"dispute_type\": \"maintenance_neglect\",\n  \"subject\": \"Unresolved maintenance issue\",\n  \"description\": \"The landlord has not addressed the repeated water leakage issue despite multiple requests.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/disputes/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "disputes"
+          ]
+        },
+        "description": "Create a dispute as a tenant or landlord who is a party to the agreement."
+      }
+    },
+    {
+      "name": "Get Dispute Detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/disputes/{{dispute_id}}/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "disputes",
+            "{{dispute_id}}"
+          ]
+        },
+        "description": "Retrieve a dispute detail if the authenticated user has access."
+      }
+    },
+    {
+      "name": "Resolve Dispute",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"resolved\",\n  \"admin_notes\": \"Reviewed and resolved after landlord confirmed the repair schedule.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/disputes/{{dispute_id}}/resolve/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "disputes",
+            "{{dispute_id}}",
+            "resolve"
+          ]
+        },
+        "description": "Resolve or dismiss a dispute as an admin user."
+      }
+    }
+  ]
+}
