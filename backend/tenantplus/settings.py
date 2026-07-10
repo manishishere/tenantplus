@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'properties',
     'applications',
     'agreements',
+    'notices',
     'rent_payments',
     'maintenance',
     'inspections',
