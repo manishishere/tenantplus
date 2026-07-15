@@ -1,66 +1,45 @@
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, LogIn, LogOut } from 'lucide-react'
-import { useAuth } from './context/AuthContext'
-import Login from './pages/Auth/Login'
-import ProtectedRoute from './components/ProtectedRoute'
-import './index.css'
-
-function Navigation() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
-
-  return (
-    <nav style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' }}>
-      <Link to="/" className="btn-primary" style={{ backgroundColor: 'transparent', color: 'var(--primary-indigo)', boxShadow: 'none' }}>
-        <LayoutDashboard size={20} style={{ marginRight: '0.5rem' }} /> Dashboard
-      </Link>
-      
-      <div style={{ flex: 1 }}></div>
-
-      {user ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-            Logged in as <strong>{user.email}</strong>
-          </span>
-          <button onClick={handleLogout} className="btn-primary" style={{ backgroundColor: 'transparent', color: 'var(--text-dark)', boxShadow: 'none', border: '1px solid rgba(0,0,0,0.1)' }}>
-            <LogOut size={18} style={{ marginRight: '0.5rem' }} /> Logout
-          </button>
-        </div>
-      ) : (
-        <Link to="/login" className="btn-primary">
-          <LogIn size={20} style={{ marginRight: '0.5rem' }} /> Login
-        </Link>
-      )}
-    </nav>
-  );
-}
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import Login from './pages/Auth/Login';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './components/Layout/DashboardLayout';
+import Properties from './pages/Dashboard/Properties';
+import './index.css';
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="layout-container">
-        <Navigation />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        
+        {/* Redirect root to dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard/properties" replace />} />
 
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          <Route path="/" element={
+        {/* Dashboard Routes */}
+        <Route 
+          path="/dashboard" 
+          element={
             <ProtectedRoute>
-              <div className="premium-card">
-                <h1>Welcome to TenantPlus Dashboard</h1>
-                <p style={{ color: 'var(--text-muted)' }}>You are successfully authenticated.</p>
-              </div>
+              <DashboardLayout />
             </ProtectedRoute>
-          } />
-        </Routes>
-      </div>
+          }
+        >
+          {/* Default dashboard route can be something else, for now redirect to properties */}
+          <Route index element={<Navigate to="/dashboard/properties" replace />} />
+          
+          <Route path="properties" element={<Properties />} />
+          
+          {/* Placeholders for future routes */}
+          <Route path="agreements" element={<div>Agreements Page</div>} />
+          <Route path="maintenance" element={<div>Maintenance Page</div>} />
+          <Route path="settings" element={<div>Settings Page</div>} />
+        </Route>
+        
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/dashboard/properties" replace />} />
+      </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;
