@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from accounts.permissions import IsAdminUser, IsLandlord, IsTenant
+from core.permissions import IsAdminUser, IsLandlord, IsTenant
 
 
 class IsPropertyOwner(BasePermission):

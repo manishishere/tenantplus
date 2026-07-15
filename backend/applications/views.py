@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsLandlord, IsTenant
+from core.permissions import IsLandlord, IsTenant
 
 from .models import Application
 from .pagination import ApplicationPagination

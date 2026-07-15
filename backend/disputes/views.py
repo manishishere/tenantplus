@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsAdminUser, IsLandlord, IsTenant
+from core.permissions import IsAdminUser, IsLandlord, IsTenant
 
 from .models import Dispute
 from .pagination import DisputePagination

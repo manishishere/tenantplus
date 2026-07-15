@@ -15,7 +15,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsTenant
+from core.permissions import IsTenant
 from agreements.models import Agreement
 
 from .esewa import generate_esewa_signature, verify_esewa_signature

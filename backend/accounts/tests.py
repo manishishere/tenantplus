@@ -8,7 +8,7 @@ from django.test import RequestFactory, TestCase
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from .middleware import RoleAuthorizationMiddleware, authorizeRoles
+
 from .models import EmailVerificationOTP, PasswordResetToken
 from .views import PasswordResetRequestView, RegisterView, ResendOTPView, VerifyEmailView
 
@@ -193,47 +193,6 @@ class EmailVerificationOTPTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data['detail'], 'Email is already verified.')
-
-
-class RoleAuthorizationMiddlewareTests(TestCase):
-    """Validate role-based access enforcement for protected views."""
-
-    def setUp(self):
-        self.factory = RequestFactory()
-        self.user = get_user_model().objects.create_user(
-            email='moderator@example.com',
-            password='secret123',
-            full_name='Moderator User',
-            role='moderator',
-        )
-        self.admin = get_user_model().objects.create_user(
-            email='admin@example.com',
-            password='secret123',
-            full_name='Admin User',
-            role='admin',
-        )
-
-    def test_middleware_denies_non_authorized_roles(self):
-        """A user without the required role should receive a 403 response."""
-        decorated_view = authorizeRoles('admin')(lambda request: HttpResponse('ok'))
-        middleware = RoleAuthorizationMiddleware(lambda request: HttpResponse('next'))
-        request = self.factory.get('/test/')
-        request.user = self.user
-
-        response = middleware.process_view(request, decorated_view, (), {})
-
-        self.assertEqual(response.status_code, 403)
-
-    def test_middleware_allows_authorized_roles(self):
-        """A user with the required role should be allowed through."""
-        decorated_view = authorizeRoles('admin')(lambda request: HttpResponse('ok'))
-        middleware = RoleAuthorizationMiddleware(lambda request: HttpResponse('next'))
-        request = self.factory.get('/test/')
-        request.user = self.admin
-
-        response = middleware.process_view(request, decorated_view, (), {})
-
-        self.assertIsNone(response)
 
 
 class PasswordResetRequestViewTests(TestCase):

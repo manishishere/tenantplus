@@ -14,7 +14,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .middleware import authorizeRoles
+from rest_framework.decorators import api_view, permission_classes
+from core.permissions import IsAdminUser
 from .models import EmailVerificationOTP, PasswordResetToken, UserDocument
 from .serializers import (
     ChangePasswordSerializer,
@@ -321,17 +322,19 @@ class ResendOTPView(APIView):
         return Response({'detail': 'OTP sent to your email.'}, status=status.HTTP_200_OK)
 
 
-@authorizeRoles('admin')
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
 def admin_dashboard(request):
     """Return a simple admin-only dashboard payload."""
-    return JsonResponse({'detail': 'Welcome to the admin dashboard.', 'role': request.user.role})
+    return Response({'detail': 'Welcome to the admin dashboard.', 'role': request.user.role})
 
 
-@authorizeRoles('admin')
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
 def user_directory(request):
     """Return the list of non-admin users visible to admins."""
     users = User.objects.filter(role__in=['tenant', 'landlord']).values('id', 'full_name', 'email', 'role')
-    return JsonResponse(list(users), safe=False)
+    return Response(list(users))
 
 
 class DocumentListCreateView(APIView):
