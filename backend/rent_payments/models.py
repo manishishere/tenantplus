@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 def generate_esewa_transaction_uuid():
@@ -20,6 +21,7 @@ class RentPayment(models.Model):
     late_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     notes = models.TextField(blank=True)
     esewa_verified = models.BooleanField(default=False)
+    history = HistoricalRecords()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
