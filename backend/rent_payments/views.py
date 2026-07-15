@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Max, Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -16,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.permissions import IsTenant
+from core.services.pdf_generator import generate_receipt_pdf
 from agreements.models import Agreement
 
 from .esewa import generate_esewa_signature, verify_esewa_signature
@@ -309,3 +311,19 @@ class EsewaVerifyView(APIView):
             log.save(update_fields=['status', 'transaction_code', 'raw_response', 'updated_at'])
 
         return Response({'detail': 'Payment verified successfully'}, status=status.HTTP_200_OK)
+
+
+class RentPaymentReceiptDownloadView(APIView):
+    """Download the rent payment receipt as a PDF."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        payment = get_object_or_404(RentPayment, id=kwargs['id'])
+        if request.user != payment.agreement.tenant and request.user != payment.agreement.landlord:
+            return Response({'detail': 'You do not have access to this payment receipt.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        pdf_bytes = generate_receipt_pdf(payment)
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="receipt.pdf"'
+        return response

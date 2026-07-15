@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +14,7 @@ from .serializers import (
     AgreementListSerializer,
     AgreementTerminateSerializer,
 )
+from core.services.pdf_generator import generate_agreement_pdf
 
 
 def _serializer_detail_error(serializer):
@@ -112,4 +114,20 @@ class AgreementTerminateView(APIView):
             agreement.property.save()
 
         return Response(AgreementDetailSerializer(agreement).data, status=status.HTTP_200_OK)
+
+
+class AgreementPDFDownloadView(APIView):
+    """Download the tenancy agreement as a PDF."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        agreement = get_object_or_404(Agreement, id=kwargs['id'])
+        if request.user != agreement.tenant and request.user != agreement.landlord:
+            return Response({'detail': 'You do not have access to this agreement.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        pdf_bytes = generate_agreement_pdf(agreement)
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="agreement.pdf"'
+        return response
 
