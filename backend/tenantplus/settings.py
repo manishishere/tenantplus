@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'maintenance',
     'inspections',
     'utilities',
+    'django_q',
 ]
 
 MIDDLEWARE = [
@@ -195,3 +196,12 @@ CSRF_COOKIE_SECURE = COOKIE_SECURE
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 APPEND_SLASH = True
+
+Q_CLUSTER = {
+    'name': 'tenantplus_cluster',
+    'orm': 'default',
+    'workers': 2,
+    'recycle': 500,
+    'timeout': 60,
+    'retry': 120,
+}

@@ -5,6 +5,7 @@ import secrets
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django_q.tasks import async_task
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from rest_framework import status
@@ -33,17 +34,15 @@ logger = logging.getLogger(__name__)
 
 
 def _send_verification_otp_email(user, otp):
-    """Send the email verification OTP without blocking the caller on failure."""
-    try:
-        send_mail(
-            'Verify your TenantPlus account',
-            f'Your verification code is: {otp}. Expires in 10 minutes.',
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-            fail_silently=False,
-        )
-    except Exception:
-        logger.exception('Failed to send email verification OTP for user %s', user.email)
+    """Send the email verification OTP via a background task."""
+    async_task(
+        'django.core.mail.send_mail',
+        'Verify your TenantPlus account',
+        f'Your verification code is: {otp}. Expires in 10 minutes.',
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
 
 
 def _create_email_verification_otp(user):
@@ -215,43 +214,22 @@ class PasswordResetRequestView(APIView):
             PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
             token = PasswordResetToken.objects.create(user=user, token=secrets.token_urlsafe(32))
             reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token.token}"
-            try:
-                send_mail(
-                    'TenantPlus — Password Reset Request',
-                    (
-                        f"Hello {user.full_name},\n\n"
-                        "You requested a password reset for your TenantPlus account.\n\n"
-                        "Click the link below to reset your password.\n"
-                        "This link expires in 30 minutes.\n\n"
-                        f"{reset_url}\n\n"
-                        "If you did not request this, please ignore this email.\n\n"
-                        "— The TenantPlus Team"
-                    ),
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
-                    fail_silently=False,
-                )
-            except smtplib.SMTPAuthenticationError:
-                token.delete()
-                return Response(
-                    {
-                        'detail': (
-                            'Gmail rejected the SMTP login. Use a Google app password in EMAIL_HOST_PASSWORD '
-                            'or configure a different SMTP sender.'
-                        )
-                    },
-                    status=status.HTTP_502_BAD_GATEWAY,
-                )
-            except smtplib.SMTPException:
-                token.delete()
-                return Response(
-                    {
-                        'detail': (
-                            'Email delivery failed. Check your SMTP host, port, TLS settings, and sender credentials.'
-                        )
-                    },
-                    status=status.HTTP_502_BAD_GATEWAY,
-                )
+            async_task(
+                'django.core.mail.send_mail',
+                'TenantPlus — Password Reset Request',
+                (
+                    f"Hello {user.full_name},\n\n"
+                    "You requested a password reset for your TenantPlus account.\n\n"
+                    "Click the link below to reset your password.\n"
+                    "This link expires in 30 minutes.\n\n"
+                    f"{reset_url}\n\n"
+                    "If you did not request this, please ignore this email.\n\n"
+                    "— The TenantPlus Team"
+                ),
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
         return Response({'detail': 'If this email is registered, a reset link has been sent.'}, status=status.HTTP_200_OK)
 
 
