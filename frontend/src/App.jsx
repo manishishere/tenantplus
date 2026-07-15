@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, LogIn, LogOut } from 'lucide-react'
 import { useAuth } from './context/AuthContext'
-import Login from './pages/Login'
+import Login from './pages/Auth/Login'
 import ProtectedRoute from './components/ProtectedRoute'
 import './index.css'
 

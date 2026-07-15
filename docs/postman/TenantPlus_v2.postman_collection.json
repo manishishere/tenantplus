@@ -1,0 +1,124 @@
+{
+  "info": {
+    "_postman_id": "f5d0a6c7-3b2d-4c3e-9182-84b490f23f5b",
+    "name": "TenantPlus v2",
+    "description": "Consolidated Postman collection for TenantPlus Auth, Utilities, and PDF APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"secret\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/login/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "login", ""]
+            }
+          }
+        },
+        {
+          "name": "Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "profile", ""]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/accounts/logout/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "accounts", "logout", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Utilities",
+      "item": [
+        {
+          "name": "List Utility Bills",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/utilities/bills/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "utilities", "bills", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PDFs",
+      "item": [
+        {
+          "name": "Download Agreement PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/agreements/:id/pdf/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "agreements", ":id", "pdf", ""],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Receipt PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rent-payments/:id/receipt/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "rent-payments", ":id", "receipt", ""],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    }
+  ]
+}

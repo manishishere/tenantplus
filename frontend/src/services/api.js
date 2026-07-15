@@ -1,47 +1,35 @@
-/**
- * A wrapper around native fetch that defaults to including credentials (cookies)
- * and sets the Content-Type to JSON.
- */
-export async function apiFetch(endpoint, options = {}) {
-  const defaultHeaders = {
+import axios from 'axios';
+
+// Create a robust Axios instance
+const api = axios.create({
+  baseURL: '/api',
+  withCredentials: true, // Crucial for HTTP-only JWT cookies
+  headers: {
     'Content-Type': 'application/json',
-  };
+    'Accept': 'application/json',
+  },
+});
 
-  const config = {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers,
-    },
-    // Crucial for sending/receiving HttpOnly cookies across origins/proxies
-    credentials: 'include',
-  };
+// Event target to broadcast global auth events (like forced logout)
+export const authEventEmitter = new EventTarget();
 
-  // Stringify the body if it's an object and not already stringified
-  if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
-    config.body = JSON.stringify(config.body);
-  }
-
-  // Use the Vite proxy (which routes /api to Django on port 8000)
-  const response = await fetch(endpoint, config);
-
-  if (!response.ok) {
-    let errorData = {};
-    try {
-      errorData = await response.json();
-    } catch (e) {
-      // Ignore if response is not JSON
+// Response Interceptor for global error handling
+api.interceptors.response.use(
+  (response) => {
+    // Pass through successful responses
+    return response;
+  },
+  (error) => {
+    // If we receive a 401 Unauthorized, and it's not the login route
+    // we broadcast a logout event so the context can clean up.
+    if (error.response && error.response.status === 401) {
+      const isLoginRoute = error.config.url === '/accounts/login/' || error.config.url.endsWith('login/');
+      if (!isLoginRoute) {
+        authEventEmitter.dispatchEvent(new Event('unauthorized'));
+      }
     }
-    const error = new Error(errorData.detail || 'An error occurred during the request');
-    error.status = response.status;
-    error.data = errorData;
-    throw error;
+    return Promise.reject(error);
   }
+);
 
-  // Handle 204 No Content
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
-}
+export default api;
