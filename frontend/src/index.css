@@ -135,3 +135,53 @@ a:hover {
   margin: 0 auto;
   padding: 2rem;
 }
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-dark);
+}
+
+@media (prefers-color-scheme: dark) {
+  .form-label {
+    color: var(--text-light);
+  }
+}
+
+.form-input {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all var(--transition-speed) ease;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--primary-indigo);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+@media (prefers-color-scheme: dark) {
+  .form-input {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+  }
+  
+  .form-input:focus {
+    border-color: var(--primary-indigo);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+  }
+}
