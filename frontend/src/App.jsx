@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Auth/Login';
+import VerifyEmail from './pages/Auth/VerifyEmail';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import Properties from './pages/Dashboard/Properties';
@@ -11,6 +12,15 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        
+        <Route 
+          path="/verify-email" 
+          element={
+            <ProtectedRoute allowUnverified={true}>
+              <VerifyEmail />
+            </ProtectedRoute>
+          } 
+        />
         
         {/* Redirect root to dashboard */}
         <Route path="/" element={<Navigate to="/dashboard/properties" replace />} />

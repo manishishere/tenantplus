@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, allowUnverified = false }) {
   const { user, isInitializing } = useAuth();
   const location = useLocation();
 
@@ -40,6 +40,11 @@ export default function ProtectedRoute({ children }) {
   if (!user) {
     // Redirect to login but save the attempted location so we can redirect them back later if desired
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Force users to verify their email before accessing standard routes
+  if (!allowUnverified && !user.is_verified) {
+    return <Navigate to="/verify-email" replace />;
   }
 
   return children;

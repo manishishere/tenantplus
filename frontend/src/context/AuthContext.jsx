@@ -106,6 +106,7 @@ export function AuthProvider({ children }) {
     isLoading,
     login,
     logout,
+    checkAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
