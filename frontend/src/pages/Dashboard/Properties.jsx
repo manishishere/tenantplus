@@ -3,7 +3,121 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import PropertyCard from '../../components/Properties/PropertyCard';
 import SkeletonGrid from '../../components/Properties/SkeletonGrid';
-import { Search, Plus, FilterX, Building2 } from 'lucide-react';
+import { Search, Plus, FilterX, Building2, Trash2 } from 'lucide-react';
+
+// IndexedDB helper for local files persistence
+const initAssetDB = () => {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('tenantplus_media', 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('media')) {
+        db.createObjectStore('media');
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = () => resolve(null);
+  });
+};
+
+const storeLocalMedia = async (key, file) => {
+  try {
+    const db = await initAssetDB();
+    if (!db) return;
+    const tx = db.transaction('media', 'readwrite');
+    tx.objectStore('media').put(file, key);
+  } catch (err) {
+    console.error('Failed to store local media in DB:', err);
+  }
+};
+
+const getLocalMedia = async (key) => {
+  try {
+    const db = await initAssetDB();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      const tx = db.transaction('media', 'readonly');
+      const req = tx.objectStore('media').get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  } catch (err) {
+    console.error('Failed to retrieve local media:', err);
+    return null;
+  }
+};
+
+function PropertyMedia({ src, alt, style }) {
+  const [resolvedSrc, setResolvedSrc] = useState('');
+  const [isVideo, setIsVideo] = useState(false);
+
+  useEffect(() => {
+    let objectUrl = '';
+    const loadMedia = async () => {
+      if (!src) {
+        setResolvedSrc('');
+        return;
+      }
+
+      const isVid = src.toLowerCase().endsWith('.mp4') || 
+                    src.toLowerCase().endsWith('.mov') || 
+                    src.toLowerCase().endsWith('.webm') ||
+                    src.startsWith('data:video/');
+      setIsVideo(isVid);
+
+      if (src.startsWith('/mock-media/')) {
+        const file = await getLocalMedia(src);
+        if (file) {
+          objectUrl = URL.createObjectURL(file);
+          setResolvedSrc(objectUrl);
+          setIsVideo(file.type.startsWith('video/'));
+          return;
+        }
+        // Fallback
+        if (isVid) {
+          setResolvedSrc('https://assets.mixkit.co/videos/preview/mixkit-interior-of-a-modern-living-room-4815-large.mp4');
+        } else {
+          setResolvedSrc('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80');
+        }
+      } else {
+        setResolvedSrc(src);
+      }
+    };
+
+    loadMedia();
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [src]);
+
+  if (!resolvedSrc) {
+    return (
+      <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--primary-indigo), var(--primary-teal))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', ...style }}>
+        <Building2 size={40} opacity={0.5} />
+      </div>
+    );
+  }
+
+  if (isVideo) {
+    return (
+      <video 
+        src={resolvedSrc} 
+        controls 
+        playsInline
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', ...style }} 
+      />
+    );
+  }
+
+  return (
+    <img 
+      src={resolvedSrc} 
+      alt={alt || 'Property media'} 
+      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', ...style }} 
+    />
+  );
+}
 
 export default function Properties() {
   const { role } = useAuth();
@@ -29,7 +143,7 @@ export default function Properties() {
     roomType: 'single',
     furnishingStatus: 'unfurnished',
     rentAmount: '',
-    photoUrl: '', // Writable photo URL
+    mediaFiles: [], // Array of selected File objects (photos and videos)
     latitude: 27.7172,
     longitude: 85.3240
   });
@@ -139,15 +253,24 @@ export default function Properties() {
 
       const createdProperty = response.data;
 
-      // 2. Add Photo if provided
-      if (addForm.photoUrl.trim()) {
-        try {
-          await api.post(`/properties/${createdProperty.id}/photos/`, {
-            photo_url: addForm.photoUrl.trim(),
-            sort_order: 0
-          });
-        } catch (photoErr) {
-          console.error('Failed to attach property photo:', photoErr);
+      // 2. Add Photos/Videos if provided
+      if (addForm.mediaFiles && addForm.mediaFiles.length > 0) {
+        for (let i = 0; i < addForm.mediaFiles.length; i++) {
+          const file = addForm.mediaFiles[i];
+          const mockKey = `/mock-media/${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${file.name}`;
+          
+          // Store actual blob in local IndexedDB
+          await storeLocalMedia(mockKey, file);
+
+          // Register in Django database
+          try {
+            await api.post(`/properties/${createdProperty.id}/photos/`, {
+              photo_url: mockKey,
+              sort_order: i
+            });
+          } catch (photoErr) {
+            console.error('Failed to attach property photo record:', photoErr);
+          }
         }
       }
 
@@ -160,7 +283,7 @@ export default function Properties() {
         roomType: 'single',
         furnishingStatus: 'unfurnished',
         rentAmount: '',
-        photoUrl: '',
+        mediaFiles: [],
         latitude: 27.7172,
         longitude: 85.3240
       });
@@ -215,6 +338,21 @@ export default function Properties() {
       setApplicationError(err.response?.data?.detail || 'Failed to submit application.');
     } finally {
       setApplicationSubmitLoading(false);
+    }
+  };
+
+  const handleDeleteProperty = async (propertyId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this property listing? This action cannot be undone.")) {
+      return;
+    }
+    try {
+      await api.delete(`/properties/${propertyId}/`);
+      setShowDetailsModal(false);
+      setSelectedProperty(null);
+      await fetchProperties();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Failed to delete property listing.');
     }
   };
 
@@ -556,15 +694,28 @@ export default function Properties() {
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Property Image URL (Optional)</label>
+                <label className="form-label">Upload Property Photos & Videos</label>
                 <input 
-                  type="url" 
+                  type="file" 
                   className="form-input" 
-                  placeholder="e.g. https://images.unsplash.com/photo-..."
-                  value={addForm.photoUrl}
-                  onChange={(e) => setAddForm({ ...addForm, photoUrl: e.target.value })}
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setAddForm({ ...addForm, mediaFiles: files });
+                  }}
                 />
-                <small style={{ color: 'var(--text-muted)' }}>Enter a web URL to display a photo of this listing</small>
+                <small style={{ color: 'var(--text-muted)' }}>Select one or more photos or videos to showcase your property listing.</small>
+                {addForm.mediaFiles && addForm.mediaFiles.length > 0 && (
+                  <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary-teal)' }}>Selected files ({addForm.mediaFiles.length}):</span>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {addForm.mediaFiles.map((f, idx) => (
+                        <li key={idx}>{f.name} ({(f.size / 1024 / 1024).toFixed(2)} MB)</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
@@ -612,20 +763,13 @@ export default function Properties() {
               </button>
             </div>
 
-            {/* Photo Gallery */}
-            {selectedProperty.photos && selectedProperty.photos.length > 0 ? (
-              <div style={{ height: '240px', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <img 
-                  src={selectedProperty.photos[0].photo_url} 
-                  alt={selectedProperty.title} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                />
-              </div>
-            ) : (
-              <div style={{ height: '180px', background: 'linear-gradient(135deg, var(--primary-indigo), var(--primary-teal))', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                <Building2 size={48} opacity={0.5} />
-              </div>
-            )}
+            {/* Photo Gallery / Video Tour */}
+            <div style={{ height: '260px', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <PropertyMedia 
+                src={selectedProperty.photos && selectedProperty.photos.length > 0 ? selectedProperty.photos[0].photo_url : ''} 
+                alt={selectedProperty.title} 
+              />
+            </div>
 
             {/* Description & Specs */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -707,7 +851,16 @@ export default function Properties() {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: role === 'landlord' ? 'space-between' : 'flex-end', alignItems: 'center', marginTop: '1.5rem' }}>
+              {role === 'landlord' && (
+                <button 
+                  onClick={() => handleDeleteProperty(selectedProperty.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '0.5rem', padding: '0.5rem 1.25rem', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  <Trash2 size={16} />
+                  Delete Listing
+                </button>
+              )}
               <button 
                 onClick={() => setShowDetailsModal(false)}
                 style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-light)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', padding: '0.5rem 1.5rem', cursor: 'pointer', fontWeight: 500 }}
