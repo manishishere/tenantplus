@@ -28,8 +28,18 @@ export default function Properties() {
     address: '',
     roomType: 'single',
     furnishingStatus: 'unfurnished',
-    rentAmount: ''
+    rentAmount: '',
+    photoUrl: '' // Writable photo URL
   });
+
+  // Property Details & Application States
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [applicationMessage, setApplicationMessage] = useState('');
+  const [applicationSubmitLoading, setApplicationSubmitLoading] = useState(false);
+  const [applicationSuccess, setApplicationSuccess] = useState(false);
+  const [applicationError, setApplicationError] = useState(null);
 
   useEffect(() => {
     fetchProperties();
@@ -96,7 +106,8 @@ export default function Properties() {
 
     setAddLoading(true);
     try {
-      await api.post('/properties/', {
+      // 1. Create Property
+      const response = await api.post('/properties/', {
         title: addForm.title.trim(),
         description: addForm.description.trim(),
         district: addForm.district.trim(),
@@ -106,6 +117,20 @@ export default function Properties() {
         rent_amount: rent
       });
 
+      const createdProperty = response.data;
+
+      // 2. Add Photo if provided
+      if (addForm.photoUrl.trim()) {
+        try {
+          await api.post(`/properties/${createdProperty.id}/photos/`, {
+            photo_url: addForm.photoUrl.trim(),
+            sort_order: 0
+          });
+        } catch (photoErr) {
+          console.error('Failed to attach property photo:', photoErr);
+        }
+      }
+
       setShowAddModal(false);
       setAddForm({
         title: '',
@@ -114,7 +139,8 @@ export default function Properties() {
         address: '',
         roomType: 'single',
         furnishingStatus: 'unfurnished',
-        rentAmount: ''
+        rentAmount: '',
+        photoUrl: ''
       });
 
       await fetchProperties();
@@ -123,6 +149,50 @@ export default function Properties() {
       setAddError(err.response?.data?.detail || err.response?.data?.title?.[0] || err.response?.data?.rent_amount?.[0] || 'Failed to list property.');
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  const handleViewDetails = async (propertyId) => {
+    setDetailsLoading(true);
+    setApplicationSuccess(false);
+    setApplicationError(null);
+    setApplicationMessage('');
+    try {
+      const res = await api.get(`/properties/${propertyId}/`);
+      setSelectedProperty(res.data);
+      setShowDetailsModal(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load property details.');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const handleApply = async (e) => {
+    e.preventDefault();
+    if (applicationSubmitLoading) return;
+    setApplicationError(null);
+    setApplicationSuccess(false);
+
+    if (!applicationMessage.trim()) {
+      setApplicationError('Please enter a message for the landlord.');
+      return;
+    }
+
+    setApplicationSubmitLoading(true);
+    try {
+      await api.post('/applications/', {
+        property: selectedProperty.id,
+        message: applicationMessage.trim()
+      });
+      setApplicationSuccess(true);
+      setApplicationMessage('');
+    } catch (err) {
+      console.error(err);
+      setApplicationError(err.response?.data?.detail || 'Failed to submit application.');
+    } finally {
+      setApplicationSubmitLoading(false);
     }
   };
 
@@ -221,7 +291,7 @@ export default function Properties() {
       ) : filteredProperties.length > 0 ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
           {filteredProperties.map(property => (
-            <PropertyCard key={property.id} property={property} />
+            <PropertyCard key={property.id} property={property} onClick={() => handleViewDetails(property.id)} />
           ))}
         </div>
       ) : (
@@ -351,6 +421,18 @@ export default function Properties() {
                 </div>
               </div>
 
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Property Image URL (Optional)</label>
+                <input 
+                  type="url" 
+                  className="form-input" 
+                  placeholder="e.g. https://images.unsplash.com/photo-..."
+                  value={addForm.photoUrl}
+                  onChange={(e) => setAddForm({ ...addForm, photoUrl: e.target.value })}
+                />
+                <small style={{ color: 'var(--text-muted)' }}>Enter a web URL to display a photo of this listing</small>
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                 <button 
                   type="button" 
@@ -370,6 +452,130 @@ export default function Properties() {
               </div>
 
             </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Property Details Modal */}
+      {showDetailsModal && selectedProperty && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(8px)' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+            
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'capitalize', fontWeight: 600 }}>
+                  {selectedProperty.room_type?.replace('_', ' ')} &bull; {selectedProperty.furnishing_status?.replace('_', ' ')}
+                </span>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.25rem 0 0 0' }}>{selectedProperty.title}</h3>
+              </div>
+              <button 
+                onClick={() => setShowDetailsModal(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer', padding: 0 }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Photo Gallery */}
+            {selectedProperty.photos && selectedProperty.photos.length > 0 ? (
+              <div style={{ height: '240px', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <img 
+                  src={selectedProperty.photos[0].photo_url} 
+                  alt={selectedProperty.title} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              </div>
+            ) : (
+              <div style={{ height: '180px', background: 'linear-gradient(135deg, var(--primary-indigo), var(--primary-teal))', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                <Building2 size={48} opacity={0.5} />
+              </div>
+            )}
+
+            {/* Description & Specs */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Rent</span>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary-indigo)' }}>
+                    Rs. {parseFloat(selectedProperty.rent_amount).toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Location / Area</span>
+                  <div style={{ fontSize: '1rem', fontWeight: 600 }}>{selectedProperty.address || selectedProperty.district}</div>
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>About this property</span>
+                <p style={{ fontSize: '0.95rem', lineHeight: 1.6, margin: '0.25rem 0 0 0', color: 'rgba(255,255,255,0.8)' }}>
+                  {selectedProperty.description || 'No description provided.'}
+                </p>
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Listed by Landlord</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
+                  <span style={{ fontWeight: 600 }}>{selectedProperty.landlord_name}</span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{selectedProperty.landlord_email}</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Tenant Apply Form */}
+            {role === 'tenant' && selectedProperty.is_available && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
+                <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 600 }}>Apply for Tenancy</h4>
+                
+                {applicationSuccess ? (
+                  <div style={{ padding: '1rem', background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '0.5rem', fontSize: '0.9rem', textAlign: 'center', fontWeight: 600 }}>
+                    Application submitted successfully! The landlord will review your request.
+                  </div>
+                ) : (
+                  <form onSubmit={handleApply} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {applicationError && (
+                      <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.25rem', fontSize: '0.85rem' }}>
+                        {applicationError}
+                      </div>
+                    )}
+                    
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Message to Landlord *</label>
+                      <textarea 
+                        className="form-input" 
+                        placeholder="Introduce yourself and specify when you'd like to move in..."
+                        rows={3}
+                        value={applicationMessage}
+                        onChange={(e) => setApplicationMessage(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      className="btn-primary" 
+                      disabled={applicationSubmitLoading}
+                      style={{ width: '100%' }}
+                    >
+                      {applicationSubmitLoading ? 'Submitting Application...' : 'Submit Application'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button 
+                onClick={() => setShowDetailsModal(false)}
+                style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-light)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', padding: '0.5rem 1.5rem', cursor: 'pointer', fontWeight: 500 }}
+              >
+                Close
+              </button>
+            </div>
 
           </div>
         </div>

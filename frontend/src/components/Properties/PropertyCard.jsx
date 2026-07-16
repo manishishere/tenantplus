@@ -1,6 +1,6 @@
 import { MapPin, Home as HomeIcon, Image as ImageIcon } from 'lucide-react';
 
-export default function PropertyCard({ property }) {
+export default function PropertyCard({ property, onClick }) {
   const formatPrice = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -20,7 +20,18 @@ export default function PropertyCard({ property }) {
   };
 
   return (
-    <div className="premium-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div 
+      className="premium-card" 
+      onClick={onClick}
+      style={{ 
+        padding: 0, 
+        overflow: 'hidden', 
+        display: 'flex', 
+        flexDirection: 'column',
+        cursor: 'pointer',
+        transition: 'transform 0.2s, box-shadow 0.2s'
+      }}
+    >
       {/* Image Placeholder */}
       <div style={{ 
         height: '180px', 
