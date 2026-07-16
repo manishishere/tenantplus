@@ -5,7 +5,7 @@ import api from '../../services/api';
 import { Mail, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react';
 
 export default function VerifyEmail() {
-  const { user, checkAuth } = useAuth();
+  const { user, checkAuth, logout } = useAuth();
   const navigate = useNavigate();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -20,6 +20,11 @@ export default function VerifyEmail() {
       navigate('/dashboard/properties', { replace: true });
     }
   }, [user, navigate]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   const handleChange = (index, value) => {
     if (isNaN(value)) return;
@@ -175,23 +180,43 @@ export default function VerifyEmail() {
           </button>
         </form>
 
-        <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem' }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-            Didn't receive the code?
-          </p>
+        <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', alignItems: 'center' }}>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.5rem', marginTop: 0 }}>
+              Didn't receive the code?
+            </p>
+            <button 
+              onClick={handleResend}
+              disabled={resending}
+              style={{ 
+                background: 'transparent', border: 'none', 
+                color: 'var(--primary-indigo)', 
+                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                cursor: resending ? 'not-allowed' : 'pointer',
+                fontWeight: 500, opacity: resending ? 0.7 : 1
+              }}
+            >
+              <RefreshCw size={16} className={resending ? 'skeleton-pulse' : ''} />
+              {resending ? 'Sending new code...' : 'Resend Code'}
+            </button>
+          </div>
+
           <button 
-            onClick={handleResend}
-            disabled={resending}
+            onClick={handleLogout}
             style={{ 
-              background: 'transparent', border: 'none', 
-              color: 'var(--primary-indigo)', 
-              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-              cursor: resending ? 'not-allowed' : 'pointer',
-              fontWeight: 500, opacity: resending ? 0.7 : 1
+              background: 'transparent', 
+              border: 'none', 
+              color: '#ef4444', 
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              transition: 'opacity 0.2s',
+              padding: 0
             }}
+            onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+            onMouseLeave={(e) => e.target.style.opacity = '1'}
           >
-            <RefreshCw size={16} className={resending ? 'skeleton-pulse' : ''} />
-            {resending ? 'Sending new code...' : 'Resend Code'}
+            Cancel & Sign Out
           </button>
         </div>
       </div>
