@@ -29,7 +29,7 @@ export default function Properties() {
       // if not, we can adjust the API or send a query param. 
       // Assuming /api/properties/ returns all available for tenants, and owned for landlords.
       const response = await api.get('/properties/');
-      setProperties(response.data);
+      setProperties(response.data.results || response.data || []);
     } catch (err) {
       setError('Failed to load properties. Please try again later.');
     } finally {
@@ -38,9 +38,10 @@ export default function Properties() {
   };
 
   const filteredProperties = useMemo(() => {
-    return properties.filter((prop) => {
-      const matchSearch = prop.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          prop.district.toLowerCase().includes(searchQuery.toLowerCase());
+    const list = Array.isArray(properties) ? properties : [];
+    return list.filter((prop) => {
+      const matchSearch = (prop.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (prop.district || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchDistrict = districtFilter ? prop.district === districtFilter : true;
       const matchRoomType = roomTypeFilter ? prop.room_type === roomTypeFilter : true;
       const matchPrice = maxPrice ? parseFloat(prop.rent_amount) <= parseFloat(maxPrice) : true;
@@ -51,7 +52,8 @@ export default function Properties() {
 
   // Extract unique districts for the dropdown
   const uniqueDistricts = useMemo(() => {
-    const districts = new Set(properties.map(p => p.district));
+    const list = Array.isArray(properties) ? properties : [];
+    const districts = new Set(list.map(p => p.district).filter(Boolean));
     return Array.from(districts).sort();
   }, [properties]);
 
