@@ -29,7 +29,9 @@ export default function Properties() {
     roomType: 'single',
     furnishingStatus: 'unfurnished',
     rentAmount: '',
-    photoUrl: '' // Writable photo URL
+    photoUrl: '', // Writable photo URL
+    latitude: 27.7172,
+    longitude: 85.3240
   });
 
   // Property Details & Application States
@@ -43,6 +45,24 @@ export default function Properties() {
 
   useEffect(() => {
     fetchProperties();
+
+    // Dynamically load Leaflet CDN CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+
+    // Dynamically load Leaflet CDN JS
+    if (!document.getElementById('leaflet-js')) {
+      const script = document.createElement('script');
+      script.id = 'leaflet-js';
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
   }, []);
 
   const fetchProperties = async () => {
@@ -111,7 +131,7 @@ export default function Properties() {
         title: addForm.title.trim(),
         description: addForm.description.trim(),
         district: addForm.district.trim(),
-        address: addForm.address.trim(),
+        address: `${addForm.address.trim()} || ${addForm.latitude},${addForm.longitude}`,
         room_type: addForm.roomType,
         furnishing_status: addForm.furnishingStatus,
         rent_amount: rent
@@ -140,7 +160,9 @@ export default function Properties() {
         roomType: 'single',
         furnishingStatus: 'unfurnished',
         rentAmount: '',
-        photoUrl: ''
+        photoUrl: '',
+        latitude: 27.7172,
+        longitude: 85.3240
       });
 
       await fetchProperties();
@@ -195,6 +217,106 @@ export default function Properties() {
       setApplicationSubmitLoading(false);
     }
   };
+
+  // Initialize Leaflet map in Add Property Modal
+  useEffect(() => {
+    if (!showAddModal) return;
+
+    let mapInstance = null;
+    let markerInstance = null;
+
+    const initMap = () => {
+      if (!window.L) {
+        setTimeout(initMap, 100);
+        return;
+      }
+
+      const mapContainer = document.getElementById('map-add');
+      if (!mapContainer) return;
+
+      const initialLat = 27.7172;
+      const initialLng = 85.3240;
+
+      // Set initial values in addForm coordinates
+      setAddForm(f => ({ ...f, latitude: initialLat, longitude: initialLng }));
+
+      mapInstance = window.L.map('map-add').setView([initialLat, initialLng], 13);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(mapInstance);
+
+      // Create a draggable marker
+      markerInstance = window.L.marker([initialLat, initialLng], { draggable: true }).addTo(mapInstance);
+
+      const updateCoords = (lat, lng) => {
+        setAddForm(f => ({ ...f, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
+      };
+
+      markerInstance.on('dragend', (e) => {
+        const position = markerInstance.getLatLng();
+        updateCoords(position.lat, position.lng);
+      });
+
+      mapInstance.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        markerInstance.setLatLng([lat, lng]);
+        updateCoords(lat, lng);
+      });
+    };
+
+    const timer = setTimeout(initMap, 200);
+
+    return () => {
+      clearTimeout(timer);
+      if (mapInstance) {
+        mapInstance.remove();
+      }
+    };
+  }, [showAddModal]);
+
+  // Initialize Leaflet map in Property Details Modal
+  useEffect(() => {
+    if (!showDetailsModal || !selectedProperty) return;
+
+    let mapInstance = null;
+
+    const initDetailMap = () => {
+      if (!window.L) {
+        setTimeout(initDetailMap, 100);
+        return;
+      }
+
+      const mapContainer = document.getElementById('map-detail');
+      if (!mapContainer) return;
+
+      const [_, coordsStr] = (selectedProperty.address || '').split(' || ');
+      let lat = 27.7172;
+      let lng = 85.3240;
+      if (coordsStr) {
+        const [cLat, cLng] = coordsStr.split(',').map(Number);
+        if (!isNaN(cLat) && !isNaN(cLng)) {
+          lat = cLat;
+          lng = cLng;
+        }
+      }
+
+      mapInstance = window.L.map('map-detail').setView([lat, lng], 15);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(mapInstance);
+
+      window.L.marker([lat, lng]).addTo(mapInstance);
+    };
+
+    const timer = setTimeout(initDetailMap, 200);
+
+    return () => {
+      clearTimeout(timer);
+      if (mapInstance) {
+        mapInstance.remove();
+      }
+    };
+  }, [showDetailsModal, selectedProperty]);
 
   return (
     <div>
@@ -393,6 +515,18 @@ export default function Properties() {
                 />
               </div>
 
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Pinpoint Location on Map *</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--primary-teal)', fontWeight: 500 }}>Drag marker or click to place</span>
+                </label>
+                <div id="map-add" style={{ height: '180px', width: '100%', borderRadius: '0.5rem', marginTop: '0.35rem', border: '1px solid rgba(255,255,255,0.1)' }}></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span>Lat: {addForm.latitude}</span>
+                  <span>Lng: {addForm.longitude}</span>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="form-group" style={{ flex: 1, margin: 0 }}>
                   <label className="form-label">Room Type</label>
@@ -505,8 +639,13 @@ export default function Properties() {
                 </div>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Location / Area</span>
-                  <div style={{ fontSize: '1rem', fontWeight: 600 }}>{selectedProperty.address || selectedProperty.district}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 600 }}>{(selectedProperty.address || '').split(' || ')[0] || selectedProperty.district}</div>
                 </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Location Map</span>
+                <div id="map-detail" style={{ height: '180px', width: '100%', borderRadius: '0.5rem', marginTop: '0.35rem', border: '1px solid rgba(255,255,255,0.1)' }}></div>
               </div>
 
               <div>
