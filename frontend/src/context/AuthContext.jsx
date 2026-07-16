@@ -53,6 +53,7 @@ export function AuthProvider({ children }) {
   // Listen for global 401s to force logout
   useEffect(() => {
     const handleUnauthorized = () => {
+      localStorage.removeItem('access_token');
       setUser(null);
       setIsInitializing(false);
       setIsLoading(false);
@@ -68,7 +69,11 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setIsLoading(true);
     try {
-      await api.post('/accounts/login/', { email, password });
+      const response = await api.post('/accounts/login/', { email, password });
+      const token = response.data.tokens?.access;
+      if (token) {
+        localStorage.setItem('access_token', token);
+      }
       await checkAuth(); // sets user state
       return { success: true };
     } catch (error) {
@@ -94,6 +99,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('Failed to logout cleanly from backend', error);
     } finally {
+      localStorage.removeItem('access_token');
       setUser(null);
       setIsLoading(false);
     }

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import PropertyCard from '../../components/Properties/PropertyCard';
 import SkeletonGrid from '../../components/Properties/SkeletonGrid';
-import { Search, Plus, FilterX } from 'lucide-react';
+import { Search, Plus, FilterX, Building2 } from 'lucide-react';
 
 export default function Properties() {
   const { role } = useAuth();

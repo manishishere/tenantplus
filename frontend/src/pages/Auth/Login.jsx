@@ -26,7 +26,7 @@ export default function Login() {
 
     const result = await login(email, password);
     if (result.success) {
-      navigate('/');
+      navigate('/dashboard');
     } else {
       setError(result.error);
     }
@@ -118,6 +118,19 @@ export default function Login() {
             )}
           </button>
         </form>
+
+        <footer style={{ marginTop: '2rem', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.25rem' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
+            Don't have an account?{' '}
+            <button 
+              onClick={() => navigate('/register')} 
+              style={{ background: 'none', border: 'none', color: 'var(--primary-indigo)', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+            >
+              Register here
+            </button>
+          </p>
+        </footer>
+
       </section>
     </div>
   );

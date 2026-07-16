@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Home, FileText, Wrench, Settings, Menu, X, LogOut, Building2 } from 'lucide-react';
+import { Home, FileText, Wrench, Settings, Menu, X, LogOut, Building2, Users, DollarSign } from 'lucide-react';
 
 export default function DashboardLayout() {
   const { user, role, logout } = useAuth();
@@ -16,8 +16,10 @@ export default function DashboardLayout() {
   const navItems = [
     { name: 'Dashboard', icon: Home, path: '/dashboard' },
     { name: 'Properties', icon: Building2, path: '/dashboard/properties' },
+    ...(role === 'landlord' ? [{ name: 'Applications', icon: Users, path: '/dashboard/applications' }] : []),
     { name: 'Agreements', icon: FileText, path: '/dashboard/agreements' },
     { name: 'Maintenance', icon: Wrench, path: '/dashboard/maintenance' },
+    { name: 'Utilities', icon: DollarSign, path: '/dashboard/utilities' },
   ];
 
   return (
