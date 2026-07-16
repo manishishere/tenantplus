@@ -17,6 +17,20 @@ export default function Properties() {
   const [roomTypeFilter, setRoomTypeFilter] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
 
+  // Add Property States
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState(null);
+  const [addForm, setAddForm] = useState({
+    title: '',
+    description: '',
+    district: '',
+    address: '',
+    roomType: 'single',
+    furnishingStatus: 'unfurnished',
+    rentAmount: ''
+  });
+
   useEffect(() => {
     fetchProperties();
   }, []);
@@ -64,6 +78,54 @@ export default function Properties() {
     setMaxPrice('');
   };
 
+  const handleAddProperty = async (e) => {
+    e.preventDefault();
+    if (addLoading) return;
+    setAddError(null);
+
+    if (addForm.title.trim().length < 5) {
+      setAddError('Title must be at least 5 characters long.');
+      return;
+    }
+
+    const rent = parseFloat(addForm.rentAmount);
+    if (isNaN(rent) || rent <= 0) {
+      setAddError('Rent amount must be greater than zero.');
+      return;
+    }
+
+    setAddLoading(true);
+    try {
+      await api.post('/properties/', {
+        title: addForm.title.trim(),
+        description: addForm.description.trim(),
+        district: addForm.district.trim(),
+        address: addForm.address.trim(),
+        room_type: addForm.roomType,
+        furnishing_status: addForm.furnishingStatus,
+        rent_amount: rent
+      });
+
+      setShowAddModal(false);
+      setAddForm({
+        title: '',
+        description: '',
+        district: '',
+        address: '',
+        roomType: 'single',
+        furnishingStatus: 'unfurnished',
+        rentAmount: ''
+      });
+
+      await fetchProperties();
+    } catch (err) {
+      console.error(err);
+      setAddError(err.response?.data?.detail || err.response?.data?.title?.[0] || err.response?.data?.rent_amount?.[0] || 'Failed to list property.');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -75,7 +137,11 @@ export default function Properties() {
         </div>
 
         {role === 'landlord' && (
-          <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button 
+            onClick={() => setShowAddModal(true)} 
+            className="btn-primary" 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
             <Plus size={20} />
             Add New Property
           </button>
@@ -169,6 +235,143 @@ export default function Properties() {
                   : "To be completely honest, there are currently no properties listed on the platform. Please check back later or ask your landlord to create a listing.")
               : "No properties match your current search filters. Try resetting them."}
           </p>
+        </div>
+      )}
+
+      {/* Add New Property Modal */}
+      {showAddModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(8px)' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0 }}>List New Property</h3>
+              <button 
+                onClick={() => setShowAddModal(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer', padding: 0 }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {addError && (
+              <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.25rem', fontSize: '0.85rem' }}>
+                {addError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddProperty} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Property Title *</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="e.g. Spacious 2 BHK Flat in Lalitpur"
+                  value={addForm.title}
+                  onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
+                  required
+                />
+                <small style={{ color: 'var(--text-muted)' }}>Min. 5 characters</small>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Description *</label>
+                <textarea 
+                  className="form-input" 
+                  placeholder="Describe your property (amenities, location highlights, rules, etc.)"
+                  rows={3}
+                  value={addForm.description}
+                  onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                  <label className="form-label">District *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="e.g. Lalitpur"
+                    value={addForm.district}
+                    onChange={(e) => setAddForm({ ...addForm, district: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                  <label className="form-label">Rent Amount (Rs. / month) *</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    placeholder="e.g. 15000"
+                    value={addForm.rentAmount}
+                    onChange={(e) => setAddForm({ ...addForm, rentAmount: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Detailed Address *</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="e.g. Jhamsikhel, Ward 3, House 42"
+                  value={addForm.address}
+                  onChange={(e) => setAddForm({ ...addForm, address: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                  <label className="form-label">Room Type</label>
+                  <select 
+                    className="form-input"
+                    value={addForm.roomType}
+                    onChange={(e) => setAddForm({ ...addForm, roomType: e.target.value })}
+                  >
+                    <option value="single">Single Room</option>
+                    <option value="double">Double Room</option>
+                    <option value="flat">Flat</option>
+                    <option value="house">Full House</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                  <label className="form-label">Furnishing Status</label>
+                  <select 
+                    className="form-input"
+                    value={addForm.furnishingStatus}
+                    onChange={(e) => setAddForm({ ...addForm, furnishingStatus: e.target.value })}
+                  >
+                    <option value="unfurnished">Unfurnished</option>
+                    <option value="semi_furnished">Semi Furnished</option>
+                    <option value="furnished">Furnished</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddModal(false)}
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-light)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', padding: '0.5rem 1.5rem', cursor: 'pointer', fontWeight: 500 }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  disabled={addLoading}
+                  style={{ padding: '0.5rem 1.5rem' }}
+                >
+                  {addLoading ? 'Listing Property...' : 'List Property'}
+                </button>
+              </div>
+
+            </form>
+
+          </div>
         </div>
       )}
     </div>
