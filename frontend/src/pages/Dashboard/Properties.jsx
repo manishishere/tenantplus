@@ -159,13 +159,15 @@ export default function Properties() {
           ))}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'var(--bg-light)', borderRadius: '1rem', border: '1px dashed rgba(0,0,0,0.1)' }}>
+        <div className="glass-panel" style={{ textAlign: 'center', padding: '4rem 2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
           <Building2 size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem auto', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>No properties found</h3>
-          <p style={{ color: 'var(--text-muted)' }}>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>No Properties Available</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', maxWidth: '400px', margin: '0 auto' }}>
             {properties.length === 0 
-              ? (role === 'landlord' ? "You haven't added any properties yet." : "There are currently no properties available.")
-              : "No properties match your current filters. Try adjusting them."}
+              ? (role === 'landlord' 
+                  ? "You haven't added any properties yet. Click the 'Add New Property' button above to create your first listing." 
+                  : "To be completely honest, there are currently no properties listed on the platform. Please check back later or ask your landlord to create a listing.")
+              : "No properties match your current search filters. Try resetting them."}
           </p>
         </div>
       )}
