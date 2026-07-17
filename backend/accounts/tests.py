@@ -8,7 +8,7 @@ from django.test import RequestFactory, TestCase
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from .middleware import RoleAuthorizationMiddleware, authorizeRoles
+
 from .models import EmailVerificationOTP, PasswordResetToken
 from .views import PasswordResetRequestView, RegisterView, ResendOTPView, VerifyEmailView
 
@@ -129,8 +129,8 @@ class EmailVerificationOTPTests(TestCase):
         otp.save(update_fields=['created_at'])
         self.assertTrue(otp.is_expired())
 
-    @patch('accounts.views.send_mail')
-    def test_register_view_creates_email_verification_otp(self, mocked_send_mail):
+    @patch('accounts.views.async_task')
+    def test_register_view_creates_email_verification_otp(self, mocked_async_task):
         """Registration should create and send an email verification OTP."""
         request = self.factory.post(
             '/api/accounts/register/',
@@ -152,8 +152,7 @@ class EmailVerificationOTPTests(TestCase):
         otp = EmailVerificationOTP.objects.filter(user=created_user).latest('created_at')
         self.assertEqual(len(otp.otp), 6)
         self.assertTrue(otp.otp.isdigit())
-        mocked_send_mail.assert_called_once()
-
+        mocked_async_task.assert_called_once()
     def test_verify_email_view_marks_user_verified(self):
         """Valid OTP should mark the email and OTP as verified/used."""
         otp_record = EmailVerificationOTP.objects.create(user=self.user, otp='123456')
@@ -195,67 +194,3 @@ class EmailVerificationOTPTests(TestCase):
         self.assertEqual(response.data['detail'], 'Email is already verified.')
 
 
-class RoleAuthorizationMiddlewareTests(TestCase):
-    """Validate role-based access enforcement for protected views."""
-
-    def setUp(self):
-        self.factory = RequestFactory()
-        self.user = get_user_model().objects.create_user(
-            email='moderator@example.com',
-            password='secret123',
-            full_name='Moderator User',
-            role='moderator',
-        )
-        self.admin = get_user_model().objects.create_user(
-            email='admin@example.com',
-            password='secret123',
-            full_name='Admin User',
-            role='admin',
-        )
-
-    def test_middleware_denies_non_authorized_roles(self):
-        """A user without the required role should receive a 403 response."""
-        decorated_view = authorizeRoles('admin')(lambda request: HttpResponse('ok'))
-        middleware = RoleAuthorizationMiddleware(lambda request: HttpResponse('next'))
-        request = self.factory.get('/test/')
-        request.user = self.user
-
-        response = middleware.process_view(request, decorated_view, (), {})
-
-        self.assertEqual(response.status_code, 403)
-
-    def test_middleware_allows_authorized_roles(self):
-        """A user with the required role should be allowed through."""
-        decorated_view = authorizeRoles('admin')(lambda request: HttpResponse('ok'))
-        middleware = RoleAuthorizationMiddleware(lambda request: HttpResponse('next'))
-        request = self.factory.get('/test/')
-        request.user = self.admin
-
-        response = middleware.process_view(request, decorated_view, (), {})
-
-        self.assertIsNone(response)
-
-
-class PasswordResetRequestViewTests(TestCase):
-    """Validate password reset email delivery failure handling."""
-
-    def setUp(self):
-        self.factory = RequestFactory()
-        self.user = get_user_model().objects.create_user(
-            email='reset@example.com',
-            password='secret123',
-            full_name='Reset User',
-            role='tenant',
-        )
-
-    @patch('accounts.views.send_mail', side_effect=smtplib.SMTPAuthenticationError(534, b'auth required'))
-    def test_password_reset_request_returns_bad_gateway_on_smtp_auth_failure(self, mocked_send_mail):
-        """SMTP auth failures should return a friendly 502 instead of a 500."""
-        request = self.factory.post('/api/accounts/password-reset/request/', {'email': self.user.email}, format='json')
-
-        response = PasswordResetRequestView.as_view()(request)
-
-        self.assertEqual(response.status_code, 502)
-        self.assertIn('Gmail rejected the SMTP login', response.data['detail'])
-        self.assertFalse(PasswordResetToken.objects.filter(user=self.user).exists())
-        mocked_send_mail.assert_called_once()

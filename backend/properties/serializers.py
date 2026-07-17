@@ -17,6 +17,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
 
     photo_count = serializers.SerializerMethodField()
     landlord_name = serializers.SerializerMethodField()
+    first_photo = serializers.SerializerMethodField()
 
     class Meta:
         model = Property
@@ -31,6 +32,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
             'created_at',
             'photo_count',
             'landlord_name',
+            'first_photo',
         )
 
     def get_photo_count(self, obj):
@@ -38,6 +40,10 @@ class PropertyListSerializer(serializers.ModelSerializer):
 
     def get_landlord_name(self, obj):
         return obj.landlord.full_name
+
+    def get_first_photo(self, obj):
+        photo = obj.photos.first()
+        return photo.photo_url if photo else None
 
 
 class PropertyDetailSerializer(serializers.ModelSerializer):

@@ -6,6 +6,7 @@ from .views import (
     RentPaymentDetailView,
     RentPaymentListCreateView,
     RentPaymentSummaryView,
+    RentPaymentReceiptDownloadView,
 )
 
 urlpatterns = [
@@ -14,4 +15,5 @@ urlpatterns = [
     path('esewa/initiate/', EsewaInitiateView.as_view()),
     path('esewa/verify/', EsewaVerifyView.as_view()),
     path('<uuid:id>/', RentPaymentDetailView.as_view()),
+    path('<uuid:id>/receipt/', RentPaymentReceiptDownloadView.as_view()),
 ]

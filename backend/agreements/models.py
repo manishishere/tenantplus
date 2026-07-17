@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 class Agreement(models.Model):
@@ -45,6 +46,7 @@ class Agreement(models.Model):
     end_date = models.DateField()
     tenant_acknowledged = models.BooleanField(default=False)
     landlord_acknowledged = models.BooleanField(default=False)
+    history = HistoricalRecords()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

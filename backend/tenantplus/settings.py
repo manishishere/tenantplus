@@ -58,6 +58,9 @@ INSTALLED_APPS = [
     'rent_payments',
     'maintenance',
     'inspections',
+    'utilities',
+    'django_q',
+    'simple_history',
 ]
 
 MIDDLEWARE = [
@@ -67,9 +70,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'accounts.middleware.RoleAuthorizationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 ROOT_URLCONF = 'tenantplus.urls'
@@ -195,3 +198,12 @@ CSRF_COOKIE_SECURE = COOKIE_SECURE
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 APPEND_SLASH = True
+
+Q_CLUSTER = {
+    'name': 'tenantplus_cluster',
+    'orm': 'default',
+    'workers': 2,
+    'recycle': 500,
+    'timeout': 60,
+    'retry': 120,
+}

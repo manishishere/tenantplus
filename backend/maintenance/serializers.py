@@ -28,6 +28,7 @@ class MaintenanceRequestListSerializer(serializers.ModelSerializer):
 
 class MaintenanceRequestDetailSerializer(serializers.ModelSerializer):
     images = MaintenanceImageSerializer(many=True, read_only=True)
+    history_trail = serializers.SerializerMethodField()
 
     class Meta:
         model = MaintenanceRequest
@@ -43,7 +44,23 @@ class MaintenanceRequestDetailSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'images',
+            'history_trail',
         )
+
+    def get_history_trail(self, obj):
+        trail = []
+        try:
+            for h in obj.history.all().order_by('history_date'):
+                trail.append({
+                    'status': h.status,
+                    'priority': h.priority,
+                    'changed_by': h.history_user.full_name if (h.history_user and hasattr(h.history_user, 'full_name')) else 'System',
+                    'timestamp': h.history_date.isoformat(),
+                    'change_type': h.history_type,
+                })
+        except Exception:
+            pass
+        return trail
 
 
 class MaintenanceRequestCreateSerializer(serializers.ModelSerializer):

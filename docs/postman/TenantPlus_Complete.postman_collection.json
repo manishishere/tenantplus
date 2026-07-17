@@ -1,0 +1,2280 @@
+{
+  "info": {
+    "_postman_id": "f5d0a6c7-3b2d-4c3e-9182-84b490f23f5b",
+    "name": "TenantPlus Complete API Flow",
+    "description": "Complete consolidated Postman collection for testing the entire TenantPlus application flow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Ramesh Thapa\",\n  \"email\": \"ramesh@example.com\",\n  \"phone\": \"9800000000\",\n  \"password\": \"StrongPass123!\",\n  \"password2\": \"StrongPass123!\",\n  \"role\": \"tenant\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/register/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ramesh@example.com\",\n  \"password\": \"StrongPass123!\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/login/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/verify-email/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "verify-email"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/resend-otp/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "resend-otp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/profile/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Ramesh Kumar Thapa\",\n  \"phone\": \"9800000001\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/profile/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"old_password\": \"StrongPass123!\",\n  \"new_password\": \"NewPass456!\",\n  \"new_password2\": \"NewPass456!\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/change-password/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "change-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Password Reset Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ramesh@example.com\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/password-reset/request/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "password-reset",
+                "request"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Password Reset Confirm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"new_password\": \"NewPass456!\",\n  \"new_password2\": \"NewPass456!\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/password-reset/confirm/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "password-reset",
+                "confirm"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Documents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/documents/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "documents"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doc_type\": \"citizenship\",\n  \"doc_url\": \"https://example.com/docs/citizenship.pdf\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/documents/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "documents"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/accounts/logout/",
+              "host": [
+                "http://127.0.0.1:8000"
+              ],
+              "path": [
+                "api",
+                "accounts",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Properties",
+      "item": [
+        {
+          "name": "List Properties",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/properties/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "ordering",
+                  "value": "-created_at",
+                  "disabled": true
+                },
+                {
+                  "key": "room_type",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "furnishing_status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "district",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "rent_amount__gte",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "rent_amount__lte",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Retrieve a paginated list of available properties with optional filtering and search"
+          }
+        },
+        {
+          "name": "Create Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cozy Studio Apartment\",\n  \"description\": \"A bright studio near the city center with natural lighting\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"123 Main Street, Thamel\",\n  \"room_type\": \"flat\",\n  \"furnishing_status\": \"furnished\",\n  \"rent_amount\": \"18000.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/properties/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties"
+              ]
+            },
+            "description": "Create a new property listing (Landlord only). Returns the created property details."
+          }
+        },
+        {
+          "name": "Get Property Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "{{property_id}}"
+              ]
+            },
+            "description": "Retrieve detailed information for a specific property including photos and landlord details"
+          }
+        },
+        {
+          "name": "Update Property",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Cozy Studio Apartment\",\n  \"description\": \"A bright studio near the city center with updated details\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"123 Main Street, Thamel\",\n  \"room_type\": \"flat\",\n  \"furnishing_status\": \"furnished\",\n  \"rent_amount\": \"20000.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "{{property_id}}"
+              ]
+            },
+            "description": "Update a property listing (Landlord only, must own the property)"
+          }
+        },
+        {
+          "name": "Delete Property",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "{{property_id}}"
+              ]
+            },
+            "description": "Delete a property (Landlord only, must own the property, cannot delete if active tenancies exist)"
+          }
+        },
+        {
+          "name": "My Listings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/my-listings/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "my-listings"
+              ]
+            },
+            "description": "Retrieve all listings owned by the authenticated landlord (Landlord only)"
+          }
+        },
+        {
+          "name": "Toggle Property Availability",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}/toggle-availability/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "{{property_id}}",
+                "toggle-availability"
+              ]
+            },
+            "description": "Toggle the availability status of a property (Landlord only, must own the property)"
+          }
+        },
+        {
+          "name": "List Property Photos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}/photos/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "{{property_id}}",
+                "photos"
+              ]
+            },
+            "description": "Retrieve all photos for a property, ordered by sort_order"
+          }
+        },
+        {
+          "name": "Upload Property Photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo_url",
+                  "value": "https://example.com/photo.jpg",
+                  "type": "text"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}/photos/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "{{property_id}}",
+                "photos"
+              ]
+            },
+            "description": "Upload a new photo for a property (Landlord only, must own the property)"
+          }
+        },
+        {
+          "name": "Delete Property Photo",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}/photos/{{photo_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "{{property_id}}",
+                "photos",
+                "{{photo_id}}"
+              ]
+            },
+            "description": "Delete a photo from a property (Landlord only, must own the property)"
+          }
+        },
+        {
+          "name": "List Saved Properties",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/saved/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "saved"
+              ]
+            },
+            "description": "Retrieve all properties saved by the authenticated tenant (Tenant only)"
+          }
+        },
+        {
+          "name": "Toggle Save Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/properties/{{property_id}}/save/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "properties",
+                "{{property_id}}",
+                "save"
+              ]
+            },
+            "description": "Toggle saving/unsaving a property for the authenticated tenant (Tenant only)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications Agreements",
+      "item": [
+        {
+          "name": "Applications",
+          "item": [
+            {
+              "name": "List Applications",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{tenant_access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/applications/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "applications"
+                  ]
+                },
+                "description": "List applications visible to the authenticated user. Use a tenant token to see tenant applications or a landlord token to see applications for owned properties."
+              }
+            },
+            {
+              "name": "Create Application",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{tenant_access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property\": \"{{property_id}}\",\n  \"message\": \"I am interested in this property and can move in next month.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/applications/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "applications"
+                  ]
+                },
+                "description": "Submit a new application as a tenant."
+              }
+            },
+            {
+              "name": "Get Application Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{tenant_access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/applications/{{application_id}}/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "applications",
+                    "{{application_id}}"
+                  ]
+                },
+                "description": "Retrieve a single application as the tenant or the property owner landlord."
+              }
+            },
+            {
+              "name": "Accept Application",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{landlord_access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"accepted\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/applications/{{application_id}}/status/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "applications",
+                    "{{application_id}}",
+                    "status"
+                  ]
+                },
+                "description": "Accept an application as the owning landlord. This should create an agreement automatically."
+              }
+            },
+            {
+              "name": "Reject Application",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{landlord_access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"rejected\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/applications/{{application_id}}/status/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "applications",
+                    "{{application_id}}",
+                    "status"
+                  ]
+                },
+                "description": "Reject an application as the owning landlord."
+              }
+            },
+            {
+              "name": "Withdraw Application",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{tenant_access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/applications/{{application_id}}/withdraw/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "applications",
+                    "{{application_id}}",
+                    "withdraw"
+                  ]
+                },
+                "description": "Withdraw a pending application as the tenant who submitted it."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agreements",
+          "item": [
+            {
+              "name": "List Agreements",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{tenant_access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements"
+                  ]
+                },
+                "description": "List agreements visible to the authenticated user. Use a tenant token to see tenant agreements or a landlord token to see landlord agreements."
+              }
+            },
+            {
+              "name": "Get Agreement Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{tenant_access_token}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}"
+                  ]
+                },
+                "description": "Retrieve a single agreement as either the tenant or landlord."
+              }
+            },
+            {
+              "name": "Acknowledge Agreement as Tenant",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{tenant_access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/acknowledge/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}",
+                    "acknowledge"
+                  ]
+                },
+                "description": "Mark the agreement acknowledged as the tenant."
+              }
+            },
+            {
+              "name": "Acknowledge Agreement as Landlord",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{landlord_access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/acknowledge/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}",
+                    "acknowledge"
+                  ]
+                },
+                "description": "Mark the agreement acknowledged as the landlord."
+              }
+            },
+            {
+              "name": "Terminate Agreement",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{tenant_access_token}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"termination_reason\": \"Tenant is moving out at the end of the month.\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/api/agreements/{{agreement_id}}/terminate/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "agreements",
+                    "{{agreement_id}}",
+                    "terminate"
+                  ]
+                },
+                "description": "Terminate an active agreement as either the tenant or landlord."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Agreements",
+      "item": [
+        {
+          "name": "Backend API",
+          "description": "Backend-only collection for agreements. In a production setup, frontend tests would live in a separate collection or runner and call the same endpoints through environment variables.",
+          "item": [
+            {
+              "name": "Tenant Flow",
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{tenant_access_token}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "item": [
+                {
+                  "name": "List My Agreements",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{base_url}}/api/agreements/",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "agreements"
+                      ]
+                    },
+                    "description": "List agreements visible to the authenticated tenant."
+                  }
+                },
+                {
+                  "name": "Get Agreement Detail",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "agreements",
+                        "{{agreement_id}}"
+                      ]
+                    },
+                    "description": "Retrieve an agreement as the tenant."
+                  }
+                },
+                {
+                  "name": "Acknowledge Agreement",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{}"
+                    },
+                    "url": {
+                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/acknowledge/",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "agreements",
+                        "{{agreement_id}}",
+                        "acknowledge"
+                      ]
+                    },
+                    "description": "Mark the agreement acknowledged as the tenant."
+                  }
+                },
+                {
+                  "name": "Terminate Agreement",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"termination_reason\": \"Ending tenancy at lease expiry.\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/terminate/",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "agreements",
+                        "{{agreement_id}}",
+                        "terminate"
+                      ]
+                    },
+                    "description": "Terminate an active agreement as the tenant."
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Landlord Flow",
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{landlord_access_token}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "item": [
+                {
+                  "name": "List My Agreements",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{base_url}}/api/agreements/",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "agreements"
+                      ]
+                    },
+                    "description": "List agreements visible to the authenticated landlord."
+                  }
+                },
+                {
+                  "name": "Get Agreement Detail",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "agreements",
+                        "{{agreement_id}}"
+                      ]
+                    },
+                    "description": "Retrieve an agreement as the landlord."
+                  }
+                },
+                {
+                  "name": "Acknowledge Agreement",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{}"
+                    },
+                    "url": {
+                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/acknowledge/",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "agreements",
+                        "{{agreement_id}}",
+                        "acknowledge"
+                      ]
+                    },
+                    "description": "Mark the agreement acknowledged as the landlord."
+                  }
+                },
+                {
+                  "name": "Terminate Agreement",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"termination_reason\": \"Property needs to be listed again.\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/terminate/",
+                      "host": [
+                        "{{base_url}}"
+                      ],
+                      "path": [
+                        "api",
+                        "agreements",
+                        "{{agreement_id}}",
+                        "terminate"
+                      ]
+                    },
+                    "description": "Terminate an active agreement as the landlord."
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Rent Payments",
+      "item": [
+        {
+          "name": "List Rent Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/rent-payments/?agreement_id={{agreement_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "rent-payments"
+              ],
+              "query": [
+                {
+                  "key": "agreement_id",
+                  "value": "{{agreement_id}}",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List rent payments for the authenticated tenant or landlord. Optionally filter by agreement_id."
+          }
+        },
+        {
+          "name": "Create Manual Rent Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"payment_month\": \"2026-07-01\",\n  \"amount\": \"15000.00\",\n  \"notes\": \"Paid in cash.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/rent-payments/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "rent-payments"
+              ]
+            },
+            "description": "Record a manual rent payment. Tenants only."
+          }
+        },
+        {
+          "name": "Get Rent Payment Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/rent-payments/{{rent_payment_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "rent-payments",
+                "{{rent_payment_id}}"
+              ]
+            },
+            "description": "Retrieve a single rent payment record."
+          }
+        },
+        {
+          "name": "Rent Payment Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/rent-payments/summary/?agreement_id={{agreement_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "rent-payments",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "agreement_id",
+                  "value": "{{agreement_id}}"
+                }
+              ]
+            },
+            "description": "Get total paid, late fees, count, and latest payment info for a tenant agreement."
+          }
+        },
+        {
+          "name": "Initiate eSewa Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"payment_month\": \"2026-07-01\",\n  \"amount\": \"15000.00\",\n  \"notes\": \"Initiate eSewa payment.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/rent-payments/esewa/initiate/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "rent-payments",
+                "esewa",
+                "initiate"
+              ]
+            },
+            "description": "Create an eSewa payment log and get form data for redirecting to eSewa."
+          }
+        },
+        {
+          "name": "Verify eSewa Payment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/rent-payments/esewa/verify/?data={{esewa_data}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "rent-payments",
+                "esewa",
+                "verify"
+              ],
+              "query": [
+                {
+                  "key": "data",
+                  "value": "{{esewa_data}}"
+                }
+              ]
+            },
+            "description": "Verify the callback payload returned by eSewa after payment completion."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Maintenance",
+      "item": [
+        {
+          "name": "List Maintenance Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/maintenance/?status=pending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "maintenance"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List maintenance requests visible to the authenticated tenant or landlord. Optional status filter."
+          }
+        },
+        {
+          "name": "Create Maintenance Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "property",
+                  "value": "{{property_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Leaking bathroom pipe",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Water is leaking under the sink and needs urgent repair.",
+                  "type": "text"
+                },
+                {
+                  "key": "priority",
+                  "value": "high",
+                  "type": "text"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/maintenance/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "maintenance"
+              ]
+            },
+            "description": "Create a maintenance request as a tenant. Supports uploading multiple images using repeated images fields."
+          }
+        },
+        {
+          "name": "Get Maintenance Request Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/maintenance/{{maintenance_request_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "maintenance",
+                "{{maintenance_request_id}}"
+              ]
+            },
+            "description": "Retrieve a single maintenance ticket if the authenticated user has access."
+          }
+        },
+        {
+          "name": "Update Maintenance Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Leaking bathroom pipe - updated\",\n  \"description\": \"The leak has worsened and needs urgent attention.\",\n  \"priority\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/maintenance/{{maintenance_request_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "maintenance",
+                "{{maintenance_request_id}}"
+              ]
+            },
+            "description": "Tenants can update pending requests; landlords can update status and priority."
+          }
+        },
+        {
+          "name": "Landlord Update Status / Priority",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/maintenance/{{maintenance_request_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "maintenance",
+                "{{maintenance_request_id}}"
+              ]
+            },
+            "description": "Landlords can move a ticket through pending, in_progress, resolved, or cancelled and adjust priority."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inspections",
+      "item": [
+        {
+          "name": "List Inspections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inspections/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inspections"
+              ]
+            },
+            "description": "List inspections visible to the authenticated tenant or landlord."
+          }
+        },
+        {
+          "name": "Create Inspection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"inspection_date\": \"2026-07-09\",\n  \"structural_condition\": \"good\",\n  \"utility_status\": \"cleared\",\n  \"total_deductions\": \"0.00\",\n  \"deduction_reason\": \"No deductions required.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inspections/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inspections"
+              ]
+            },
+            "description": "Create a move-out inspection report. Landlords or admins only."
+          }
+        },
+        {
+          "name": "Get Inspection Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/inspections/{{inspection_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inspections",
+                "{{inspection_id}}"
+              ]
+            },
+            "description": "Retrieve a single inspection report if the authenticated user is related to the agreement."
+          }
+        },
+        {
+          "name": "Update Inspection",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"structural_condition\": \"fair\",\n  \"utility_status\": \"pending_bills\",\n  \"total_deductions\": \"2500.00\",\n  \"deduction_reason\": \"Minor wall damage and unpaid utility bill.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inspections/{{inspection_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inspections",
+                "{{inspection_id}}"
+              ]
+            },
+            "description": "Update an inspection report before finalization. Landlords or admins only."
+          }
+        },
+        {
+          "name": "Finalize Inspection",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_finalized\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/inspections/{{inspection_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "inspections",
+                "{{inspection_id}}"
+              ]
+            },
+            "description": "Finalize the inspection. Finalization should trigger the agreement transition workflow."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notices",
+      "item": [
+        {
+          "name": "List Notices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notices/?agreement_id={{agreement_id}}&notice_type=termination",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notices"
+              ],
+              "query": [
+                {
+                  "key": "agreement_id",
+                  "value": "{{agreement_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "notice_type",
+                  "value": "termination",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List notices visible to the authenticated user. Optional agreement_id and notice_type filters can be enabled in the query string."
+          }
+        },
+        {
+          "name": "Create Termination Notice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"notice_type\": \"termination\",\n  \"subject\": \"Termination notice for tenancy agreement\",\n  \"body\": \"This notice is served to formally terminate the tenancy agreement in accordance with the agreement terms and applicable law.\",\n  \"notice_period_days\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notices/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notices"
+              ]
+            },
+            "description": "Create a termination notice as the tenant or landlord for an active agreement."
+          }
+        },
+        {
+          "name": "Create Eviction Notice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"notice_type\": \"eviction\",\n  \"subject\": \"Eviction notice\",\n  \"body\": \"This notice is issued due to a tenancy violation and serves as a formal eviction warning.\",\n  \"notice_period_days\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notices/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notices"
+              ]
+            },
+            "description": "Create an eviction notice as a landlord for an active agreement."
+          }
+        },
+        {
+          "name": "Create Rent Arrears Warning",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"notice_type\": \"rent_arrears\",\n  \"subject\": \"Rent arrears warning\",\n  \"body\": \"Your rent payment is overdue. Please clear the outstanding balance within the notice period.\",\n  \"notice_period_days\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notices/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notices"
+              ]
+            },
+            "description": "Create a rent arrears warning as a landlord for an active agreement."
+          }
+        },
+        {
+          "name": "Create General Notice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"notice_type\": \"general\",\n  \"subject\": \"General notice\",\n  \"body\": \"This is a general formal communication regarding the tenancy.\",\n  \"notice_period_days\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notices/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notices"
+              ]
+            },
+            "description": "Create a general notice as the tenant or landlord for an active agreement."
+          }
+        },
+        {
+          "name": "Get Notice Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notices/{{notice_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notices",
+                "{{notice_id}}"
+              ]
+            },
+            "description": "Retrieve a notice detail if the authenticated user has access."
+          }
+        },
+        {
+          "name": "Acknowledge Notice",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notices/{{notice_id}}/acknowledge/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notices",
+                "{{notice_id}}",
+                "acknowledge"
+              ]
+            },
+            "description": "Acknowledge a notice as the tenant or landlord, but not as the issuer."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disputes",
+      "item": [
+        {
+          "name": "List Disputes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/disputes/?status=open",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "disputes"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "open",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List disputes visible to the authenticated user. Admins can see all disputes; tenants and landlords see disputes tied to their agreements."
+          }
+        },
+        {
+          "name": "Create Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"dispute_type\": \"maintenance_neglect\",\n  \"subject\": \"Unresolved maintenance issue\",\n  \"description\": \"The landlord has not addressed the repeated water leakage issue despite multiple requests.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/disputes/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "disputes"
+              ]
+            },
+            "description": "Create a dispute as a tenant or landlord who is a party to the agreement."
+          }
+        },
+        {
+          "name": "Get Dispute Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/disputes/{{dispute_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{dispute_id}}"
+              ]
+            },
+            "description": "Retrieve a dispute detail if the authenticated user has access."
+          }
+        },
+        {
+          "name": "Resolve Dispute",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"resolved\",\n  \"admin_notes\": \"Reviewed and resolved after landlord confirmed the repair schedule.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/disputes/{{dispute_id}}/resolve/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "disputes",
+                "{{dispute_id}}",
+                "resolve"
+              ]
+            },
+            "description": "Resolve or dismiss a dispute as an admin user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Utilities",
+      "item": [
+        {
+          "name": "List Utility Bills",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/utilities/bills/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "utilities",
+                "bills",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PDFs",
+      "item": [
+        {
+          "name": "Download Agreement PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/agreements/:id/pdf/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "agreements",
+                ":id",
+                "pdf",
+                ""
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Receipt PDF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/rent-payments/:id/receipt/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rent-payments",
+                ":id",
+                "receipt",
+                ""
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    }
+  ]
+}

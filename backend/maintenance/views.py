@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import IsTenant
+from core.permissions import IsTenant
 
 from .models import MaintenanceImage, MaintenanceRequest
 from .pagination import MaintenancePagination

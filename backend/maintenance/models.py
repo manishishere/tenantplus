@@ -2,6 +2,7 @@ import uuid
 from datetime import date
 
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 class MaintenanceRequest(models.Model):
@@ -37,6 +38,7 @@ class MaintenanceRequest(models.Model):
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     ticket_no = models.CharField(max_length=50, unique=True, blank=True)
+    history = HistoricalRecords()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
