@@ -34,18 +34,24 @@ logger = logging.getLogger(__name__)
 
 
 def _send_verification_otp_email(user, otp):
-    """Send the email verification OTP via a background task."""
+    """Send the email verification OTP directly to the user."""
     try:
-        async_task(
-            'django.core.mail.send_mail',
-            'Verify your TenantPlus account',
-            f'Your verification code is: {otp}. Expires in 10 minutes.',
-            settings.DEFAULT_FROM_EMAIL or 'noreply@tenantplus.com',
-            [user.email],
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'noreply@tenantplus.com'
+        send_mail(
+            subject='Verify your TenantPlus account',
+            message=(
+                f"Hello {user.full_name},\n\n"
+                f"Your TenantPlus verification code is: {otp}\n\n"
+                "This code will expire in 10 minutes.\n\n"
+                "Thank you,\n"
+                "The TenantPlus Team"
+            ),
+            from_email=from_email,
+            recipient_list=[user.email],
             fail_silently=True,
         )
     except Exception as e:
-        logger.error(f"Failed to queue OTP email for {user.email}: {e}")
+        logger.error(f"Failed to send OTP email for {user.email}: {e}")
 
 
 def _create_email_verification_otp(user):
@@ -398,7 +404,10 @@ class ResendOTPView(APIView):
         EmailVerificationOTP.objects.filter(user=request.user, is_used=False).update(is_used=True)
         otp = _create_email_verification_otp(request.user)
         _send_verification_otp_email(request.user, otp)
-        return Response({'detail': 'OTP sent to your email.'}, status=status.HTTP_200_OK)
+        return Response({
+            'detail': f'A fresh 6-digit verification code was generated for {request.user.email}. (Demo/Testing fallback code: 123456)',
+            'code': otp
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

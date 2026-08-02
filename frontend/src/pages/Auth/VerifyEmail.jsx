@@ -89,8 +89,8 @@ export default function VerifyEmail() {
     setError('');
     setMessage('');
     try {
-      await api.post('/accounts/resend-otp/');
-      setMessage('A new code has been sent to your email.');
+      const res = await api.post('/accounts/resend-otp/');
+      setMessage(res.data?.detail || 'A new verification code has been sent.');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0].focus();
     } catch (err) {
