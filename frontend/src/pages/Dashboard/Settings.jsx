@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { parseApiError } from '../../utils/errorUtils';
 import { 
   User, 
   Sun, 
@@ -133,9 +134,30 @@ export default function Settings() {
     }
   };
 
+  const validateDocFile = (file, label) => {
+    if (!file) return null;
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
+    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (file.size > MAX_SIZE) {
+      return `${label} (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 5MB limit. Please select a smaller file.`;
+    }
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return `${label} format is not supported. Please upload a PNG, JPG, or PDF file.`;
+    }
+    return null;
+  };
+
   const handleFrontFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      const err = validateDocFile(file, docType === 'citizenship' ? 'Citizenship Front photo' : 'Document file');
+      if (err) {
+        setDocMsg({ type: 'error', text: err });
+        setDocFile(null);
+        setFrontPreview(null);
+        return;
+      }
+      setDocMsg({ type: '', text: '' });
       setDocFile(file);
       if (file.type.startsWith('image/')) {
         setFrontPreview(URL.createObjectURL(file));
@@ -148,6 +170,14 @@ export default function Settings() {
   const handleBackFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      const err = validateDocFile(file, 'Citizenship Back photo');
+      if (err) {
+        setDocMsg({ type: 'error', text: err });
+        setBackDocFile(null);
+        setBackPreview(null);
+        return;
+      }
+      setDocMsg({ type: '', text: '' });
       setBackDocFile(file);
       if (file.type.startsWith('image/')) {
         setBackPreview(URL.createObjectURL(file));
@@ -172,6 +202,19 @@ export default function Settings() {
       return;
     }
 
+    const frontErr = validateDocFile(docFile, 'Front document');
+    if (frontErr) {
+      setDocMsg({ type: 'error', text: frontErr });
+      return;
+    }
+    if (backDocFile) {
+      const backErr = validateDocFile(backDocFile, 'Back document');
+      if (backErr) {
+        setDocMsg({ type: 'error', text: backErr });
+        return;
+      }
+    }
+
     setDocLoading(true);
     setDocMsg({ type: '', text: '' });
     try {
@@ -190,7 +233,7 @@ export default function Settings() {
       if (checkAuth) await checkAuth();
       if (fetchUserProfile) await fetchUserProfile();
     } catch (err) {
-      setDocMsg({ type: 'error', text: err.response?.data?.detail || 'Document submitted for review.' });
+      setDocMsg({ type: 'error', text: parseApiError(err, 'Failed to submit document for review.') });
     } finally {
       setDocLoading(false);
     }

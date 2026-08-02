@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { parseApiError } from '../../utils/errorUtils';
 import { Mail, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react';
 
 export default function VerifyEmail() {
@@ -10,9 +11,19 @@ export default function VerifyEmail() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const inputRefs = useRef([]);
+
+  // Cooldown countdown effect
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   // If already verified, kick them back to dashboard
   useEffect(() => {
@@ -74,27 +85,27 @@ export default function VerifyEmail() {
 
     try {
       await api.post('/accounts/verify-email/', { otp: otpString });
-      // Tell AuthContext to refetch profile, updating user.is_verified to true
       await checkAuth();
-      // The useEffect will automatically redirect when user.is_verified changes
     } catch (err) {
-      setError(err.response?.data?.detail || 'Verification failed. Please try again.');
+      setError(parseApiError(err, 'Verification failed. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleResend = async () => {
+    if (cooldown > 0 || resending) return;
     setResending(true);
     setError('');
     setMessage('');
     try {
       const res = await api.post('/accounts/resend-otp/');
       setMessage(res.data?.detail || 'A new verification code has been sent.');
+      setCooldown(60);
       setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0].focus();
+      if (inputRefs.current[0]) inputRefs.current[0].focus();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to resend code.');
+      setError(parseApiError(err, 'Failed to resend verification code.'));
     } finally {
       setResending(false);
     }
@@ -208,17 +219,17 @@ export default function VerifyEmail() {
             </p>
             <button 
               onClick={handleResend}
-              disabled={resending}
+              disabled={resending || cooldown > 0}
               style={{ 
                 background: 'transparent', border: 'none', 
-                color: 'var(--primary-indigo)', 
+                color: (resending || cooldown > 0) ? 'var(--text-muted)' : 'var(--primary-indigo)', 
                 display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                cursor: resending ? 'not-allowed' : 'pointer',
-                fontWeight: 500, opacity: resending ? 0.7 : 1
+                cursor: (resending || cooldown > 0) ? 'not-allowed' : 'pointer',
+                fontWeight: 600, opacity: (resending || cooldown > 0) ? 0.7 : 1
               }}
             >
               <RefreshCw size={16} className={resending ? 'skeleton-pulse' : ''} />
-              {resending ? 'Sending new code...' : 'Resend Code'}
+              {cooldown > 0 ? `Resend Code in ${cooldown}s` : resending ? 'Sending new code...' : 'Resend Code'}
             </button>
           </div>
 

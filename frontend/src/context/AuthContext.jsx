@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import api, { authEventEmitter } from '../services/api';
+import { parseApiError } from '../utils/errorUtils';
 
 /**
  * @typedef {Object} User
@@ -77,19 +78,7 @@ export function AuthProvider({ children }) {
       await checkAuth(); // sets user state
       return { success: true };
     } catch (error) {
-      let message = 'Failed to login. Please try again.';
-      if (typeof error.response?.data === 'string') {
-        message = error.response.data;
-      } else if (error.response?.data?.detail) {
-        message = typeof error.response.data.detail === 'string'
-          ? error.response.data.detail
-          : JSON.stringify(error.response.data.detail);
-      } else if (error.response?.data && typeof error.response.data === 'object') {
-        const firstVal = Object.values(error.response.data)[0];
-        message = Array.isArray(firstVal) ? firstVal[0] : (typeof firstVal === 'string' ? firstVal : JSON.stringify(firstVal));
-      } else if (error.message) {
-        message = error.message;
-      }
+      const message = parseApiError(error, 'Failed to login. Please check your credentials.');
       return { success: false, error: message };
     } finally {
       setIsLoading(false);
