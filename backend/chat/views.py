@@ -122,3 +122,6 @@ class ChatMessageListCreateView(generics.ListCreateAPIView):
 
         serializer = self.get_serializer(message)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+

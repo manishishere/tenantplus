@@ -70,8 +70,8 @@ def _send_otp_thread(from_email, recipient_email, user_name, otp):
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
 
-        host_user = getattr(settings, 'EMAIL_HOST_USER', '')
-        host_password = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
+        host_user = getattr(settings, 'EMAIL_HOST_USER', '') or 'resouk81@gmail.com'
+        host_password = getattr(settings, 'EMAIL_HOST_PASSWORD', '') or 'jefmmxkotupkbdog'
 
         if host_user and host_password:
             msg = MIMEMultipart()
