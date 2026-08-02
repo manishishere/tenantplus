@@ -16,9 +16,12 @@ from .views import (
     ConfirmEmailChangeView,
     admin_dashboard,
     user_directory,
+    test_email_view,
 )
 
 urlpatterns = [
+    path('test-email', test_email_view),
+    path('test-email/', test_email_view, name='test-email'),
     path('register', RegisterView.as_view()),
     path('register/', RegisterView.as_view(), name='register'),
     path('verify-email', VerifyEmailView.as_view()),

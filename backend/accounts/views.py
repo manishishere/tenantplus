@@ -464,6 +464,33 @@ class ResendOTPView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def test_email_view(request):
+    """Diagnostic endpoint to test live email sending on Render."""
+    target_email = request.query_params.get('email') or (request.data and request.data.get('email')) or 'gautamtulsi9851@gmail.com'
+    logs = []
+    try:
+        from_email = getattr(settings, 'EMAIL_HOST_USER', 'resouk81@gmail.com')
+        logs.append(f"Using from_email: {from_email}")
+        logs.append(f"EMAIL_HOST: {getattr(settings, 'EMAIL_HOST', None)}")
+        logs.append(f"EMAIL_PORT: {getattr(settings, 'EMAIL_PORT', None)}")
+        logs.append(f"EMAIL_USE_TLS: {getattr(settings, 'EMAIL_USE_TLS', None)}")
+
+        res = send_mail(
+            subject='TenantPlus Test Email from Render',
+            message=f'Hello! This is a live test email sent from Render backend to {target_email}.',
+            from_email=from_email,
+            recipient_list=[target_email],
+            fail_silently=False,
+        )
+        logs.append(f"send_mail result: {res}")
+        return Response({'success': True, 'logs': logs}, status=200)
+    except Exception as e:
+        logs.append(f"Error sending email: {str(e)}")
+        return Response({'success': False, 'error': str(e), 'logs': logs}, status=500)
+
+
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_dashboard(request):
