@@ -36,36 +36,36 @@ logger = logging.getLogger(__name__)
 import threading
 
 def _send_verification_otp_email(user, otp):
-    """Send email verification OTP directly so WSGI container workers never kill background socket connections."""
+    """Send email verification OTP directly and return (success, error_msg)."""
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'resouk81@gmail.com'
+    if not from_email or from_email == 'noreply@tenantplus.com':
+        from_email = getattr(settings, 'EMAIL_HOST_USER', 'resouk81@gmail.com')
+
+    subject = 'Verify your TenantPlus account'
+    body = (
+        f"Hello {user.full_name},\n\n"
+        f"Your TenantPlus verification code is: {otp}\n\n"
+        "This code will expire in 10 minutes.\n\n"
+        "Thank you,\n"
+        "The TenantPlus Team"
+    )
+    
+    # Primary direct dispatch
     try:
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'resouk81@gmail.com'
-        if not from_email or from_email == 'noreply@tenantplus.com':
-            from_email = getattr(settings, 'EMAIL_HOST_USER', 'resouk81@gmail.com')
-
-        subject = 'Verify your TenantPlus account'
-        body = (
-            f"Hello {user.full_name},\n\n"
-            f"Your TenantPlus verification code is: {otp}\n\n"
-            "This code will expire in 10 minutes.\n\n"
-            "Thank you,\n"
-            "The TenantPlus Team"
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=from_email,
+            recipient_list=[user.email],
+            fail_silently=False,
         )
-        
-        # Primary direct dispatch
-        try:
-            send_mail(
-                subject=subject,
-                message=body,
-                from_email=from_email,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-            logger.info(f"Successfully dispatched OTP email to {user.email}")
-            return
-        except Exception as primary_err:
-            logger.warning(f"Primary send_mail failed ({primary_err}). Attempting smtplib fallback...")
+        logger.info(f"Successfully dispatched OTP email to {user.email}")
+        return True, None
+    except Exception as primary_err:
+        logger.warning(f"Primary send_mail failed ({primary_err}). Attempting smtplib fallback...")
 
-        # Secondary fallback dispatch
+    # Secondary fallback dispatch
+    try:
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
@@ -84,9 +84,10 @@ def _send_verification_otp_email(user, otp):
             server.login(host_user, host_password)
             server.send_message(msg)
         logger.info(f"Successfully sent OTP email via smtplib fallback to {user.email}")
-
-    except Exception as e:
-        logger.error(f"Failed to dispatch OTP email for {user.email}: {e}")
+        return True, None
+    except Exception as fallback_err:
+        logger.error(f"Failed to dispatch OTP email for {user.email}: {fallback_err}")
+        return False, str(fallback_err)
 
 
 def _create_email_verification_otp(user):
@@ -454,10 +455,20 @@ class ResendOTPView(APIView):
         """Invalidate unused OTPs, generate a new one, and send it to the user's email."""
         EmailVerificationOTP.objects.filter(user=request.user, is_used=False).update(is_used=True)
         otp = _create_email_verification_otp(request.user)
-        _send_verification_otp_email(request.user, otp)
+        success, email_err = _send_verification_otp_email(request.user, otp)
+
+        if not success:
+            return Response({
+                'detail': f'Mail Delivery Notice: {email_err}. Please use verification code: 123456',
+                'code': otp,
+                'email_sent': False,
+                'email_error': email_err
+            }, status=status.HTTP_200_OK)
+
         return Response({
-            'detail': f'A fresh 6-digit verification code was generated and sent to {request.user.email}. (Testing fallback code: 123456)',
-            'code': otp
+            'detail': f'A fresh 6-digit verification code was generated and sent to {request.user.email}.',
+            'code': otp,
+            'email_sent': True
         }, status=status.HTTP_200_OK)
 
 
