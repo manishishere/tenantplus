@@ -100,7 +100,8 @@ export default function VerifyEmail() {
     setMessage('');
     try {
       const res = await api.post('/accounts/resend-otp/');
-      setMessage(res.data?.detail || 'A new verification code has been sent.');
+      const codeMsg = res.data?.code ? ` Your verification code is: ${res.data.code}` : '';
+      setMessage((res.data?.detail || 'A new verification code has been sent.') + codeMsg);
       setCooldown(60);
       setOtp(['', '', '', '', '', '']);
       if (inputRefs.current[0]) inputRefs.current[0].focus();
