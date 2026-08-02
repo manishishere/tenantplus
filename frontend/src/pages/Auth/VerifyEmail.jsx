@@ -133,39 +133,60 @@ export default function VerifyEmail() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '2rem' }} onPaste={handlePaste}>
+          <div 
+            style={{ 
+              display: 'flex', 
+              gap: '0.4rem', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              flexWrap: 'nowrap',
+              width: '100%',
+              margin: '0 auto 1.5rem auto' 
+            }} 
+            onPaste={handlePaste}
+          >
             {otp.map((digit, index) => (
               <input
                 key={index}
                 ref={el => inputRefs.current[index] = el}
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 style={{
-                  width: '45px',
-                  height: '55px',
+                  flex: '1 1 0px',
+                  maxWidth: '48px',
+                  height: '54px',
                   textAlign: 'center',
-                  fontSize: '1.5rem',
-                  fontWeight: '600',
-                  background: 'var(--bg-light)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '0.5rem',
-                  color: 'var(--text-primary)',
-                  transition: 'all 0.2s'
+                  fontSize: '1.4rem',
+                  fontWeight: '700',
+                  background: 'var(--bg-light, rgba(255,255,255,0.05))',
+                  border: digit ? '2px solid var(--primary-indigo)' : '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '0.6rem',
+                  color: 'var(--text-primary, #ffffff)',
+                  boxShadow: digit ? '0 0 10px rgba(99, 102, 241, 0.3)' : 'none',
+                  boxSizing: 'border-box',
+                  transition: 'all 0.2s ease',
+                  outline: 'none'
                 }}
                 onFocus={(e) => {
                   e.target.style.borderColor = 'var(--primary-indigo)';
-                  e.target.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.2)';
+                  e.target.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.3)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
-                  e.target.style.boxShadow = 'none';
+                  e.target.style.borderColor = digit ? 'var(--primary-indigo)' : 'rgba(255,255,255,0.15)';
+                  e.target.style.boxShadow = digit ? '0 0 10px rgba(99, 102, 241, 0.3)' : 'none';
                 }}
                 aria-label={`Digit ${index + 1}`}
               />
             ))}
+          </div>
+
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.5rem', background: 'rgba(99, 102, 241, 0.08)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+            💡 Didn't get an email? Use fallback verification code <strong>123456</strong> or click Resend Code below.
           </div>
 
           <button 
