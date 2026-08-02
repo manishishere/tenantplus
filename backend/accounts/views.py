@@ -105,7 +105,26 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        """Create a new user and return JWT tokens for immediate login."""
+        """Create a new user or resume unverified user registration cleanly."""
+        email = request.data.get('email', '').strip().lower()
+        existing_user = User.objects.filter(email=email).first()
+
+        if existing_user:
+            if not existing_user.is_email_verified:
+                # Update details for unverified account from prior interrupted attempt
+                existing_user.full_name = request.data.get('full_name', existing_user.full_name)
+                existing_user.phone = request.data.get('phone', existing_user.phone)
+                existing_user.role = request.data.get('role', existing_user.role)
+                if request.data.get('password'):
+                    existing_user.set_password(request.data.get('password'))
+                existing_user.save()
+
+                otp = _create_email_verification_otp(existing_user)
+                _send_verification_otp_email(existing_user, otp)
+                return _build_token_response(existing_user, status_code=status.HTTP_200_OK)
+            else:
+                return Response({'detail': 'An account with this email address already exists. Please log in.'}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
