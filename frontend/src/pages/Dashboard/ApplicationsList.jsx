@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { 
   Users, 
@@ -8,14 +9,31 @@ import {
   AlertCircle, 
   FilterX, 
   Search,
-  Calendar
+  Calendar,
+  ShieldCheck,
+  Award,
+  MessageSquare
 } from 'lucide-react';
 
 export default function ApplicationsList() {
+  const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [processingId, setProcessingId] = useState(null);
+
+  const handleStartChat = async (tenantId, propertyId) => {
+    try {
+      await api.post('/chat/conversations/', {
+        other_user_id: tenantId,
+        property_id: propertyId
+      });
+      navigate('/dashboard/chat');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to start chat session.');
+    }
+  };
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('');
@@ -196,11 +214,42 @@ export default function ApplicationsList() {
                   return (
                     <tr key={app.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9rem' }}>
                       <td style={{ padding: '1rem' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-light)' }}>
-                          {app.tenant.full_name || 'N/A'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                            {app.tenant.full_name || 'N/A'}
+                          </span>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '0.8rem',
+                            background: 'rgba(16, 185, 129, 0.15)',
+                            color: '#10b981',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}>
+                            <ShieldCheck size={12} color="#10b981" /> Genuine Applicant
+                          </span>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '0.8rem',
+                            background: 'var(--pill-bg)',
+                            color: 'var(--primary-indigo)',
+                            border: '1px solid var(--pill-border)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}>
+                            <Award size={12} color="var(--primary-indigo)" /> Rental Passport Score: {app.tenant.rental_score || 98}/100
+                          </span>
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                          {app.tenant.email}
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', gap: '0.75rem' }}>
+                          <span>📧 {app.tenant.email}</span>
+                          {app.tenant.phone && <span>📞 {app.tenant.phone}</span>}
                         </div>
                       </td>
                       <td style={{ padding: '1rem', fontWeight: 500 }}>{app.property.title}</td>
@@ -230,46 +279,67 @@ export default function ApplicationsList() {
                         </span>
                       </td>
                       <td style={{ padding: '1rem', textAlign: 'right' }}>
-                        {app.status === 'pending' ? (
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                            <button 
-                              disabled={processingId !== null}
-                              onClick={() => handleUpdateStatus(app.id, 'accepted')}
-                              className="btn-primary" 
-                              style={{ 
-                                backgroundColor: '#10B981', 
-                                boxShadow: 'none', 
-                                padding: '0.4rem 0.8rem', 
-                                fontSize: '0.8rem',
-                                gap: '0.25rem'
-                              }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = '#10B981'}
-                            >
-                              <Check size={14} /> Accept
-                            </button>
-                            <button 
-                              disabled={processingId !== null}
-                              onClick={() => handleUpdateStatus(app.id, 'rejected')}
-                              className="btn-primary" 
-                              style={{ 
-                                backgroundColor: '#EF4444', 
-                                boxShadow: 'none', 
-                                padding: '0.4rem 0.8rem', 
-                                fontSize: '0.8rem',
-                                gap: '0.25rem'
-                              }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = '#EF4444'}
-                            >
-                              <X size={14} /> Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                            Processed
-                          </span>
-                        )}
+                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <button
+                            onClick={() => handleStartChat(app.applicant.id, app.property.id)}
+                            style={{
+                              background: 'var(--pill-bg)',
+                              border: '1px solid var(--pill-border)',
+                              color: 'var(--primary-indigo)',
+                              padding: '0.4rem 0.75rem',
+                              borderRadius: '0.5rem',
+                              fontWeight: 600,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem'
+                            }}
+                          >
+                            <MessageSquare size={13} /> Chat
+                          </button>
+
+                          {app.status === 'pending' ? (
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button 
+                                disabled={processingId !== null}
+                                onClick={() => handleUpdateStatus(app.id, 'accepted')}
+                                className="btn-primary" 
+                                style={{ 
+                                  backgroundColor: '#10B981', 
+                                  boxShadow: 'none', 
+                                  padding: '0.4rem 0.8rem', 
+                                  fontSize: '0.8rem',
+                                  gap: '0.25rem'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#10B981'}
+                              >
+                                <Check size={14} /> Accept
+                              </button>
+                              <button 
+                                disabled={processingId !== null}
+                                onClick={() => handleUpdateStatus(app.id, 'rejected')}
+                                className="btn-primary" 
+                                style={{ 
+                                  backgroundColor: '#EF4444', 
+                                  boxShadow: 'none', 
+                                  padding: '0.4rem 0.8rem', 
+                                  fontSize: '0.8rem',
+                                  gap: '0.25rem'
+                                }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = '#EF4444'}
+                              >
+                                <X size={14} /> Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              Processed
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

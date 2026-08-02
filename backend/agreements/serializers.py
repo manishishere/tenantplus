@@ -10,10 +10,40 @@ class AgreementListSerializer(serializers.ModelSerializer):
 
     property = PropertySummarySerializer(read_only=True)
     tenant = TenantSummarySerializer(read_only=True)
+    landlord = serializers.SerializerMethodField()
+
+    def get_landlord(self, obj):
+        l_user = obj.landlord or getattr(obj.property, 'landlord', None)
+        if l_user:
+            return TenantSummarySerializer(l_user).data
+        return None
 
     class Meta:
         model = Agreement
-        fields = ('id', 'property', 'tenant', 'status', 'rent_amount', 'start_date', 'end_date', 'created_at')
+        fields = (
+            'id', 
+            'property', 
+            'tenant', 
+            'landlord',
+            'status', 
+            'rent_amount', 
+            'start_date', 
+            'end_date', 
+            'tenant_acknowledged', 
+            'landlord_acknowledged', 
+            'signed_document_url', 
+            'landlord_signature_url',
+            'tenant_signature_url',
+            'witness1_name',
+            'witness1_citizenship',
+            'witness1_phone',
+            'witness2_name',
+            'witness2_citizenship',
+            'witness2_phone',
+            'signed_doc_status', 
+            'rejection_reason', 
+            'created_at'
+        )
 
 
 class AgreementDetailSerializer(serializers.ModelSerializer):
@@ -38,6 +68,17 @@ class AgreementDetailSerializer(serializers.ModelSerializer):
             'end_date',
             'tenant_acknowledged',
             'landlord_acknowledged',
+            'signed_document_url',
+            'landlord_signature_url',
+            'tenant_signature_url',
+            'witness1_name',
+            'witness1_citizenship',
+            'witness1_phone',
+            'witness2_name',
+            'witness2_citizenship',
+            'witness2_phone',
+            'signed_doc_status',
+            'rejection_reason',
             'created_at',
             'updated_at',
             'is_expired',

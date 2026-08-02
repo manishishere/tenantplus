@@ -1,12 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Home, FileText, Wrench, Settings, Menu, X, LogOut, Building2, Users, DollarSign } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import api from '../../services/api';
+import NotificationBell from '../Notifications/NotificationBell';
+import { Home, FileText, Wrench, Settings, Menu, X, LogOut, Building2, Users, DollarSign, Sun, Moon, ClipboardCheck, MessageSquare } from 'lucide-react';
 
 export default function DashboardLayout() {
   const { user, role, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [unreadMaintenanceCount, setUnreadMaintenanceCount] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchNavCounts();
+    const interval = setInterval(fetchNavCounts, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNavCounts = async () => {
+    try {
+      const [chatRes, maintRes] = await Promise.allSettled([
+        api.get('/chat/conversations/'),
+        api.get('/maintenance/')
+      ]);
+
+      if (chatRes.status === 'fulfilled') {
+        const rawConvs = chatRes.value.data?.results || chatRes.value.data;
+        const convs = Array.isArray(rawConvs) ? rawConvs : [];
+        const total = convs.reduce((acc, c) => acc + (c?.unread_count || 0), 0);
+        setUnreadChatCount(total);
+      }
+
+      if (maintRes.status === 'fulfilled') {
+        const rawTickets = maintRes.value.data?.results || maintRes.value.data;
+        const tickets = Array.isArray(rawTickets) ? rawTickets : [];
+        // Pending or in-progress tickets requiring action/addressing
+        const activeCount = tickets.filter(t => t && (t.status === 'pending' || t.status === 'in_progress')).length;
+        setUnreadMaintenanceCount(activeCount);
+      }
+    } catch (err) {
+      // silent catch for nav polling
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -18,6 +56,8 @@ export default function DashboardLayout() {
     { name: 'Properties', icon: Building2, path: '/dashboard/properties' },
     ...(role === 'landlord' ? [{ name: 'Applications', icon: Users, path: '/dashboard/applications' }] : []),
     { name: 'Agreements', icon: FileText, path: '/dashboard/agreements' },
+    { name: 'Direct Chat', icon: MessageSquare, path: '/dashboard/chat' },
+    { name: 'Inspection Audit', icon: ClipboardCheck, path: '/dashboard/inspection' },
     { name: 'Maintenance', icon: Wrench, path: '/dashboard/maintenance' },
     { name: 'Utilities', icon: DollarSign, path: '/dashboard/utilities' },
   ];
@@ -53,9 +93,40 @@ export default function DashboardLayout() {
               to={item.path} 
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}
+              style={{ display: 'flex', alignItems: 'center' }}
             >
               <item.icon size={20} />
-              {item.name}
+              <span>{item.name}</span>
+              
+              {item.path === '/dashboard/chat' && unreadChatCount > 0 && (
+                <span style={{
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  padding: '0.12rem 0.45rem',
+                  borderRadius: '1rem',
+                  marginLeft: 'auto',
+                  lineHeight: 1
+                }}>
+                  {unreadChatCount}
+                </span>
+              )}
+
+              {item.path === '/dashboard/maintenance' && unreadMaintenanceCount > 0 && (
+                <span style={{
+                  background: '#f59e0b',
+                  color: '#ffffff',
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  padding: '0.12rem 0.45rem',
+                  borderRadius: '1rem',
+                  marginLeft: 'auto',
+                  lineHeight: 1
+                }}>
+                  {unreadMaintenanceCount}
+                </span>
+              )}
             </NavLink>
           ))}
           
@@ -86,9 +157,33 @@ export default function DashboardLayout() {
               <Menu size={24} />
             </button>
           </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {/* Notification Bell Dropdown */}
+            <NotificationBell />
+
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              style={{
+                background: 'var(--pill-bg, rgba(255,255,255,0.08))',
+                border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
+            </button>
+
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{user?.full_name || user?.email}</div>
+              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-dark)' }}>{user?.full_name || user?.email}</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{role}</div>
             </div>
             <div style={{ 

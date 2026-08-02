@@ -13,9 +13,22 @@ class PropertySummarySerializer(serializers.ModelSerializer):
 
 
 class MaintenanceImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = MaintenanceImage
         fields = ('id', 'image', 'uploaded_at')
+
+    def get_image(self, obj):
+        if not obj.image:
+            return None
+        url = obj.image.url
+        if not url.startswith('/media/'):
+            url = f"/media/{url.lstrip('/')}"
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        return f"http://localhost:8000{url}"
 
 
 class MaintenanceRequestListSerializer(serializers.ModelSerializer):

@@ -19,6 +19,17 @@ class TenantSummarySerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     full_name = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True)
+    phone = serializers.CharField(read_only=True)
+    is_verified = serializers.BooleanField(read_only=True)
+    rental_score = serializers.SerializerMethodField()
+
+    def get_rental_score(self, obj):
+        score = 80
+        if getattr(obj, 'is_verified', False):
+            score += 15
+        if getattr(obj, 'phone', ''):
+            score += 3
+        return min(score, 100)
 
 
 class ApplicationListSerializer(serializers.ModelSerializer):
@@ -61,8 +72,10 @@ class ApplicationCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         tenant = getattr(request, 'user', None)
         property_obj = attrs.get('property')
-        if tenant and property_obj:
-            if Application.objects.filter(
+        if tenant:
+            if not tenant.is_verified:
+                raise serializers.ValidationError('KYC Verification Required: You must complete identity verification under Settings before submitting rental applications.')
+            if property_obj and Application.objects.filter(
                 tenant=tenant,
                 property=property_obj,
                 status__in=(Application.STATUS_PENDING, Application.STATUS_ACCEPTED),

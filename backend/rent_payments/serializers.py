@@ -62,10 +62,7 @@ class RentPaymentCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_payment_month(self, value):
-        normalized_value = value.replace(day=1)
-        if normalized_value > date.today().replace(day=1):
-            raise serializers.ValidationError('Cannot record payment for a future month.')
-        return normalized_value
+        return value.replace(day=1)
 
     def validate_amount(self, value):
         if value <= 0:
@@ -75,8 +72,18 @@ class RentPaymentCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         agreement = attrs.get('agreement')
         payment_month = attrs.get('payment_month')
-        if agreement and payment_month and RentPayment.objects.filter(agreement=agreement, payment_month=payment_month).exists():
-            raise serializers.ValidationError('A payment has already been recorded for this month.')
+        if agreement and payment_month:
+            if RentPayment.objects.filter(agreement=agreement, payment_month=payment_month).exists():
+                raise serializers.ValidationError('A payment has already been recorded for this month.')
+            
+            start_month = agreement.start_date.replace(day=1)
+            if payment_month < start_month:
+                raise serializers.ValidationError('Cannot record payment for a month before the lease start date.')
+            
+            end_month = agreement.end_date.replace(day=1)
+            if payment_month > end_month:
+                raise serializers.ValidationError('Cannot record payment for a month past the lease expiration date.')
+
         return attrs
 
 

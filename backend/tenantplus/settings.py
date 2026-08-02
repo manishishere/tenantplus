@@ -26,12 +26,12 @@ environ.Env.read_env(BASE_DIR.parent / '.env')
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_7z4csn(xfi#s$vigymm3a9svgi4pv=k9shr6lsibuqu2!1uct'
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-_7z4csn(xfi#s$vigymm3a9svgi4pv=k9shr6lsibuqu2!1uct')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 APPEND_SLASH = False
 
 
@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'maintenance',
     'inspections',
     'utilities',
+    'chat',
     'django_q',
     'simple_history',
 ]
@@ -66,6 +67,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -98,12 +100,22 @@ WSGI_APPLICATION = 'tenantplus.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+try:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=env('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+except ImportError:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -141,6 +153,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -181,10 +198,10 @@ ESEWA_PAYMENT_URL = env('ESEWA_PAYMENT_URL', default='https://rc-epay.esewa.com.
 ESEWA_VERIFY_URL = env('ESEWA_VERIFY_URL', default='https://rc-epay.esewa.com.np/api/epay/transaction/status/')
 
 # Allow browser-based clients to send credentials for the refresh cookie.
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://localhost:3000',
     'http://localhost:5173',
-]
+])
 CORS_ALLOW_CREDENTIALS = True
 
 # Use secure cookies in production and non-secure cookies in local development.

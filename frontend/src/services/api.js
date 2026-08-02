@@ -1,8 +1,10 @@
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
 // Create a robust Axios instance
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   withCredentials: true, // Crucial for HTTP-only JWT cookies
   headers: {
     'Content-Type': 'application/json',
@@ -73,7 +75,7 @@ api.interceptors.response.use(
 
       try {
         // Request new access token from backend using the HTTP-only refresh cookie
-        const refreshResponse = await axios.post('/api/accounts/token/refresh/', {}, { withCredentials: true });
+        const refreshResponse = await axios.post(`${API_BASE_URL}/accounts/token/refresh/`, {}, { withCredentials: true });
         const newToken = refreshResponse.data.access;
         
         localStorage.setItem('access_token', newToken);

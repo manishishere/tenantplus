@@ -177,10 +177,96 @@ class ProfileView(APIView):
 
     def put(self, request, *args, **kwargs):
         """Update the authenticated user's editable profile fields."""
+        if request.user.is_verified:
+            data = request.data
+            if 'full_name' in data and data['full_name'] != request.user.full_name:
+                return Response(
+                    {'detail': 'Your account is KYC Verified by Admin. Official personal identification details cannot be modified.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if 'phone' in data and data['phone'] != request.user.phone:
+                return Response(
+                    {'detail': 'Your account is KYC Verified by Admin. Official contact details cannot be modified.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         serializer = UpdateProfileSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserProfileSerializer(request.user).data, status=status.HTTP_200_OK)
+
+
+class RequestEmailChangeView(APIView):
+    """Request email address change with 6-digit OTP verification."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        new_email = request.data.get('new_email', '').strip().lower()
+        if not new_email:
+            return Response({'detail': 'Please provide a valid new email address.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_email == request.user.email.lower():
+            return Response({'detail': 'This is already your current email address.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(email=new_email).exclude(id=request.user.id).exists():
+            return Response({'detail': 'An account with this email address already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp = f"{random.randint(100000, 999999)}"
+        EmailVerificationOTP.objects.create(
+            user=request.user,
+            pending_email=new_email,
+            otp=otp
+        )
+
+        async_task(
+            'django.core.mail.send_mail',
+            'Verify Your New Email Address — TenantPlus',
+            f'Hello {request.user.full_name},\n\nYour 6-digit verification code to update your TenantPlus email to {new_email} is: {otp}.\n\nThis code expires in 10 minutes.',
+            settings.DEFAULT_FROM_EMAIL,
+            [new_email],
+            fail_silently=False,
+        )
+
+        return Response({
+            'detail': f'Verification code sent to {new_email}. Enter the 6-digit code to complete email change.',
+            'pending_email': new_email
+        }, status=status.HTTP_200_OK)
+
+
+class ConfirmEmailChangeView(APIView):
+    """Confirm email address change using OTP."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        new_email = request.data.get('new_email', '').strip().lower()
+        otp = request.data.get('otp', '').strip()
+
+        if not new_email or not otp:
+            return Response({'detail': 'Both new email and OTP are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        verification_otp = EmailVerificationOTP.objects.filter(
+            user=request.user,
+            pending_email=new_email,
+            is_used=False
+        ).order_by('-created_at').first()
+
+        if verification_otp is None or verification_otp.is_expired() or str(verification_otp.otp) != str(otp):
+            return Response({'detail': 'Invalid or expired verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        verification_otp.is_used = True
+        verification_otp.save()
+
+        # Perform the official email update!
+        user = request.user
+        user.email = new_email
+        user.save()
+
+        return Response({
+            'detail': 'Email address updated successfully!',
+            'user': UserProfileSerializer(user).data
+        }, status=status.HTTP_200_OK)
 
 
 class ChangePasswordView(APIView):
