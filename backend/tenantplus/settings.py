@@ -201,13 +201,29 @@ ESEWA_VERIFY_URL = env('ESEWA_VERIFY_URL', default='https://rc-epay.esewa.com.np
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://localhost:3000',
     'http://localhost:5173',
+    'https://tenantplus.vercel.app',
 ])
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+    r"^https://.*\.onrender\.com$",
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+]
 CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://*.vercel.app',
+    'https://*.onrender.com',
+])
 
 # Use secure cookies in production and non-secure cookies in local development.
 COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = COOKIE_SECURE
 CSRF_COOKIE_SECURE = COOKIE_SECURE
+SESSION_COOKIE_SAMESITE = 'None' if COOKIE_SECURE else 'Lax'
+CSRF_COOKIE_SAMESITE = 'None' if COOKIE_SECURE else 'Lax'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

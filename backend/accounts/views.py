@@ -35,14 +35,17 @@ logger = logging.getLogger(__name__)
 
 def _send_verification_otp_email(user, otp):
     """Send the email verification OTP via a background task."""
-    async_task(
-        'django.core.mail.send_mail',
-        'Verify your TenantPlus account',
-        f'Your verification code is: {otp}. Expires in 10 minutes.',
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        fail_silently=False,
-    )
+    try:
+        async_task(
+            'django.core.mail.send_mail',
+            'Verify your TenantPlus account',
+            f'Your verification code is: {otp}. Expires in 10 minutes.',
+            settings.DEFAULT_FROM_EMAIL or 'noreply@tenantplus.com',
+            [user.email],
+            fail_silently=True,
+        )
+    except Exception as e:
+        logger.error(f"Failed to queue OTP email for {user.email}: {e}")
 
 
 def _create_email_verification_otp(user):
@@ -69,7 +72,7 @@ def _build_token_response(user, status_code=status.HTTP_200_OK):
         'refresh_token',
         str(refresh),
         httponly=True,
-        samesite='Lax',
+        samesite='None' if settings.COOKIE_SECURE else 'Lax',
         secure=settings.COOKIE_SECURE,
         max_age=7 * 24 * 60 * 60,
     )
@@ -138,7 +141,7 @@ class TokenRefreshCookieView(APIView):
             'refresh_token',
             str(refresh),
             httponly=True,
-            samesite='Lax',
+            samesite='None' if settings.COOKIE_SECURE else 'Lax',
             secure=settings.COOKIE_SECURE,
             max_age=7 * 24 * 60 * 60,
         )
