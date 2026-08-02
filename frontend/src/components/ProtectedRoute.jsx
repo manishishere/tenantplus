@@ -42,5 +42,10 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Enforce Email OTP verification: unverified users cannot access dashboard routes
+  if (!user.is_email_verified && location.pathname !== '/verify-email') {
+    return <Navigate to="/verify-email" replace />;
+  }
+
   return children;
 }

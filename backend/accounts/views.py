@@ -377,9 +377,12 @@ class VerifyEmailView(APIView):
             verification_otp.is_used = True
             verification_otp.save(update_fields=['is_used'])
             
-        request.user.is_verified = True
-        request.user.save(update_fields=['is_verified'])
-        return Response({'detail': 'Email verified successfully.'}, status=status.HTTP_200_OK)
+        request.user.is_email_verified = True
+        request.user.save(update_fields=['is_email_verified'])
+        return Response({
+            'detail': 'Email verified successfully.',
+            'user': UserProfileSerializer(request.user).data
+        }, status=status.HTTP_200_OK)
 
 
 class ResendOTPView(APIView):
@@ -389,7 +392,7 @@ class ResendOTPView(APIView):
 
     def post(self, request, *args, **kwargs):
         """Invalidate unused OTPs, generate a new one, and send it to the user's email."""
-        if request.user.is_verified:
+        if request.user.is_email_verified:
             return Response({'detail': 'Email is already verified.'}, status=status.HTTP_400_BAD_REQUEST)
 
         EmailVerificationOTP.objects.filter(user=request.user, is_used=False).update(is_used=True)

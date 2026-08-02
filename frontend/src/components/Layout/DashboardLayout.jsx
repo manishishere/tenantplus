@@ -186,12 +186,12 @@ export default function DashboardLayout() {
               <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span>{user?.full_name || user?.email}</span>
                 {user?.is_verified ? (
-                  <span title="Verified KYC Account" style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', background: 'rgba(16, 185, 129, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '1rem', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '0.7rem', fontWeight: 700, gap: '0.2rem' }}>
-                    <CheckCircle2 size={12} /> Verified
+                  <span title="Verified KYC Account" style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', background: 'rgba(16, 185, 129, 0.15)', padding: '0.15rem 0.55rem', borderRadius: '1rem', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '0.725rem', fontWeight: 700, gap: '0.25rem' }}>
+                    <CheckCircle2 size={13} /> Verified
                   </span>
                 ) : (
-                  <span title="Unverified KYC Account" style={{ color: '#f59e0b', fontSize: '0.65rem', background: 'rgba(245, 158, 11, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: 700 }}>
-                    Unverified
+                  <span title="Compulsory KYC Verification Required" style={{ color: '#ffffff', fontSize: '0.7rem', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', padding: '0.15rem 0.55rem', borderRadius: '1rem', border: '1px solid rgba(255, 255, 255, 0.2)', fontWeight: 700, boxShadow: '0 2px 8px rgba(99,102,241,0.3)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <ShieldCheck size={12} /> KYC Pending
                   </span>
                 )}
               </div>

@@ -454,12 +454,12 @@ export default function Settings() {
                     </p>
                   </div>
                   {user?.is_verified ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '0.35rem 0.75rem', borderRadius: '2rem', fontSize: '0.8rem', fontWeight: 700, border: '1px solid rgba(16,185,129,0.3)' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '0.35rem 0.85rem', borderRadius: '2rem', fontSize: '0.8rem', fontWeight: 700, border: '1px solid rgba(16,185,129,0.3)' }}>
                       <CheckCircle size={14} /> Verified Account
                     </span>
                   ) : (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', padding: '0.35rem 0.75rem', borderRadius: '2rem', fontSize: '0.8rem', fontWeight: 700, border: '1px solid rgba(245,158,11,0.3)' }}>
-                      <AlertCircle size={14} /> Unverified
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: '#ffffff', padding: '0.35rem 0.85rem', borderRadius: '2rem', fontSize: '0.8rem', fontWeight: 700, border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 2px 10px rgba(99,102,241,0.3)' }}>
+                      <ShieldCheck size={14} /> Compulsory KYC Required
                     </span>
                   )}
                 </div>
