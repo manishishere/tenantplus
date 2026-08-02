@@ -73,18 +73,22 @@ export default function Register() {
       console.error(err);
       if (err.response?.data) {
         const data = err.response.data;
-        if (typeof data === 'object' && !data.detail) {
+        if (typeof data === 'string') {
+          setError(data);
+        } else if (data.detail && typeof data.detail === 'string') {
+          setError(data.detail);
+        } else if (typeof data === 'object') {
           const messages = Object.entries(data).map(([field, val]) => {
             const label = field.charAt(0).toUpperCase() + field.slice(1).replace('_', ' ');
-            const message = Array.isArray(val) ? val[0] : val;
-            return `${label}: ${message}`;
+            const messageStr = Array.isArray(val) ? val[0] : (typeof val === 'string' ? val : JSON.stringify(val));
+            return `${label}: ${messageStr}`;
           });
           setError(messages.join(' '));
         } else {
-          setError(data.detail || 'Registration failed. Please check your input.');
+          setError('Registration failed. Please check your input.');
         }
       } else {
-        setError('Registration failed. Please check your input.');
+        setError(err.message || 'Registration failed. Please check your input.');
       }
     } finally {
       setLoading(false);
