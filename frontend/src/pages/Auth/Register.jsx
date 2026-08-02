@@ -7,7 +7,7 @@ import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
 export default function Register() {
   const navigate = useNavigate();
-  const { checkAuth } = useAuth();
+  const { checkAuth, setUser } = useAuth();
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -63,10 +63,14 @@ export default function Register() {
       const token = response.data.tokens?.access;
       if (token) {
         localStorage.setItem('access_token', token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
 
-      // Refetch profile in AuthContext (sets user auth state)
-      await checkAuth();
+      if (response.data.user) {
+        setUser(response.data.user);
+      } else if (checkAuth) {
+        await checkAuth();
+      }
 
       // Redirect to Email OTP verification screen first
       navigate('/verify-email');
