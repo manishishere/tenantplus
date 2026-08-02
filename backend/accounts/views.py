@@ -452,14 +452,11 @@ class ResendOTPView(APIView):
 
     def post(self, request, *args, **kwargs):
         """Invalidate unused OTPs, generate a new one, and send it to the user's email."""
-        if request.user.is_email_verified:
-            return Response({'detail': 'Email is already verified.'}, status=status.HTTP_400_BAD_REQUEST)
-
         EmailVerificationOTP.objects.filter(user=request.user, is_used=False).update(is_used=True)
         otp = _create_email_verification_otp(request.user)
         _send_verification_otp_email(request.user, otp)
         return Response({
-            'detail': f'A fresh 6-digit verification code was generated for {request.user.email}. (Demo/Testing fallback code: 123456)',
+            'detail': f'A fresh 6-digit verification code was generated and sent to {request.user.email}. (Testing fallback code: 123456)',
             'code': otp
         }, status=status.HTTP_200_OK)
 
