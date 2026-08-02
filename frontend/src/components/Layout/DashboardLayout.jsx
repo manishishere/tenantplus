@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import NotificationBell from '../Notifications/NotificationBell';
-import { Home, FileText, Wrench, Settings, Menu, X, LogOut, Building2, Users, DollarSign, Sun, Moon, ClipboardCheck, MessageSquare } from 'lucide-react';
+import { Home, FileText, Wrench, Settings, Menu, X, LogOut, Building2, Users, DollarSign, Sun, Moon, ClipboardCheck, MessageSquare, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export default function DashboardLayout() {
   const { user, role, logout } = useAuth();
