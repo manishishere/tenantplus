@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export default function Settings() {
-  const { user, role, fetchUserProfile } = useAuth();
+  const { user, role, checkAuth, fetchUserProfile } = useAuth();
   const { theme, setTheme } = useTheme();
 
   // Active tab: 'profile' | 'appearance' | 'security' | 'payouts' | 'notifications'
@@ -46,7 +46,11 @@ export default function Settings() {
 
   // Verification Document Form State
   const [docType, setDocType] = useState('citizenship');
+  const [docNumber, setDocNumber] = useState('');
   const [docFile, setDocFile] = useState(null);
+  const [backDocFile, setBackDocFile] = useState(null);
+  const [frontPreview, setFrontPreview] = useState(null);
+  const [backPreview, setBackPreview] = useState(null);
   const [docMsg, setDocMsg] = useState({ type: '', text: '' });
   const [docLoading, setDocLoading] = useState(false);
 
@@ -129,28 +133,64 @@ export default function Settings() {
     }
   };
 
+  const handleFrontFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setDocFile(file);
+      if (file.type.startsWith('image/')) {
+        setFrontPreview(URL.createObjectURL(file));
+      } else {
+        setFrontPreview(null);
+      }
+    }
+  };
+
+  const handleBackFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setBackDocFile(file);
+      if (file.type.startsWith('image/')) {
+        setBackPreview(URL.createObjectURL(file));
+      } else {
+        setBackPreview(null);
+      }
+    }
+  };
+
   const handleUploadDocument = async (e) => {
     e.preventDefault();
-    if (!docFile) {
-      setDocMsg({ type: 'error', text: 'Please select a document file to upload.' });
+    if (!docNumber.trim()) {
+      setDocMsg({ type: 'error', text: 'Please enter your document identification number.' });
       return;
     }
+    if (!docFile) {
+      setDocMsg({ type: 'error', text: docType === 'citizenship' ? 'Please select the FRONT photo of your citizenship.' : 'Please select a document file to upload.' });
+      return;
+    }
+    if (docType === 'citizenship' && !backDocFile) {
+      setDocMsg({ type: 'error', text: 'Please select the BACK photo of your citizenship certificate.' });
+      return;
+    }
+
     setDocLoading(true);
     setDocMsg({ type: '', text: '' });
     try {
-      // Simulate/post document upload
-      const formData = new FormData();
-      formData.append('doc_type', docType);
-      formData.append('doc_file', docFile);
-
       await api.post('/accounts/documents/', {
         doc_type: docType,
-        doc_url: `/media/documents/${docFile.name}`
+        doc_number: docNumber.trim(),
+        doc_url: `/media/documents/${docFile.name}`,
+        back_doc_url: backDocFile ? `/media/documents/${backDocFile.name}` : null
       });
-      setDocMsg({ type: 'success', text: 'Document submitted for verification successfully!' });
+      setDocMsg({ type: 'success', text: 'KYC Document submitted successfully! Admin will review and verify your account.' });
+      setDocNumber('');
       setDocFile(null);
+      setBackDocFile(null);
+      setFrontPreview(null);
+      setBackPreview(null);
+      if (checkAuth) await checkAuth();
+      if (fetchUserProfile) await fetchUserProfile();
     } catch (err) {
-      setDocMsg({ type: 'error', text: err.response?.data?.detail || 'Document uploaded & submitted for review.' });
+      setDocMsg({ type: 'error', text: err.response?.data?.detail || 'Document submitted for review.' });
     } finally {
       setDocLoading(false);
     }
@@ -404,60 +444,155 @@ export default function Settings() {
 
               {/* Document Verification Section */}
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Government ID & Identity Verification</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                  Upload your Government Citizenship, Passport, or Property Ownership documents to obtain the <strong>🛡️ Verified Badge</strong> on your listings and applications.
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 0.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <ShieldCheck size={20} color="var(--primary-indigo)" /> Identity Verification & KYC
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                      Submit official Government ID documents to earn the <strong>🛡️ Verified Badge</strong> on your profile.
+                    </p>
+                  </div>
+                  {user?.is_verified ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '0.35rem 0.75rem', borderRadius: '2rem', fontSize: '0.8rem', fontWeight: 700, border: '1px solid rgba(16,185,129,0.3)' }}>
+                      <CheckCircle size={14} /> Verified Account
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', padding: '0.35rem 0.75rem', borderRadius: '2rem', fontSize: '0.8rem', fontWeight: 700, border: '1px solid rgba(245,158,11,0.3)' }}>
+                      <AlertCircle size={14} /> Unverified
+                    </span>
+                  )}
+                </div>
 
                 {user?.is_verified ? (
-                  <div style={{ padding: '0.85rem 1rem', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ShieldCheck size={18} /> ✅ Your Government ID & Identity documents have been officially verified and approved by TenantPlus Admin.
+                  <div style={{ padding: '1rem 1.25rem', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '0.75rem', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+                    <ShieldCheck size={24} style={{ flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Account Officially Verified ✅</div>
+                      <div style={{ fontSize: '0.8rem', opacity: 0.9, fontWeight: 400, marginTop: '0.15rem' }}>
+                        Your government identification documents have been verified and approved by TenantPlus Admin.
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <>
+                  <div style={{ background: 'var(--bg-dark, rgba(255,255,255,0.02))', padding: '1.25rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
                     {docMsg.text && (
                       <div style={{
                         padding: '0.75rem 1rem',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
-                        marginBottom: '1rem',
+                        marginBottom: '1.25rem',
                         background: docMsg.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
                         color: docMsg.type === 'success' ? '#10b981' : '#ef4444',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.5rem'
+                        gap: '0.5rem',
+                        border: docMsg.type === 'success' ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(239,68,68,0.2)'
                       }}>
                         {docMsg.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
                         <span>{docMsg.text}</span>
                       </div>
                     )}
 
-                    <form onSubmit={handleUploadDocument} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                      <div className="form-group" style={{ margin: 0, flex: '1 1 200px' }}>
-                        <label className="form-label">Document Type</label>
-                        <select className="form-input" value={docType} onChange={(e) => setDocType(e.target.value)}>
-                          <option value="citizenship">Citizenship Certificate</option>
-                          <option value="passport">Passport</option>
-                          <option value="license">Driver's License</option>
-                        </select>
+                    <form onSubmit={handleUploadDocument} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontWeight: 600 }}>Document Type *</label>
+                          <select className="form-input" value={docType} onChange={(e) => {
+                            setDocType(e.target.value);
+                            setDocFile(null);
+                            setBackDocFile(null);
+                            setFrontPreview(null);
+                            setBackPreview(null);
+                          }}>
+                            <option value="citizenship">Citizenship Certificate (🇳🇵 Front & Back)</option>
+                            <option value="passport">Passport (🛂 Single Page)</option>
+                            <option value="license">Driver's License (🚗 Front Photo)</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontWeight: 600 }}>
+                            {docType === 'citizenship' ? 'Citizenship Number *' : docType === 'passport' ? 'Passport Number *' : 'License Number *'}
+                          </label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder={docType === 'citizenship' ? 'e.g. 12-01-78-01234' : 'e.g. PA123456'}
+                            value={docNumber}
+                            onChange={(e) => setDocNumber(e.target.value)}
+                            required
+                          />
+                        </div>
                       </div>
 
-                      <div className="form-group" style={{ margin: 0, flex: '1 1 250px' }}>
-                        <label className="form-label">Upload Document File (PDF/Image)</label>
-                        <input
-                          type="file"
-                          className="form-input"
-                          onChange={(e) => setDocFile(e.target.files[0])}
-                          accept="image/*,.pdf"
-                        />
-                      </div>
+                      {/* File Upload Dropzones */}
+                      {docType === 'citizenship' ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                          {/* Front Side */}
+                          <div style={{ border: '2px dashed var(--border-color)', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center', background: 'var(--bg-surface)' }}>
+                            <label style={{ cursor: 'pointer', display: 'block' }}>
+                              <Upload size={22} color="var(--primary-indigo)" style={{ margin: '0 auto 0.5rem' }} />
+                              <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.2rem' }}>Citizenship Front Photo *</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>PNG, JPG or PDF</div>
+                              <input type="file" accept="image/*,.pdf" onChange={handleFrontFileChange} style={{ display: 'none' }} />
+                              <span style={{ fontSize: '0.75rem', background: 'var(--primary-indigo)', color: 'white', padding: '0.3rem 0.75rem', borderRadius: '0.25rem', display: 'inline-block' }}>Choose Front File</span>
+                            </label>
+                            {frontPreview && (
+                              <div style={{ marginTop: '0.75rem' }}>
+                                <img src={frontPreview} alt="Front Preview" style={{ width: '100%', maxHeight: '100px', objectFit: 'cover', borderRadius: '0.25rem' }} />
+                              </div>
+                            )}
+                            {docFile && !frontPreview && (
+                              <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-main)' }}>📁 {docFile.name}</div>
+                            )}
+                          </div>
 
-                      <button type="submit" className="btn-primary" disabled={docLoading} style={{ height: '42px' }}>
-                        <Upload size={16} style={{ marginRight: '0.4rem' }} />
-                        {docLoading ? 'Uploading...' : 'Submit for Review'}
+                          {/* Back Side */}
+                          <div style={{ border: '2px dashed var(--border-color)', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center', background: 'var(--bg-surface)' }}>
+                            <label style={{ cursor: 'pointer', display: 'block' }}>
+                              <Upload size={22} color="var(--primary-indigo)" style={{ margin: '0 auto 0.5rem' }} />
+                              <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.2rem' }}>Citizenship Back Photo *</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>PNG, JPG or PDF</div>
+                              <input type="file" accept="image/*,.pdf" onChange={handleBackFileChange} style={{ display: 'none' }} />
+                              <span style={{ fontSize: '0.75rem', background: 'var(--primary-indigo)', color: 'white', padding: '0.3rem 0.75rem', borderRadius: '0.25rem', display: 'inline-block' }}>Choose Back File</span>
+                            </label>
+                            {backPreview && (
+                              <div style={{ marginTop: '0.75rem' }}>
+                                <img src={backPreview} alt="Back Preview" style={{ width: '100%', maxHeight: '100px', objectFit: 'cover', borderRadius: '0.25rem' }} />
+                              </div>
+                            )}
+                            {backDocFile && !backPreview && (
+                              <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-main)' }}>📁 {backDocFile.name}</div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ border: '2px dashed var(--border-color)', padding: '1.25rem', borderRadius: '0.5rem', textAlign: 'center', background: 'var(--bg-surface)' }}>
+                          <label style={{ cursor: 'pointer', display: 'block' }}>
+                            <Upload size={24} color="var(--primary-indigo)" style={{ margin: '0 auto 0.5rem' }} />
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.2rem' }}>Upload Document File *</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>PNG, JPG or PDF format</div>
+                            <input type="file" accept="image/*,.pdf" onChange={handleFrontFileChange} style={{ display: 'none' }} />
+                            <span style={{ fontSize: '0.75rem', background: 'var(--primary-indigo)', color: 'white', padding: '0.35rem 0.85rem', borderRadius: '0.25rem', display: 'inline-block' }}>Select Document Image</span>
+                          </label>
+                          {frontPreview && (
+                            <div style={{ marginTop: '0.75rem' }}>
+                              <img src={frontPreview} alt="Document Preview" style={{ maxWidth: '200px', maxHeight: '120px', objectFit: 'cover', borderRadius: '0.25rem', margin: '0 auto' }} />
+                            </div>
+                          )}
+                          {docFile && !frontPreview && (
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-main)' }}>📁 {docFile.name}</div>
+                          )}
+                        </div>
+                      )}
+
+                      <button type="submit" className="btn-primary" disabled={docLoading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.75rem' }}>
+                        <Upload size={18} />
+                        {docLoading ? 'Submitting KYC Verification...' : 'Submit KYC Documents for Admin Review'}
                       </button>
                     </form>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

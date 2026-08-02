@@ -67,8 +67,8 @@ export default function Register() {
       // Refetch profile in AuthContext (sets user auth state)
       await checkAuth();
 
-      // Redirect to dashboard (which redirects to verification if unverified, else dashboard home)
-      navigate('/dashboard');
+      // Redirect to Email OTP verification screen first
+      navigate('/verify-email');
     } catch (err) {
       console.error(err);
       if (err.response?.data) {

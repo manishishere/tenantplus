@@ -182,8 +182,19 @@ export default function DashboardLayout() {
               {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
             </button>
 
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-dark)' }}>{user?.full_name || user?.email}</div>
+            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span>{user?.full_name || user?.email}</span>
+                {user?.is_verified ? (
+                  <span title="Verified KYC Account" style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', background: 'rgba(16, 185, 129, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '1rem', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '0.7rem', fontWeight: 700, gap: '0.2rem' }}>
+                    <CheckCircle2 size={12} /> Verified
+                  </span>
+                ) : (
+                  <span title="Unverified KYC Account" style={{ color: '#f59e0b', fontSize: '0.65rem', background: 'rgba(245, 158, 11, 0.15)', padding: '0.1rem 0.4rem', borderRadius: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: 700 }}>
+                    Unverified
+                  </span>
+                )}
+              </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{role}</div>
             </div>
             <div style={{ 

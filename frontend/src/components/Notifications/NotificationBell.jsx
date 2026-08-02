@@ -84,13 +84,28 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const [readIds, setReadIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('read_notification_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const unreadCount = notifications.filter(n => !n.read && !readIds.includes(n.id)).length;
 
   const markAllAsRead = () => {
+    const allIds = notifications.map(n => n.id);
+    setReadIds(allIds);
+    localStorage.setItem('read_notification_ids', JSON.stringify(allIds));
     setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
   const handleNotificationClick = (item) => {
+    const updated = [...new Set([...readIds, item.id])];
+    setReadIds(updated);
+    localStorage.setItem('read_notification_ids', JSON.stringify(updated));
     setNotifications(notifications.map(n => n.id === item.id ? { ...n, read: true } : n));
     setIsOpen(false);
     navigate(item.link);
@@ -171,33 +186,36 @@ export default function NotificationBell() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                onClick={() => handleNotificationClick(n)}
-                style={{
-                  background: n.read ? 'transparent' : 'var(--bg-input)',
-                  border: n.read ? '1px solid transparent' : '1px solid var(--pill-border)',
-                  padding: '0.65rem 0.75rem',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.2rem',
-                  transition: 'background 0.2s ease'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 700, color: n.read ? 'var(--text-main)' : 'var(--primary-indigo)' }}>
-                    {n.title}
-                  </span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{n.timestamp}</span>
+            {notifications.map((n) => {
+              const isRead = n.read || readIds.includes(n.id);
+              return (
+                <div
+                  key={n.id}
+                  onClick={() => handleNotificationClick(n)}
+                  style={{
+                    background: isRead ? 'transparent' : 'var(--bg-input)',
+                    border: isRead ? '1px solid transparent' : '1px solid var(--pill-border)',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.2rem',
+                    transition: 'background 0.2s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.825rem', fontWeight: 700, color: isRead ? 'var(--text-main)' : 'var(--primary-indigo)' }}>
+                      {n.title}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{n.timestamp}</span>
+                  </div>
+                  <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.35 }}>
+                    {n.message}
+                  </p>
                 </div>
-                <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.35 }}>
-                  {n.message}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
