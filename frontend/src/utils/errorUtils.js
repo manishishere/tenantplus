@@ -17,8 +17,17 @@ export function parseApiError(error, fallbackMsg = 'An unexpected error occurred
     return fallbackMsg;
   }
 
-  if (typeof data === 'string') return data;
-  if (data.detail && typeof data.detail === 'string') return data.detail;
+  if (typeof data === 'string') {
+    if (data.includes('token') || data.includes('Token')) return 'Your session has expired. Please sign in again.';
+    return data;
+  }
+  if (data.detail && typeof data.detail === 'string') {
+    const detailLower = data.detail.toLowerCase();
+    if (detailLower.includes('token not valid') || detailLower.includes('token is invalid') || detailLower.includes('token_not_valid') || detailLower.includes('given token')) {
+      return 'Your session has expired. Please sign in again.';
+    }
+    return data.detail;
+  }
 
   if (typeof data === 'object') {
     const keys = Object.keys(data);
