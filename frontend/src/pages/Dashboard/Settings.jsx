@@ -55,6 +55,19 @@ export default function Settings() {
   const [docMsg, setDocMsg] = useState({ type: '', text: '' });
   const [docLoading, setDocLoading] = useState(false);
 
+  // Payout Bank State
+  const [bankName, setBankName] = useState('Nabil Bank');
+  const [accountHolder, setAccountHolder] = useState(user?.full_name || '');
+  const [accountNumber, setAccountNumber] = useState('0120010023456');
+  const [payoutMsg, setPayoutMsg] = useState({ type: '', text: '' });
+
+  // Notification Preferences State
+  const [notifs, setNotifs] = useState({
+    emailRentDue: true,
+    emailMaintenance: true,
+    emailAgreements: true
+  });
+
   const handleRequestEmailChange = async (e) => {
     e.preventDefault();
     if (!newEmail.trim()) return;
