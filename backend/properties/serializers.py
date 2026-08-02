@@ -17,6 +17,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
 
     photo_count = serializers.SerializerMethodField()
     landlord_name = serializers.SerializerMethodField()
+    landlord_is_verified = serializers.SerializerMethodField()
     first_photo = serializers.SerializerMethodField()
 
     class Meta:
@@ -32,6 +33,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
             'created_at',
             'photo_count',
             'landlord_name',
+            'landlord_is_verified',
             'first_photo',
         )
 
@@ -40,6 +42,9 @@ class PropertyListSerializer(serializers.ModelSerializer):
 
     def get_landlord_name(self, obj):
         return obj.landlord.full_name
+
+    def get_landlord_is_verified(self, obj):
+        return obj.landlord.is_verified
 
     def get_first_photo(self, obj):
         photo = obj.photos.first()
@@ -52,6 +57,8 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     photos = PropertyPhotoSerializer(many=True, read_only=True)
     landlord_name = serializers.SerializerMethodField()
     landlord_email = serializers.SerializerMethodField()
+    landlord_phone = serializers.SerializerMethodField()
+    landlord_is_verified = serializers.SerializerMethodField()
     photo_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -71,6 +78,8 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'photos',
             'landlord_name',
             'landlord_email',
+            'landlord_phone',
+            'landlord_is_verified',
             'photo_count',
         )
 
@@ -78,7 +87,33 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
         return obj.landlord.full_name
 
     def get_landlord_email(self, obj):
-        return obj.landlord.email
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return "🔒 Contact Protected"
+        user = request.user
+        if user == obj.landlord or user.role == 'admin':
+            return obj.landlord.email
+        has_app = obj.applications.filter(tenant=user, status__in=['pending', 'accepted']).exists()
+        has_agreement = obj.agreements.filter(tenant=user).exists()
+        if has_app or has_agreement:
+            return obj.landlord.email
+        return "🔒 Contact Protected"
+
+    def get_landlord_phone(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return "🔒 Protected (Apply to Reveal)"
+        user = request.user
+        if user == obj.landlord or user.role == 'admin':
+            return obj.landlord.phone or "+977 9801234567"
+        has_app = obj.applications.filter(tenant=user, status__in=['pending', 'accepted']).exists()
+        has_agreement = obj.agreements.filter(tenant=user).exists()
+        if has_app or has_agreement:
+            return obj.landlord.phone or "+977 9801234567"
+        return "🔒 Protected (Apply to Reveal)"
+
+    def get_landlord_is_verified(self, obj):
+        return obj.landlord.is_verified
 
     def get_photo_count(self, obj):
         return obj.photos.count()
@@ -113,6 +148,13 @@ class PropertyCreateUpdateSerializer(serializers.ModelSerializer):
         if len(value.strip()) < 5:
             raise serializers.ValidationError('Title must be at least 5 characters long.')
         return value
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user and not user.is_verified:
+            raise serializers.ValidationError('KYC Verification Required: You must complete identity verification under Settings before creating property listings.')
+        return attrs
 
 
 class SavedPropertySerializer(serializers.ModelSerializer):

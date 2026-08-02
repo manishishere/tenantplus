@@ -11,7 +11,8 @@ import {
   Zap,
   Droplet,
   Globe,
-  Trash
+  Trash,
+  Camera
 } from 'lucide-react';
 
 export default function Utilities() {
@@ -41,6 +42,10 @@ export default function Utilities() {
     currentReading: '',
     readingDate: ''
   });
+
+  // Meter Photo Proof State
+  const [meterPhoto, setMeterPhoto] = useState(null);
+  const [previewPhotoModal, setPreviewPhotoModal] = useState(null);
 
   // Fetch initial data
   const fetchData = useCallback(async () => {
@@ -152,17 +157,24 @@ export default function Utilities() {
     }
   };
 
-  // Delete bill
-  const handleDeleteBill = async (billId) => {
-    if (!window.confirm('Are you sure you want to delete this utility bill?')) return;
+  // Download PDF Invoice
+  const handleDownloadBillPDF = async (billId) => {
     try {
-      await api.delete(`/utilities/bills/${billId}/`);
-      // Refresh list
-      const billsRes = await api.get('/utilities/bills/');
-      setBills(billsRes.data.results || billsRes.data || []);
+      const response = await api.get(`/utilities/bills/${billId}/pdf/`, {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `utility_bill_${billId.slice(0, 8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
-      setError('Failed to delete utility bill.');
+      alert('Failed to download utility bill PDF. Please try again.');
     }
   };
 
@@ -287,6 +299,29 @@ export default function Utilities() {
                   </div>
                 </div>
 
+                {/* Meter Dial Photo Attachment Proof */}
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Camera size={14} color="var(--primary-indigo)" /> NEA/KUKL Meter Dial Photo Proof
+                  </label>
+                  <input
+                    type="file"
+                    className="form-input"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => setMeterPhoto(reader.result);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'block' }}>
+                    Attach clear photo of the meter dial to eliminate tenant bill disputes.
+                  </span>
+                </div>
+
                 {/* Meter Reading Option */}
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
@@ -397,9 +432,11 @@ export default function Utilities() {
                   return (
                     <tr key={bill.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9rem' }}>
                       <td style={{ padding: '1rem 0.5rem' }}>
-                        <div style={{ fontWeight: 600 }}>{bill.agreement?.property?.title || 'Unknown Property'}</div>
+                        <div style={{ fontWeight: 600 }}>
+                          {bill.agreement_detail?.property?.title || bill.agreement?.property?.title || 'Sanagaun Property'}
+                        </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          Tenant: {bill.agreement?.tenant?.full_name || 'Anonymous'}
+                          Tenant: {bill.agreement_detail?.tenant?.full_name || bill.agreement?.tenant?.full_name || 'Manish Gautam'}
                         </div>
                       </td>
                       <td style={{ padding: '1rem 0.5rem', fontWeight: 500 }}>{billMonth}</td>
@@ -410,7 +447,14 @@ export default function Utilities() {
                       <td style={{ padding: '1rem 0.5rem' }}>{getStatusBadge(bill.status)}</td>
                       <td style={{ padding: '1rem 0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
-                          
+                          <button 
+                            onClick={() => handleDownloadBillPDF(bill.id)}
+                            style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid #6366f1', borderRadius: '0.25rem', padding: '0.35rem 0.6rem', color: '#818cf8', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                            title="Download Utility Bill PDF"
+                          >
+                            <FileText size={14} /> PDF
+                          </button>
+
                           {/* Landlord Toggle Payment Action */}
                           {isLandlord ? (
                             <>

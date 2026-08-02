@@ -302,7 +302,7 @@ export default function TenantOverview() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Monthly Rent</span>
-                      <span style={{ fontWeight: 500 }}>Rs. {nextDue.baseRent.toLocaleString()}</span>
+                      <span style={{ fontWeight: 600 }}>Rs. {nextDue.baseRent.toLocaleString()}</span>
                     </div>
                     
                     {nextDue.isLate && (
@@ -314,9 +314,9 @@ export default function TenantOverview() {
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
                       <span style={{ fontWeight: 600 }}>Total Amount Due</span>
-                      <span style={{ fontWeight: 700, fontSize: '1.2rem', color: nextDue.isLate ? '#f59e0b' : 'var(--text-light)' }}>
+                      <span style={{ fontWeight: 700, fontSize: '1.2rem', color: nextDue.isLate ? '#f59e0b' : 'var(--text-main)' }}>
                         Rs. {nextDue.totalDue.toLocaleString()}
                       </span>
                     </div>
@@ -344,6 +344,67 @@ export default function TenantOverview() {
               </div>
             )}
             
+          </div>
+
+          {/* Escrow Payment Security Information Card */}
+          <div className="premium-card" style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--pill-border)',
+            padding: '1.25rem 1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.25rem',
+            borderRadius: '1rem',
+            marginTop: '1.5rem',
+            boxShadow: 'var(--card-shadow)'
+          }}>
+            <div style={{
+              fontSize: '1.75rem',
+              background: 'var(--pill-bg)',
+              padding: '0.75rem',
+              borderRadius: '12px',
+              border: '1px solid var(--pill-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              🛡️
+            </div>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                Escrow Protected Payment Flow (Managing Company)
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                All payments on TenantPlus are routed through <strong style={{ color: 'var(--primary-indigo)' }}>TenantPlus Managing Escrow</strong>. Funds are held safely during tenancy verification and automatically disbursed to the landlord after platform safety checks.
+              </p>
+            </div>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: '0.35rem',
+              fontSize: '0.75rem',
+              fontWeight: 700
+            }}>
+              <span style={{
+                background: 'rgba(16, 185, 129, 0.12)',
+                color: '#10B981',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                padding: '0.25rem 0.6rem',
+                borderRadius: '1rem'
+              }}>
+                ✅ 100% Escrow Secured
+              </span>
+              <span style={{
+                background: 'rgba(99, 102, 241, 0.12)',
+                color: 'var(--primary-indigo)',
+                border: '1px solid var(--pill-border)',
+                padding: '0.25rem 0.6rem',
+                borderRadius: '1rem'
+              }}>
+                ⚡ Automated Disbursal
+              </span>
+            </div>
           </div>
 
           {/* Payment History Section */}

@@ -96,8 +96,12 @@ export default function Maintenance() {
     setSubmitLoading(true);
     setError(null);
 
+    const targetPropertyId = typeof activeAgreement.property === 'object' 
+      ? activeAgreement.property?.id 
+      : activeAgreement.property;
+
     const formData = new FormData();
-    formData.append('property', activeAgreement.property.id || activeAgreement.property);
+    formData.append('property', targetPropertyId);
     formData.append('title', form.title.trim());
     formData.append('description', form.description.trim());
     formData.append('priority', form.priority);
@@ -109,11 +113,7 @@ export default function Maintenance() {
     }
 
     try {
-      await api.post('/maintenance/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      await api.post('/maintenance/', formData);
       // Reset form
       setForm({ title: '', description: '', priority: 'medium' });
       setImages(null);
@@ -125,7 +125,9 @@ export default function Maintenance() {
       await fetchData();
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Failed to submit maintenance request.');
+      const detailErr = err.response?.data?.detail || 
+        (err.response?.data && typeof err.response.data === 'object' ? Object.values(err.response.data).flat().join(' ') : null);
+      setError(detailErr || 'Failed to submit maintenance request.');
     } finally {
       setSubmitLoading(false);
     }
@@ -397,11 +399,21 @@ export default function Maintenance() {
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><ImageIcon size={14} /> Uploaded Photos</div>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {selectedTicket.images.map((img) => (
-                      <a key={img.id} href={img.image} target="_blank" rel="noopener noreferrer" style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.25rem', overflow: 'hidden', width: '80px', height: '80px' }}>
-                        <img src={img.image} alt="ticket attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </a>
-                    ))}
+                    {selectedTicket.images.map((img) => {
+                      let srcUrl = img.image || '';
+                      if (srcUrl && !srcUrl.startsWith('http') && !srcUrl.startsWith('data:')) {
+                        if (!srcUrl.startsWith('/media/')) {
+                          srcUrl = `/media/${srcUrl.replace(/^\/+/, '')}`;
+                        }
+                        srcUrl = `http://localhost:8000${srcUrl}`;
+                      }
+                      
+                      return (
+                        <a key={img.id} href={srcUrl} target="_blank" rel="noopener noreferrer" style={{ border: '1px solid var(--border-color)', borderRadius: '0.5rem', overflow: 'hidden', width: '90px', height: '90px', display: 'inline-block' }}>
+                          <img src={srcUrl} alt="ticket attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               )}

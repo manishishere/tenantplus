@@ -62,9 +62,10 @@ class PropertyListCreateView(APIView):
 
     def post(self, request, *args, **kwargs):
         """Create a new property listing for the authenticated landlord."""
-        # Landlord-only write access is enforced here; tenants cannot create listings.
         if not IsLandlord().has_permission(request, self):
             return Response({'detail': 'Only landlords can create properties.'}, status=status.HTTP_403_FORBIDDEN)
+        if not request.user.is_verified:
+            return Response({'detail': 'Verification Required: You must complete citizenship/identity KYC verification under Settings before creating property listings.'}, status=status.HTTP_403_FORBIDDEN)
         serializer = PropertyCreateUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         property_obj = serializer.save(landlord=request.user)
@@ -79,7 +80,7 @@ class PropertyDetailView(APIView):
     def get(self, request, *args, **kwargs):
         """Return the detail view for a property."""
         property_obj = get_object_or_404(Property, id=kwargs['id'])
-        return Response(PropertyDetailSerializer(property_obj).data, status=status.HTTP_200_OK)
+        return Response(PropertyDetailSerializer(property_obj, context={'request': request}).data, status=status.HTTP_200_OK)
 
     def put(self, request, *args, **kwargs):
         """Allow the owning landlord to update a property listing."""

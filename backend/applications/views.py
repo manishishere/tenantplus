@@ -119,6 +119,7 @@ class ApplicationStatusUpdateView(APIView):
                     application=application,
                     rent_amount=application.property.rent_amount,
                     status='active',
+                    landlord_acknowledged=True,
                     start_date=date.today(),
                     end_date=date.today() + relativedelta(years=1),
                 )
