@@ -5,6 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 // Create a robust Axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 60000, // 60s timeout to gracefully accommodate Render backend cold starts
   withCredentials: true, // Crucial for HTTP-only JWT cookies
   headers: {
     'Content-Type': 'application/json',

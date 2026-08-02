@@ -11,7 +11,9 @@ export function parseApiError(error, fallbackMsg = 'An unexpected error occurred
   const data = error.response?.data;
   if (!data) {
     if (error.message && typeof error.message === 'string') {
-      if (error.message === 'Network Error') return 'Unable to connect to the server. Please check your internet connection.';
+      if (error.message === 'Network Error' || error.code === 'ECONNABORTED') {
+        return 'Server is starting up... Please click Register again in a few seconds.';
+      }
       return error.message;
     }
     return fallbackMsg;
