@@ -80,10 +80,11 @@ def _send_otp_thread(from_email, recipient_email, user_name, otp):
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'plain'))
 
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
+            with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
+                server.starttls()
                 server.login(host_user, host_password)
                 server.send_message(msg)
-            logger.info(f"Successfully sent OTP email via SSL 465 fallback to {recipient_email}")
+            logger.info(f"Successfully sent OTP email via TLS 587 fallback to {recipient_email}")
         else:
             logger.error("EMAIL_HOST_USER or EMAIL_HOST_PASSWORD is missing in backend settings.")
     except Exception as fallback_err:
