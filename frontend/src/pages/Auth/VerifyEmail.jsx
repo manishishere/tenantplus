@@ -25,9 +25,9 @@ export default function VerifyEmail() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  // If already verified, kick them back to dashboard
+  // If email is already verified, navigate to dashboard
   useEffect(() => {
-    if (user?.is_verified) {
+    if (user?.is_email_verified) {
       navigate('/dashboard/properties', { replace: true });
     }
   }, [user, navigate]);
@@ -168,28 +168,28 @@ export default function VerifyEmail() {
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 style={{
-                  flex: '1 1 0px',
-                  maxWidth: '48px',
-                  height: '54px',
+                  width: '44px',
+                  minWidth: '36px',
+                  height: '52px',
                   textAlign: 'center',
                   fontSize: '1.4rem',
-                  fontWeight: '700',
-                  background: 'var(--bg-light, rgba(255,255,255,0.05))',
-                  border: digit ? '2px solid var(--primary-indigo)' : '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: '0.6rem',
-                  color: 'var(--text-primary, #ffffff)',
-                  boxShadow: digit ? '0 0 10px rgba(99, 102, 241, 0.3)' : 'none',
+                  fontWeight: '800',
+                  background: 'var(--bg-input, rgba(99, 102, 241, 0.08))',
+                  border: digit ? '2px solid #6366f1' : '1.5px solid var(--border-color, rgba(99, 102, 241, 0.3))',
+                  borderRadius: '0.65rem',
+                  color: 'var(--text-main, #ffffff)',
+                  boxShadow: digit ? '0 0 12px rgba(99, 102, 241, 0.35)' : 'none',
                   boxSizing: 'border-box',
                   transition: 'all 0.2s ease',
                   outline: 'none'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--primary-indigo)';
-                  e.target.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.3)';
+                  e.target.style.borderColor = '#6366f1';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.3)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = digit ? 'var(--primary-indigo)' : 'rgba(255,255,255,0.15)';
-                  e.target.style.boxShadow = digit ? '0 0 10px rgba(99, 102, 241, 0.3)' : 'none';
+                  e.target.style.borderColor = digit ? '#6366f1' : 'var(--border-color, rgba(99, 102, 241, 0.3))';
+                  e.target.style.boxShadow = digit ? '0 0 12px rgba(99, 102, 241, 0.35)' : 'none';
                 }}
                 aria-label={`Digit ${index + 1}`}
               />
