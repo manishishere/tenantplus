@@ -19,11 +19,12 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 
-from accounts.views import ProfileView, admin_dashboard, user_directory
+from accounts.views import ProfileView, admin_dashboard, user_directory, test_email_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('admin/dashboard', admin_dashboard),
+    path('api/test-email/', test_email_view),
     path('api/users', user_directory),
     path('api/profile', ProfileView.as_view()),
     path('api/accounts/', include('accounts.urls')),
