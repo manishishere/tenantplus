@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { parseApiError } from '../../utils/errorUtils';
 import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
 export default function Register() {
@@ -71,25 +72,7 @@ export default function Register() {
       navigate('/verify-email');
     } catch (err) {
       console.error(err);
-      if (err.response?.data) {
-        const data = err.response.data;
-        if (typeof data === 'string') {
-          setError(data);
-        } else if (data.detail && typeof data.detail === 'string') {
-          setError(data.detail);
-        } else if (typeof data === 'object') {
-          const messages = Object.entries(data).map(([field, val]) => {
-            const label = field.charAt(0).toUpperCase() + field.slice(1).replace('_', ' ');
-            const messageStr = Array.isArray(val) ? val[0] : (typeof val === 'string' ? val : JSON.stringify(val));
-            return `${label}: ${messageStr}`;
-          });
-          setError(messages.join(' '));
-        } else {
-          setError('Registration failed. Please check your input.');
-        }
-      } else {
-        setError(err.message || 'Registration failed. Please check your input.');
-      }
+      setError(parseApiError(err, 'Registration failed. Please check your input and try again.'));
     } finally {
       setLoading(false);
     }

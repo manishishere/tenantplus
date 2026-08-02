@@ -34,24 +34,34 @@ logger = logging.getLogger(__name__)
 
 
 def _send_verification_otp_email(user, otp):
-    """Send the email verification OTP directly to the user."""
+    """Send the email verification OTP safely without hanging HTTP registration response."""
     try:
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'noreply@tenantplus.com'
-        send_mail(
-            subject='Verify your TenantPlus account',
-            message=(
-                f"Hello {user.full_name},\n\n"
-                f"Your TenantPlus verification code is: {otp}\n\n"
-                "This code will expire in 10 minutes.\n\n"
-                "Thank you,\n"
-                "The TenantPlus Team"
-            ),
-            from_email=from_email,
-            recipient_list=[user.email],
-            fail_silently=True,
-        )
+        try:
+            async_task(
+                'django.core.mail.send_mail',
+                'Verify your TenantPlus account',
+                (
+                    f"Hello {user.full_name},\n\n"
+                    f"Your TenantPlus verification code is: {otp}\n\n"
+                    "This code will expire in 10 minutes.\n\n"
+                    "Thank you,\n"
+                    "The TenantPlus Team"
+                ),
+                from_email,
+                [user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            send_mail(
+                subject='Verify your TenantPlus account',
+                message=f"Hello {user.full_name},\n\nYour TenantPlus verification code is: {otp}\n\nThis code will expire in 10 minutes.",
+                from_email=from_email,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
     except Exception as e:
-        logger.error(f"Failed to send OTP email for {user.email}: {e}")
+        logger.error(f"Failed to dispatch OTP email for {user.email}: {e}")
 
 
 def _create_email_verification_otp(user):
