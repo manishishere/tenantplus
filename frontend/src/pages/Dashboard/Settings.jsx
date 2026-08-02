@@ -37,6 +37,19 @@ export default function Settings() {
   const [emailMsg, setEmailMsg] = useState({ type: '', text: '' });
   const [emailLoading, setEmailLoading] = useState(false);
 
+  // Security Form State
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [securityMsg, setSecurityMsg] = useState({ type: '', text: '' });
+  const [securityLoading, setSecurityLoading] = useState(false);
+
+  // Verification Document Form State
+  const [docType, setDocType] = useState('citizenship');
+  const [docFile, setDocFile] = useState(null);
+  const [docMsg, setDocMsg] = useState({ type: '', text: '' });
+  const [docLoading, setDocLoading] = useState(false);
+
   const handleRequestEmailChange = async (e) => {
     e.preventDefault();
     if (!newEmail.trim()) return;
