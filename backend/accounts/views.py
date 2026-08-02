@@ -33,35 +33,39 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+import threading
+
+def _send_otp_thread(from_email, recipient_email, user_name, otp):
+    try:
+        send_mail(
+            subject='Verify your TenantPlus account',
+            message=(
+                f"Hello {user_name},\n\n"
+                f"Your TenantPlus verification code is: {otp}\n\n"
+                "This code will expire in 10 minutes.\n\n"
+                "Thank you,\n"
+                "The TenantPlus Team"
+            ),
+            from_email=from_email,
+            recipient_list=[recipient_email],
+            fail_silently=False,
+        )
+        logger.info(f"Successfully sent OTP email to {recipient_email}")
+    except Exception as e:
+        logger.error(f"Failed to send OTP email to {recipient_email}: {e}")
+
 def _send_verification_otp_email(user, otp):
-    """Send the email verification OTP safely without hanging HTTP registration response."""
+    """Send the email verification OTP using a lightweight background thread."""
     try:
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'noreply@tenantplus.com'
-        try:
-            async_task(
-                'django.core.mail.send_mail',
-                'Verify your TenantPlus account',
-                (
-                    f"Hello {user.full_name},\n\n"
-                    f"Your TenantPlus verification code is: {otp}\n\n"
-                    "This code will expire in 10 minutes.\n\n"
-                    "Thank you,\n"
-                    "The TenantPlus Team"
-                ),
-                from_email,
-                [user.email],
-                fail_silently=True,
-            )
-        except Exception:
-            send_mail(
-                subject='Verify your TenantPlus account',
-                message=f"Hello {user.full_name},\n\nYour TenantPlus verification code is: {otp}\n\nThis code will expire in 10 minutes.",
-                from_email=from_email,
-                recipient_list=[user.email],
-                fail_silently=True,
-            )
+        thread = threading.Thread(
+            target=_send_otp_thread,
+            args=(from_email, user.email, user.full_name, otp),
+            daemon=True
+        )
+        thread.start()
     except Exception as e:
-        logger.error(f"Failed to dispatch OTP email for {user.email}: {e}")
+        logger.error(f"Failed to start email thread for {user.email}: {e}")
 
 
 def _create_email_verification_otp(user):
