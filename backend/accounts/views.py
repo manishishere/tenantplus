@@ -35,37 +35,37 @@ logger = logging.getLogger(__name__)
 
 import threading
 
-def _send_otp_thread(from_email, recipient_email, user_name, otp):
-    """Attempt email delivery via Django send_mail with SSL port 465 fallback for cloud environments."""
-    sender = from_email or getattr(settings, 'EMAIL_HOST_USER', '')
-    if not sender or sender == 'noreply@tenantplus.com':
-        sender = getattr(settings, 'EMAIL_HOST_USER', sender)
-
-    subject = 'Verify your TenantPlus account'
-    body = (
-        f"Hello {user_name},\n\n"
-        f"Your TenantPlus verification code is: {otp}\n\n"
-        "This code will expire in 10 minutes.\n\n"
-        "Thank you,\n"
-        "The TenantPlus Team"
-    )
-
-    # 1. Primary Attempt via Django send_mail
+def _send_verification_otp_email(user, otp):
+    """Send email verification OTP directly so WSGI container workers never kill background socket connections."""
     try:
-        send_mail(
-            subject=subject,
-            message=body,
-            from_email=sender,
-            recipient_list=[recipient_email],
-            fail_silently=False,
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'resouk81@gmail.com'
+        if not from_email or from_email == 'noreply@tenantplus.com':
+            from_email = getattr(settings, 'EMAIL_HOST_USER', 'resouk81@gmail.com')
+
+        subject = 'Verify your TenantPlus account'
+        body = (
+            f"Hello {user.full_name},\n\n"
+            f"Your TenantPlus verification code is: {otp}\n\n"
+            "This code will expire in 10 minutes.\n\n"
+            "Thank you,\n"
+            "The TenantPlus Team"
         )
-        logger.info(f"Successfully sent OTP email via Django send_mail to {recipient_email}")
-        return
-    except Exception as primary_err:
-        logger.warning(f"Primary send_mail failed ({primary_err}). Attempting direct SSL port 465 fallback...")
+        
+        # Primary direct dispatch
+        try:
+            send_mail(
+                subject=subject,
+                message=body,
+                from_email=from_email,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+            logger.info(f"Successfully dispatched OTP email to {user.email}")
+            return
+        except Exception as primary_err:
+            logger.warning(f"Primary send_mail failed ({primary_err}). Attempting smtplib fallback...")
 
-    # 2. Direct smtplib SSL (Port 465) Fallback for Gmail on Render/Cloud
-    try:
+        # Secondary fallback dispatch
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
@@ -73,35 +73,20 @@ def _send_otp_thread(from_email, recipient_email, user_name, otp):
         host_user = getattr(settings, 'EMAIL_HOST_USER', '') or 'resouk81@gmail.com'
         host_password = getattr(settings, 'EMAIL_HOST_PASSWORD', '') or 'jefmmxkotupkbdog'
 
-        if host_user and host_password:
-            msg = MIMEMultipart()
-            msg['From'] = f"TenantPlus Verification <{host_user}>"
-            msg['To'] = recipient_email
-            msg['Subject'] = subject
-            msg.attach(MIMEText(body, 'plain'))
+        msg = MIMEMultipart()
+        msg['From'] = f"TenantPlus <{host_user}>"
+        msg['To'] = user.email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
 
-            with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
-                server.starttls()
-                server.login(host_user, host_password)
-                server.send_message(msg)
-            logger.info(f"Successfully sent OTP email via TLS 587 fallback to {recipient_email}")
-        else:
-            logger.error("EMAIL_HOST_USER or EMAIL_HOST_PASSWORD is missing in backend settings.")
-    except Exception as fallback_err:
-        logger.error(f"All OTP email delivery attempts failed for {recipient_email}: {fallback_err}")
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
+            server.starttls()
+            server.login(host_user, host_password)
+            server.send_message(msg)
+        logger.info(f"Successfully sent OTP email via smtplib fallback to {user.email}")
 
-def _send_verification_otp_email(user, otp):
-    """Send the email verification OTP using a lightweight background thread."""
-    try:
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'noreply@tenantplus.com'
-        thread = threading.Thread(
-            target=_send_otp_thread,
-            args=(from_email, user.email, user.full_name, otp),
-            daemon=True
-        )
-        thread.start()
     except Exception as e:
-        logger.error(f"Failed to start email thread for {user.email}: {e}")
+        logger.error(f"Failed to dispatch OTP email for {user.email}: {e}")
 
 
 def _create_email_verification_otp(user):
