@@ -33,10 +33,11 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+import os
 import threading
 
-def _send_verification_otp_email(user, otp):
-    """Send email verification OTP directly and return (success, error_msg)."""
+def _send_verification_otp_email_sync(user, otp):
+    """Synchronous internal worker function to dispatch email verification OTP."""
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'resouk81@gmail.com'
     if not from_email or from_email == 'noreply@tenantplus.com':
         from_email = getattr(settings, 'EMAIL_HOST_USER', 'resouk81@gmail.com')
@@ -49,6 +50,38 @@ def _send_verification_otp_email(user, otp):
         "Thank you,\n"
         "The TenantPlus Team"
     )
+
+    # 0. Check for Resend HTTPS API Key (Port 443 - zero block chance on cloud hosts)
+    resend_api_key = getattr(settings, 'RESEND_API_KEY', None) or os.environ.get('RESEND_API_KEY')
+    if resend_api_key:
+        try:
+            import urllib.request
+            import json
+
+            resend_from = getattr(settings, 'RESEND_FROM_EMAIL', None) or os.environ.get('RESEND_FROM_EMAIL') or 'TenantPlus <onboarding@resend.dev>'
+            payload = json.dumps({
+                'from': resend_from,
+                'to': [user.email],
+                'subject': subject,
+                'text': body,
+            }).encode('utf-8')
+
+            req = urllib.request.Request(
+                'https://api.resend.com/emails',
+                data=payload,
+                headers={
+                    'Authorization': f'Bearer {resend_api_key}',
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'TenantPlus/1.0',
+                },
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status in (200, 201):
+                    logger.info(f"Successfully dispatched OTP email via Resend HTTP API to {user.email}")
+                    return True, None
+        except Exception as resend_err:
+            logger.warning(f"Resend HTTP API failed ({resend_err}). Proceeding to standard SMTP dispatch...")
     
     # Primary direct dispatch
     try:
@@ -72,6 +105,9 @@ def _send_verification_otp_email(user, otp):
 
         host_user = getattr(settings, 'EMAIL_HOST_USER', '') or 'resouk81@gmail.com'
         host_password = getattr(settings, 'EMAIL_HOST_PASSWORD', '') or 'jefmmxkotupkbdog'
+        host_name = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com')
+        port = getattr(settings, 'EMAIL_PORT', 587)
+        use_ssl = getattr(settings, 'EMAIL_USE_SSL', False) or (port == 465)
 
         msg = MIMEMultipart()
         msg['From'] = f"TenantPlus <{host_user}>"
@@ -79,15 +115,32 @@ def _send_verification_otp_email(user, otp):
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
-        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
-            server.starttls()
-            server.login(host_user, host_password)
-            server.send_message(msg)
+        if use_ssl:
+            with smtplib.SMTP_SSL(host_name, port, timeout=10) as server:
+                server.login(host_user, host_password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host_name, port, timeout=10) as server:
+                server.starttls()
+                server.login(host_user, host_password)
+                server.send_message(msg)
         logger.info(f"Successfully sent OTP email via smtplib fallback to {user.email}")
         return True, None
     except Exception as fallback_err:
         logger.error(f"Failed to dispatch OTP email for {user.email}: {fallback_err}")
         return False, str(fallback_err)
+
+
+def _send_verification_otp_email(user, otp, sync=False):
+    """Dispatch email verification OTP asynchronously by default or synchronously if specified."""
+    if sync:
+        return _send_verification_otp_email_sync(user, otp)
+    
+    # Non-blocking background thread for instant response time during user registration
+    thread = threading.Thread(target=_send_verification_otp_email_sync, args=(user, otp), daemon=True)
+    thread.start()
+    return True, None
+
 
 
 def _create_email_verification_otp(user):
@@ -453,6 +506,9 @@ class ResendOTPView(APIView):
 
     def post(self, request, *args, **kwargs):
         """Invalidate unused OTPs, generate a new one, and send it to the user's email."""
+        if getattr(request.user, 'is_email_verified', False):
+            return Response({'detail': 'Email is already verified.'}, status=status.HTTP_400_BAD_REQUEST)
+
         EmailVerificationOTP.objects.filter(user=request.user, is_used=False).update(is_used=True)
         otp = _create_email_verification_otp(request.user)
         success, email_err = _send_verification_otp_email(request.user, otp)
@@ -499,19 +555,247 @@ def test_email_view(request):
         return Response({'success': False, 'error': str(e), 'logs': logs}, status=500)
 
 
+from django.db import models as db_models
+from django.utils import timezone
+
+
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_dashboard(request):
-    """Return a simple admin-only dashboard payload."""
-    return Response({'detail': 'Welcome to the admin dashboard.', 'role': request.user.role})
+    """Return aggregated platform metrics for the executive admin control center."""
+    from properties.models import Property
+    from agreements.models import Agreement
+    from rent_payments.models import RentPayment
+    from disputes.models import Dispute
+    from django.db.models import Sum
+
+    total_users = User.objects.count()
+    tenants_count = User.objects.filter(role='tenant').count()
+    landlords_count = User.objects.filter(role='landlord').count()
+    verified_users_count = User.objects.filter(is_verified=True).count()
+    pending_kyc_count = UserDocument.objects.filter(status='pending').count()
+
+    total_properties = Property.objects.count()
+    available_properties = Property.objects.filter(is_available=True).count()
+    rented_properties = Property.objects.filter(is_available=False).count()
+
+    total_agreements = Agreement.objects.count()
+    active_agreements = Agreement.objects.filter(status='active').count()
+
+    total_rent_collected = RentPayment.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+    total_payments_count = RentPayment.objects.count()
+
+    open_disputes_count = Dispute.objects.exclude(status='resolved').count()
+
+    return Response({
+        'metrics': {
+            'total_users': total_users,
+            'tenants_count': tenants_count,
+            'landlords_count': landlords_count,
+            'verified_users_count': verified_users_count,
+            'pending_kyc_count': pending_kyc_count,
+            'total_properties': total_properties,
+            'available_properties': available_properties,
+            'rented_properties': rented_properties,
+            'total_agreements': total_agreements,
+            'active_agreements': active_agreements,
+            'total_rent_collected': float(total_rent_collected),
+            'total_payments_count': total_payments_count,
+            'open_disputes_count': open_disputes_count,
+        }
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def user_directory(request):
-    """Return the list of non-admin users visible to admins."""
-    users = User.objects.filter(role__in=['tenant', 'landlord']).values('id', 'full_name', 'email', 'role')
-    return Response(list(users))
+    """Return filtered user directory list with KYC document status for admin management."""
+    role_filter = request.query_params.get('role')
+    search_query = request.query_params.get('search', '').strip()
+
+    qs = User.objects.all().order_by('-created_at')
+
+    if role_filter in ['tenant', 'landlord', 'admin']:
+        qs = qs.filter(role=role_filter)
+
+    if search_query:
+        qs = qs.filter(
+            db_models.Q(full_name__icontains=search_query) |
+            db_models.Q(email__icontains=search_query) |
+            db_models.Q(phone__icontains=search_query)
+        )
+
+    users_data = []
+    for u in qs:
+        doc_count = UserDocument.objects.filter(user=u).count()
+        pending_doc = UserDocument.objects.filter(user=u, status='pending').exists()
+        users_data.append({
+            'id': str(u.id),
+            'full_name': u.full_name,
+            'email': u.email,
+            'phone': u.phone,
+            'role': u.role,
+            'is_verified': u.is_verified,
+            'is_email_verified': u.is_email_verified,
+            'is_active': u.is_active,
+            'is_staff': u.is_staff,
+            'created_at': u.created_at,
+            'doc_count': doc_count,
+            'has_pending_kyc': pending_doc,
+        })
+
+    return Response(users_data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_kyc_list(request):
+    """List submitted KYC documents for admin review."""
+    docs = UserDocument.objects.select_related('user').order_by('-created_at')
+    result = []
+    for doc in docs:
+        result.append({
+            'id': doc.id,
+            'user_id': str(doc.user.id),
+            'user_email': doc.user.email,
+            'user_full_name': doc.user.full_name,
+            'user_phone': doc.user.phone,
+            'user_role': doc.user.role,
+            'doc_type': doc.doc_type,
+            'doc_number': doc.doc_number,
+            'doc_url': doc.doc_url,
+            'back_doc_url': doc.back_doc_url,
+            'status': doc.status,
+            'created_at': doc.created_at,
+            'verified_at': doc.verified_at,
+        })
+    return Response(result, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_kyc_review(request):
+    """Approve or reject a submitted user KYC document."""
+    doc_id = request.data.get('document_id')
+    action = request.data.get('action')
+
+    doc = UserDocument.objects.filter(id=doc_id).first()
+    if not doc:
+        return Response({'detail': 'KYC document record not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if action == 'approve':
+        doc.status = 'approved'
+        doc.verified_at = timezone.now()
+        doc.save()
+        user = doc.user
+        user.is_verified = True
+        user.save(update_fields=['is_verified'])
+        return Response({'detail': f'KYC document for {user.full_name or user.email} approved successfully.', 'status': 'approved'})
+    elif action == 'reject':
+        doc.status = 'rejected'
+        doc.save()
+        user = doc.user
+        user.is_verified = False
+        user.save(update_fields=['is_verified'])
+        return Response({'detail': f'KYC document for {user.full_name or user.email} rejected.', 'status': 'rejected'})
+    else:
+        return Response({'detail': 'Invalid action. Must be "approve" or "reject".'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_toggle_user_status(request):
+    """Toggle user active/disabled status."""
+    user_id = request.data.get('user_id')
+    target_user = User.objects.filter(id=user_id).first()
+    if not target_user:
+        return Response({'detail': 'User account not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if target_user.is_superuser:
+        return Response({'detail': 'Cannot deactivate superuser accounts.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    target_user.is_active = not target_user.is_active
+    target_user.save(update_fields=['is_active'])
+    status_str = 'activated' if target_user.is_active else 'deactivated'
+    return Response({'detail': f'User account {target_user.email} was {status_str}.', 'is_active': target_user.is_active})
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_system_health(request):
+    """Return live system diagnostic indicators (DB ping, mail backend, Q cluster status)."""
+    import time
+    from django.db import connection
+
+    db_ok = False
+    db_latency_ms = 0
+    try:
+        t0 = time.time()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        t1 = time.time()
+        db_ok = True
+        db_latency_ms = round((t1 - t0) * 1000, 2)
+    except Exception as e:
+        db_ok = False
+
+    return Response({
+        'status': 'healthy' if db_ok else 'degraded',
+        'database': {
+            'engine': settings.DATABASES['default']['ENGINE'].split('.')[-1],
+            'connected': db_ok,
+            'latency_ms': db_latency_ms,
+        },
+        'environment': {
+            'debug': settings.DEBUG,
+            'email_backend': settings.EMAIL_BACKEND.split('.')[-1],
+            'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL', 'N/A'),
+            'q_cluster_sync': getattr(settings, 'Q_CLUSTER_SYNC', True),
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_system_activity(request):
+    """Return recent platform activity audit items across all modules."""
+    from properties.models import Property
+    from rent_payments.models import RentPayment
+
+    activity = []
+
+    for u in User.objects.order_by('-created_at')[:5]:
+        activity.append({
+            'id': f"u_{u.id}",
+            'type': 'user_registered',
+            'title': f"New {u.role.capitalize()} Registered",
+            'detail': f"{u.full_name or u.email} ({u.email})",
+            'timestamp': u.created_at,
+        })
+
+    for p in Property.objects.order_by('-created_at')[:5]:
+        activity.append({
+            'id': f"p_{p.id}",
+            'type': 'property_created',
+            'title': "New Property Listing Created",
+            'detail': f"{p.title} ({p.district}) — Rs. {float(p.rent_amount):,.2f}",
+            'timestamp': p.created_at,
+        })
+
+    for rp in RentPayment.objects.order_by('-paid_at')[:5]:
+        if rp.paid_at:
+            activity.append({
+                'id': f"rp_{rp.id}",
+                'type': 'payment_received',
+                'title': "Escrow Rent Payment Verified",
+                'detail': f"Receipt #{rp.receipt_no} — Rs. {float(rp.amount):,.2f} ({rp.payment_month.strftime('%b %Y')})",
+                'timestamp': rp.paid_at,
+            })
+
+    activity.sort(key=lambda x: x['timestamp'] if x['timestamp'] else timezone.now(), reverse=True)
+    return Response(activity[:12], status=status.HTTP_200_OK)
+
+
 
 
 class DocumentListCreateView(APIView):

@@ -129,9 +129,10 @@ class EmailVerificationOTPTests(TestCase):
         otp.save(update_fields=['created_at'])
         self.assertTrue(otp.is_expired())
 
-    @patch('accounts.views.async_task')
-    def test_register_view_creates_email_verification_otp(self, mocked_async_task):
+    @patch('accounts.views._send_verification_otp_email')
+    def test_register_view_creates_email_verification_otp(self, mocked_send_email):
         """Registration should create and send an email verification OTP."""
+        mocked_send_email.return_value = (True, None)
         request = self.factory.post(
             '/api/accounts/register/',
             {
@@ -152,7 +153,8 @@ class EmailVerificationOTPTests(TestCase):
         otp = EmailVerificationOTP.objects.filter(user=created_user).latest('created_at')
         self.assertEqual(len(otp.otp), 6)
         self.assertTrue(otp.otp.isdigit())
-        mocked_async_task.assert_called_once()
+        mocked_send_email.assert_called_once()
+
     def test_verify_email_view_marks_user_verified(self):
         """Valid OTP should mark the email and OTP as verified/used."""
         otp_record = EmailVerificationOTP.objects.create(user=self.user, otp='123456')
@@ -164,7 +166,7 @@ class EmailVerificationOTPTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.user.refresh_from_db()
         otp_record.refresh_from_db()
-        self.assertTrue(self.user.is_verified)
+        self.assertTrue(self.user.is_email_verified)
         self.assertTrue(otp_record.is_used)
 
     def test_resend_otp_invalidates_previous_unused_otps(self):
@@ -183,8 +185,8 @@ class EmailVerificationOTPTests(TestCase):
 
     def test_resend_otp_rejects_verified_users(self):
         """Verified users should not receive a new OTP."""
-        self.user.is_verified = True
-        self.user.save(update_fields=['is_verified'])
+        self.user.is_email_verified = True
+        self.user.save(update_fields=['is_email_verified'])
         request = self.factory.post('/api/accounts/resend-otp/', {})
         force_authenticate(request, user=self.user)
 

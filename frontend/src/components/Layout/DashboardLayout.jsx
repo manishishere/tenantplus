@@ -51,7 +51,12 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
-  const navItems = [
+  const navItems = role === 'admin' ? [
+    { name: 'Executive Console', icon: Home, path: '/dashboard' },
+    { name: 'Property Moderation', icon: Building2, path: '/dashboard/properties' },
+    { name: 'Agreements Audit', icon: FileText, path: '/dashboard/agreements' },
+    { name: 'Maintenance Oversight', icon: Wrench, path: '/dashboard/maintenance' },
+  ] : [
     { name: 'Dashboard', icon: Home, path: '/dashboard' },
     { name: 'Properties', icon: Building2, path: '/dashboard/properties' },
     ...(role === 'landlord' ? [{ name: 'Applications', icon: Users, path: '/dashboard/applications' }] : []),
@@ -61,6 +66,8 @@ export default function DashboardLayout() {
     { name: 'Maintenance', icon: Wrench, path: '/dashboard/maintenance' },
     { name: 'Utilities', icon: DollarSign, path: '/dashboard/utilities' },
   ];
+
+
 
   return (
     <div className="dashboard-root">
@@ -185,7 +192,11 @@ export default function DashboardLayout() {
             <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
               <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <span>{user?.full_name || user?.email}</span>
-                {user?.is_verified ? (
+                {role === 'admin' || user?.is_staff ? (
+                  <span title="System Administrator" style={{ color: '#a855f7', display: 'inline-flex', alignItems: 'center', background: 'rgba(168, 85, 247, 0.15)', padding: '0.15rem 0.55rem', borderRadius: '1rem', border: '1px solid rgba(168, 85, 247, 0.3)', fontSize: '0.725rem', fontWeight: 700, gap: '0.25rem' }}>
+                    <ShieldCheck size={13} /> System Admin
+                  </span>
+                ) : user?.is_verified ? (
                   <span title="Verified KYC Account" style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', background: 'rgba(16, 185, 129, 0.15)', padding: '0.15rem 0.55rem', borderRadius: '1rem', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '0.725rem', fontWeight: 700, gap: '0.25rem' }}>
                     <CheckCircle2 size={13} /> Verified
                   </span>
@@ -194,6 +205,7 @@ export default function DashboardLayout() {
                     <ShieldCheck size={12} /> KYC Pending
                   </span>
                 )}
+
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{role}</div>
             </div>

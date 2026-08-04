@@ -16,6 +16,11 @@ from .views import (
     ConfirmEmailChangeView,
     admin_dashboard,
     user_directory,
+    admin_kyc_list,
+    admin_kyc_review,
+    admin_toggle_user_status,
+    admin_system_health,
+    admin_system_activity,
     test_email_view,
 )
 
@@ -49,5 +54,19 @@ urlpatterns = [
     path('documents', DocumentListCreateView.as_view()),
     path('documents/', DocumentListCreateView.as_view(), name='documents'),
     path('admin/dashboard', admin_dashboard, name='admin-dashboard'),
+    path('admin/dashboard/', admin_dashboard),
+    path('admin/kyc-documents', admin_kyc_list),
+    path('admin/kyc-documents/', admin_kyc_list),
+    path('admin/kyc-review', admin_kyc_review),
+    path('admin/kyc-review/', admin_kyc_review),
+    path('admin/toggle-user-status', admin_toggle_user_status),
+    path('admin/toggle-user-status/', admin_toggle_user_status),
+    path('admin/system-health', admin_system_health),
+    path('admin/system-health/', admin_system_health),
+    path('admin/system-activity', admin_system_activity),
+    path('admin/system-activity/', admin_system_activity),
     path('users', user_directory, name='user-directory'),
+    path('users/', user_directory),
 ]
+
+

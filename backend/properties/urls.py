@@ -9,15 +9,21 @@ from .views import (
     SavedPropertyListView,
     SavedPropertyToggleView,
     ToggleAvailabilityView,
+    admin_property_list,
+    admin_moderate_property,
 )
 
 urlpatterns = [
     path('', PropertyListCreateView.as_view()),
+    path('admin/all', admin_property_list),
+    path('admin/all/', admin_property_list),
     path('my-listings/', MyListingsView.as_view()),
     path('saved/', SavedPropertyListView.as_view()),
     path('<uuid:id>/', PropertyDetailView.as_view()),
     path('<uuid:id>/toggle-availability/', ToggleAvailabilityView.as_view()),
+    path('<uuid:id>/admin-moderate/', admin_moderate_property),
     path('<uuid:id>/photos/', PropertyPhotoListCreateView.as_view()),
     path('<uuid:id>/photos/<uuid:photo_id>/', PropertyPhotoDeleteView.as_view()),
     path('<uuid:id>/save/', SavedPropertyToggleView.as_view()),
 ]
+

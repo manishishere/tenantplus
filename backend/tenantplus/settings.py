@@ -187,10 +187,11 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='resouk81@gmail.com')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='jefmmxkotupkbdog')
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
-EMAIL_USE_TLS = True
-EMAIL_TIMEOUT = 10
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=False)
+EMAIL_TIMEOUT = env.int('EMAIL_TIMEOUT', default=10)
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
 ESEWA_MERCHANT_ID = env('ESEWA_MERCHANT_ID', default='EPAYTEST')
 ESEWA_SECRET_KEY = env('ESEWA_SECRET_KEY', default='8gBm/:&EnhH.1/q')
@@ -232,6 +233,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 APPEND_SLASH = True
 
+Q_CLUSTER_SYNC = env.bool('Q_CLUSTER_SYNC', default=DEBUG or not env.bool('Q_CLUSTER_WORKER_RUNNING', default=False))
+
 Q_CLUSTER = {
     'name': 'tenantplus_cluster',
     'orm': 'default',
@@ -239,4 +242,5 @@ Q_CLUSTER = {
     'recycle': 500,
     'timeout': 60,
     'retry': 120,
+    'sync': Q_CLUSTER_SYNC,
 }

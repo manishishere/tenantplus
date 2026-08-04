@@ -215,3 +215,33 @@ class SavedPropertyToggleView(APIView):
             return Response({'saved': True, 'detail': 'Property saved.'}, status=status.HTTP_201_CREATED)
         saved_property.delete()
         return Response({'saved': False, 'detail': 'Property removed from saved.'}, status=status.HTTP_200_OK)
+
+
+from rest_framework.decorators import api_view, permission_classes
+from core.permissions import IsAdminUser
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_property_list(request):
+    """Return all property listings regardless of availability for admin moderation."""
+    properties = Property.objects.all().order_by('-created_at')
+    serializer = PropertyListSerializer(properties, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_moderate_property(request, id):
+    """Approve or toggle property listing status as an administrator."""
+    property_obj = get_object_or_404(Property, id=id)
+    is_available = request.data.get('is_available')
+
+    if is_available is not None:
+        property_obj.is_available = bool(is_available)
+        property_obj.save(update_fields=['is_available'])
+
+    return Response({
+        'detail': f'Property listing "{property_obj.title}" updated.',
+        'property': PropertyListSerializer(property_obj).data
+    }, status=status.HTTP_200_OK)
+
