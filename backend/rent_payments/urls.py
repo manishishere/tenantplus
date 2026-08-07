@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    ApplyLateFeeView,
     EsewaInitiateView,
     EsewaVerifyView,
     RentPaymentDetailView,
@@ -18,4 +19,5 @@ urlpatterns = [
     path('esewa/verify/', EsewaVerifyView.as_view()),
     path('<uuid:id>/', RentPaymentDetailView.as_view()),
     path('<uuid:id>/receipt/', RentPaymentReceiptDownloadView.as_view()),
+    path('<uuid:id>/apply-late-fee/', ApplyLateFeeView.as_view()),
 ]

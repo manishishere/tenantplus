@@ -7,6 +7,7 @@ from .views import (
     AgreementTerminateView,
     AgreementPDFDownloadView,
     AgreementUploadSignedView,
+    AgreementPayAdvanceView,
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('<uuid:id>/terminate/', AgreementTerminateView.as_view()),
     path('<uuid:id>/pdf/', AgreementPDFDownloadView.as_view()),
     path('<uuid:id>/download-pdf/', AgreementPDFDownloadView.as_view()),
+    path('<uuid:id>/pay-advance/', AgreementPayAdvanceView.as_view()),
 ]

@@ -370,3 +370,36 @@ class SendRentReminderView(APIView):
         if success:
             return Response({'detail': f'Rent due reminder email sent to {agreement.tenant.email}.'}, status=status.HTTP_200_OK)
         return Response({'detail': 'Failed to send reminder email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ApplyLateFeeView(APIView):
+    """Allow a landlord to apply a Rs. 500 late fee on a payment that is 30+ days overdue."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        from datetime import date
+
+        payment = get_object_or_404(RentPayment, id=kwargs['id'])
+        agreement = payment.agreement
+
+        if request.user != agreement.landlord:
+            return Response({'detail': 'Only the landlord can apply a late fee.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if payment.late_fee_applied_by_landlord:
+            return Response({'detail': 'Late fee has already been applied to this payment.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Only allow if 30+ days past the payment month
+        days_overdue = (date.today() - payment.payment_month).days
+        if days_overdue < 30:
+            return Response(
+                {'detail': f'Late fee can only be applied after 30 days overdue. Currently {days_overdue} days past due.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        payment.late_fee = Decimal('500.00')
+        payment.is_late = True
+        payment.late_fee_applied_by_landlord = True
+        payment.save(update_fields=['late_fee', 'is_late', 'late_fee_applied_by_landlord'])
+
+        return Response(RentPaymentDetailSerializer(payment).data, status=status.HTTP_200_OK)

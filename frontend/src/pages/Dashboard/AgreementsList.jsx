@@ -42,8 +42,41 @@ export default function AgreementsList() {
   });
   const [witnessSubmitting, setWitnessSubmitting] = useState(false);
 
+  // Advance Payment State
+  const [advancePayLoading, setAdvancePayLoading] = useState(false);
+  const [advancePayError, setAdvancePayError] = useState('');
+  const [lateFeeLoading, setLateFeeLoading] = useState({});
+
+  // Countdown timer state (seconds remaining until 24h deadline)
+  const [advanceCountdowns, setAdvanceCountdowns] = useState({});
+
   // Lease Renewal Grace Period & Status State
   const [renewalState, setRenewalState] = useState({});
+
+  // Advance payment countdown ticker
+  useEffect(() => {
+    const tick = setInterval(() => {
+      const now = new Date();
+      const newCountdowns = {};
+      agreements.forEach(ag => {
+        if (ag.status === 'pending_advance' && ag.advance_payment_deadline) {
+          const deadline = new Date(ag.advance_payment_deadline);
+          const diffMs = deadline - now;
+          newCountdowns[ag.id] = diffMs > 0 ? diffMs : 0;
+        }
+      });
+      setAdvanceCountdowns(newCountdowns);
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [agreements]);
+
+  const formatCountdown = (ms) => {
+    if (!ms || ms <= 0) return '00:00:00';
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -208,6 +241,31 @@ export default function AgreementsList() {
     }
   };
 
+  const handlePayAdvance = async (agreementId) => {
+    setAdvancePayLoading(true);
+    setAdvancePayError('');
+    try {
+      await api.post(`/agreements/${agreementId}/pay-advance/`);
+      await fetchAgreements();
+    } catch (err) {
+      setAdvancePayError(err.response?.data?.detail || 'Failed to process advance payment.');
+    } finally {
+      setAdvancePayLoading(false);
+    }
+  };
+
+  const handleApplyLateFee = async (paymentId) => {
+    setLateFeeLoading(prev => ({ ...prev, [paymentId]: true }));
+    try {
+      await api.post(`/rent-payments/${paymentId}/apply-late-fee/`);
+      await fetchAgreements();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to apply late fee.');
+    } finally {
+      setLateFeeLoading(prev => ({ ...prev, [paymentId]: false }));
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -270,6 +328,79 @@ export default function AgreementsList() {
       {error && (
         <div style={{ padding: '0.85rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.5rem', fontSize: '0.85rem' }}>
           {error}
+        </div>
+      )}
+
+      {/* ADVANCE PAYMENT BANNER — shown when agreement is pending_advance */}
+      {activeAgreement && activeAgreement.status === 'pending_advance' && (
+        <div style={{
+          background: role === 'tenant' 
+            ? 'linear-gradient(135deg, #b45309 0%, #92400e 100%)' 
+            : 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)',
+          color: '#fff',
+          padding: '1.25rem 1.5rem',
+          borderRadius: '1rem',
+          border: '1px solid rgba(255,255,255,0.15)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1.25rem',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '50%', padding: '0.6rem', display: 'flex' }}>
+              <Clock size={24} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: '0.2rem' }}>
+                {role === 'tenant' 
+                  ? 'Advance Payment Required to Activate Agreement' 
+                  : 'Awaiting Tenant Advance Payment'}
+              </div>
+              <div style={{ fontSize: '0.83rem', opacity: 0.9 }}>
+                {role === 'tenant' 
+                  ? `Pay Rs. ${parseFloat(activeAgreement.advance_amount || activeAgreement.rent_amount).toLocaleString()} advance rent within 24 hours or the application will be auto-cancelled.`
+                  : `The tenant must pay Rs. ${parseFloat(activeAgreement.advance_amount || activeAgreement.rent_amount).toLocaleString()} within 24 hours to activate this agreement.`}
+              </div>
+              {advanceCountdowns[activeAgreement.id] !== undefined && (
+                <div style={{ marginTop: '0.4rem', fontWeight: 800, fontSize: '1.35rem', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+                  {advanceCountdowns[activeAgreement.id] > 0 
+                    ? `⏱ ${formatCountdown(advanceCountdowns[activeAgreement.id])} remaining`
+                    : '⚠ Window Expired — Contact Support'}
+                </div>
+              )}
+            </div>
+          </div>
+          {role === 'tenant' && advanceCountdowns[activeAgreement.id] > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end', minWidth: '200px' }}>
+              {advancePayError && (
+                <div style={{ fontSize: '0.78rem', color: '#fca5a5', textAlign: 'right' }}>{advancePayError}</div>
+              )}
+              <button
+                onClick={() => handlePayAdvance(activeAgreement.id)}
+                disabled={advancePayLoading}
+                style={{
+                  background: '#ffffff',
+                  color: '#b45309',
+                  border: 'none',
+                  borderRadius: '0.6rem',
+                  padding: '0.75rem 1.5rem',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  cursor: advancePayLoading ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  opacity: advancePayLoading ? 0.7 : 1,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {advancePayLoading ? 'Processing...' : `Pay Rs. ${parseFloat(activeAgreement.advance_amount || activeAgreement.rent_amount).toLocaleString()} Advance Now`}
+              </button>
+              <span style={{ fontSize: '0.75rem', opacity: 0.8, textAlign: 'right' }}>
+                Deadline: {activeAgreement.advance_payment_deadline ? new Date(activeAgreement.advance_payment_deadline).toLocaleString() : 'N/A'}
+              </span>
+            </div>
+          )}
         </div>
       )}
 

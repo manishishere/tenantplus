@@ -105,12 +105,17 @@ class ApplicationStatusUpdateView(APIView):
         new_status = serializer.validated_data['status']
         with transaction.atomic():
             application.status = new_status
+            application.accepted_at = date.today() if new_status == Application.STATUS_ACCEPTED else None
             application.save()
 
             if new_status == Application.STATUS_ACCEPTED:
                 application.property.is_available = False
                 application.property.save()
                 from agreements.models import Agreement
+                from django.utils import timezone
+                from datetime import timedelta
+
+                advance_deadline = timezone.now() + timedelta(hours=24)
 
                 Agreement.objects.create(
                     tenant=application.tenant,
@@ -118,7 +123,10 @@ class ApplicationStatusUpdateView(APIView):
                     property=application.property,
                     application=application,
                     rent_amount=application.property.rent_amount,
-                    status='active',
+                    advance_amount=application.property.rent_amount,  # 1 month advance
+                    status=Agreement.STATUS_PENDING_ADVANCE,
+                    advance_payment_status=Agreement.ADVANCE_STATUS_PENDING,
+                    advance_payment_deadline=advance_deadline,
                     landlord_acknowledged=True,
                     start_date=date.today(),
                     end_date=date.today() + relativedelta(years=1),

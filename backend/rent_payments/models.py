@@ -19,6 +19,7 @@ class RentPayment(models.Model):
     receipt_no = models.CharField(max_length=50, unique=True, blank=True)
     is_late = models.BooleanField(default=False)
     late_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    late_fee_applied_by_landlord = models.BooleanField(default=False)  # Landlord must manually trigger
     notes = models.TextField(blank=True)
     esewa_verified = models.BooleanField(default=False)
     history = HistoricalRecords()
@@ -48,7 +49,6 @@ class RentPayment(models.Model):
             self.late_fee = Decimal('0.00')
 
     def save(self, *args, **kwargs):
-        self.calculate_late_fee()
         if not self.receipt_no:
             self.receipt_no = self.generate_receipt_no()
         super().save(*args, **kwargs)

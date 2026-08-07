@@ -198,3 +198,59 @@ class AgreementPDFDownloadView(APIView):
         response['Content-Disposition'] = 'attachment; filename="agreement.pdf"'
         return response
 
+
+class AgreementPayAdvanceView(APIView):
+    """Allow tenant to pay the advance rent within the 24-hour window to activate the agreement."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        from django.utils import timezone
+
+        agreement = get_object_or_404(Agreement, id=kwargs['id'])
+        if request.user != agreement.tenant:
+            return Response({'detail': 'Only the tenant can pay the advance.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if agreement.status != Agreement.STATUS_PENDING_ADVANCE:
+            return Response({'detail': 'This agreement does not require advance payment.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the 24-hour window has expired
+        if agreement.advance_payment_deadline and timezone.now() > agreement.advance_payment_deadline:
+            # Auto-cancel: free the property and mark application as rejected
+            with transaction.atomic():
+                agreement.advance_payment_status = Agreement.ADVANCE_STATUS_EXPIRED
+                agreement.status = Agreement.STATUS_TERMINATED
+                agreement.save()
+
+                prop = agreement.property
+                prop.is_available = True
+                prop.save()
+
+                application = agreement.application
+                application.status = 'rejected'
+                application.save()
+
+            return Response(
+                {'detail': 'The 24-hour advance payment window has expired. The application has been auto-cancelled and the property is now available again.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Record advance payment and activate agreement
+        with transaction.atomic():
+            agreement.advance_payment_status = Agreement.ADVANCE_STATUS_PAID
+            agreement.status = Agreement.STATUS_ACTIVE
+            agreement.save()
+
+            # Create advance rent payment record
+            from rent_payments.models import RentPayment
+            from datetime import date
+            RentPayment.objects.create(
+                agreement=agreement,
+                amount=agreement.advance_amount,
+                payment_month=agreement.start_date,
+                notes='Advance payment - agreement activation',
+                late_fee=0,
+                is_late=False,
+            )
+
+        return Response(AgreementDetailSerializer(agreement).data, status=status.HTTP_200_OK)

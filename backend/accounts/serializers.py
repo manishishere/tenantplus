@@ -79,6 +79,13 @@ class ChangePasswordSerializer(serializers.Serializer):
 class UserDocumentSerializer(serializers.ModelSerializer):
     """Validate document submissions for tenancy verification."""
 
+    # Override DRF auto-inferred max_length=500 — these are large base64 Data URLs
+    user_photo = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    doc_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    back_doc_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    house_doc_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    electricity_bill_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
     class Meta:
         model = UserDocument
         fields = (

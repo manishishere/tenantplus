@@ -13,11 +13,23 @@ class Agreement(models.Model):
     STATUS_ACTIVE = 'active'
     STATUS_EXPIRED = 'expired'
     STATUS_TERMINATED = 'terminated'
+    STATUS_PENDING_ADVANCE = 'pending_advance'
 
     STATUS_CHOICES = (
         (STATUS_ACTIVE, 'Active'),
         (STATUS_EXPIRED, 'Expired'),
         (STATUS_TERMINATED, 'Terminated'),
+        (STATUS_PENDING_ADVANCE, 'Pending Advance Payment'),
+    )
+
+    ADVANCE_STATUS_PENDING = 'pending'
+    ADVANCE_STATUS_PAID = 'paid'
+    ADVANCE_STATUS_EXPIRED = 'expired'
+
+    ADVANCE_PAYMENT_STATUS_CHOICES = (
+        (ADVANCE_STATUS_PENDING, 'Pending'),
+        (ADVANCE_STATUS_PAID, 'Paid'),
+        (ADVANCE_STATUS_EXPIRED, 'Expired - Auto Cancelled'),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -70,6 +82,15 @@ class Agreement(models.Model):
         default='pending_upload'
     )
     rejection_reason = models.TextField(blank=True, null=True)
+    # Advance Payment Enforcement (24-hour window after landlord acceptance)
+    advance_payment_status = models.CharField(
+        max_length=20,
+        choices=ADVANCE_PAYMENT_STATUS_CHOICES,
+        default=ADVANCE_STATUS_PENDING
+    )
+    advance_payment_deadline = models.DateTimeField(null=True, blank=True)
+    advance_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
     history = HistoricalRecords()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -452,7 +452,7 @@ export default function Properties() {
             <PropertyCard 
               key={prop.id} 
               property={prop} 
-              onSelect={handleOpenDetails} 
+              onClick={() => handleOpenDetails(prop)} 
             />
           ))}
         </div>
