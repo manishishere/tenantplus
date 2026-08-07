@@ -15,24 +15,19 @@ from .serializers import DisputeCreateSerializer, DisputeResolveSerializer, Disp
 def _serializer_detail_error(serializer):
     errors = serializer.errors
     if isinstance(errors, dict):
-        for value in errors.values():
-            if isinstance(value, list) and value:
-                return str(value[0])
-            if value:
-                return str(value)
-    if isinstance(errors, list) and errors:
-        return str(errors[0])
-    return 'Invalid input.'
+        return f"{errors}"
+    return str(errors)
 
 
 class DisputeListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        from django.db import models
         if request.user.role == 'tenant':
-            queryset = Dispute.objects.filter(agreement__tenant=request.user)
+            queryset = Dispute.objects.filter(models.Q(filed_by=request.user) | models.Q(agreement__tenant=request.user)).distinct()
         elif request.user.role == 'landlord':
-            queryset = Dispute.objects.filter(agreement__landlord=request.user)
+            queryset = Dispute.objects.filter(models.Q(filed_by=request.user) | models.Q(agreement__landlord=request.user)).distinct()
         elif request.user.role == 'admin':
             queryset = Dispute.objects.all()
         else:

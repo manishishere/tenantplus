@@ -13,11 +13,10 @@ import {
   AlertTriangle,
   ShieldCheck,
   CreditCard,
-  Phone,
   Mail,
   Award,
-  TrendingUp,
-  CheckCircle2
+  CheckCircle2,
+  PlusCircle
 } from 'lucide-react';
 
 export default function LandlordOverview() {
@@ -70,7 +69,6 @@ export default function LandlordOverview() {
     }
   };
 
-  // Metrics
   const totalProperties = properties.length;
   const activeAgreements = agreements.filter(a => a.status === 'active');
   const activeTenanciesCount = activeAgreements.length;
@@ -131,128 +129,164 @@ export default function LandlordOverview() {
         <div style={{ textAlign: 'center' }}>
           <div style={{
             width: '40px', height: '40px',
-            border: '3px solid rgba(99, 102, 241, 0.2)',
-            borderTopColor: 'var(--primary-indigo)',
+            border: '3px solid var(--border-color)',
+            borderTopColor: 'var(--accent-amber)',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 1rem auto'
           }} />
-          <p style={{ color: 'var(--text-muted)' }}>Loading landlord overview...</p>
+          <p style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Loading landlord overview...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', fontFamily: 'var(--font-family)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       
-      {/* 1. TOP HEADER & ESCROW STATUS */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Landlord Dashboard</h1>
-            <span style={{
-              background: 'rgba(16, 185, 129, 0.12)',
-              color: '#10b981',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              padding: '0.35rem 0.8rem',
-              borderRadius: '1.5rem',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}>
-              <ShieldCheck size={14} color="#10b981" /> Verified Landlord Badge
-            </span>
-          </div>
-          <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem', fontSize: '0.9rem' }}>
-            Monitor your rental portfolio, review applications, and track rent collection.
-          </p>
-        </div>
-
-        {/* High-Contrast Escrow Disbursal Banner */}
-        <div style={{
-          background: 'var(--pill-bg)',
-          border: '1px solid var(--pill-border)',
-          padding: '0.75rem 1.15rem',
-          borderRadius: '0.75rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.85rem'
-        }}>
-          <div style={{ background: 'var(--primary-indigo)', padding: '0.5rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center' }}>
-            <CreditCard size={18} color="#ffffff" />
-          </div>
+      {/* 1. TOP HERO HEADER & ESCROW STATUS (WARM MINIMAL) */}
+      <div className="glass-panel" style={{ 
+        padding: '2.25rem',
+        backgroundColor: 'var(--bg-card)',
+        border: '1px solid var(--border-color)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-main)' }}>
-              Platform Escrow Disbursal: Active
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{
+                background: 'var(--pill-bg)',
+                color: 'var(--pill-text)',
+                border: '1px solid var(--pill-border)',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '1rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}>
+                Landlord Control
+              </span>
+              <span style={{
+                background: 'rgba(16, 185, 129, 0.12)',
+                color: '#10b981',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '1rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem'
+              }}>
+                <ShieldCheck size={13} /> Verified Landlord Badge
+              </span>
             </div>
-            <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-              Direct bank payouts triggered after tenant move-in verification.
+            <h1 style={{ margin: 0, fontSize: '2.1rem', fontWeight: 800 }}>
+              Rental Portfolio Control
+            </h1>
+            <p style={{ color: 'var(--text-muted)', marginTop: '0.35rem', fontSize: '0.95rem' }}>
+              Screen tenant applications, oversee active tenancies, and collect rent payments safely.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => navigate('/dashboard/properties')} 
+              className="btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <PlusCircle size={18} /> Manage Listings
+            </button>
+
+            <div style={{
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border-color)',
+              padding: '0.65rem 1.15rem',
+              borderRadius: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <div style={{ backgroundColor: 'var(--accent-amber)', padding: '0.45rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center' }}>
+                <CreditCard size={18} color="#ffffff" />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                  Platform Escrow Disbursal: Active
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.05rem' }}>
+                  Direct payouts after tenant move-in check.
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '1rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <AlertCircle size={20} />
-          <span>{error}</span>
+          <span style={{ fontWeight: 600 }}>{error}</span>
         </div>
       )}
 
       {/* 2. METRICS CARDS GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.25rem' }}>
         
         {/* Total Properties */}
-        <div className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem' }}>
-          <div style={{ background: 'rgba(99, 102, 241, 0.12)', padding: '0.85rem', borderRadius: '0.75rem' }}>
-            <Building2 size={26} color="var(--primary-indigo)" />
+        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem' }}>
+          <div style={{ background: 'var(--pill-bg)', padding: '0.85rem', borderRadius: '0.75rem', border: '1px solid var(--pill-border)' }}>
+            <Building2 size={24} color="var(--accent-amber)" />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Listings</span>
-            <h2 style={{ fontSize: '1.8rem', margin: '0.15rem 0 0 0', fontWeight: 800, color: 'var(--text-main)' }}>{totalProperties}</h2>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Listings</span>
+            <h2 style={{ fontSize: '1.85rem', margin: '0.15rem 0 0 0', fontWeight: 800, color: 'var(--text-main)' }}>{totalProperties}</h2>
           </div>
         </div>
 
         {/* Active Tenancies */}
-        <div className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem' }}>
-          <div style={{ background: 'rgba(16, 185, 129, 0.12)', padding: '0.85rem', borderRadius: '0.75rem' }}>
-            <FileText size={26} color="#10b981" />
+        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem' }}>
+          <div style={{ background: 'rgba(16, 185, 129, 0.12)', padding: '0.85rem', borderRadius: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+            <FileText size={24} color="#10b981" />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Tenancies</span>
-            <h2 style={{ fontSize: '1.8rem', margin: '0.15rem 0 0 0', fontWeight: 800, color: 'var(--text-main)' }}>{activeTenanciesCount}</h2>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active Tenancies</span>
+            <h2 style={{ fontSize: '1.85rem', margin: '0.15rem 0 0 0', fontWeight: 800, color: '#10b981' }}>{activeTenanciesCount}</h2>
           </div>
         </div>
 
         {/* Pending Applications */}
         <div 
-          className="premium-card" 
+          className="glass-panel" 
           style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem', cursor: 'pointer' }}
           onClick={() => navigate('/dashboard/applications')}
         >
-          <div style={{ background: 'rgba(245, 158, 11, 0.12)', padding: '0.85rem', borderRadius: '0.75rem' }}>
-            <Clock size={26} color="#d97706" />
+          <div style={{ background: 'rgba(245, 158, 11, 0.12)', padding: '0.85rem', borderRadius: '0.75rem', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+            <Clock size={24} color="#f59e0b" />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Pending Apps</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pending Apps</span>
               <ChevronRight size={16} color="var(--text-muted)" />
             </div>
-            <h2 style={{ fontSize: '1.8rem', margin: '0.15rem 0 0 0', fontWeight: 800, color: 'var(--text-main)' }}>{pendingAppsCount}</h2>
+            <h2 style={{ fontSize: '1.85rem', margin: '0.15rem 0 0 0', fontWeight: 800, color: '#f59e0b' }}>{pendingAppsCount}</h2>
           </div>
         </div>
 
         {/* Unpaid Rent */}
-        <div className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem' }}>
-          <div style={{ background: unpaidRentAmount > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)', padding: '0.85rem', borderRadius: '0.75rem' }}>
-            <AlertCircle size={26} color={unpaidRentAmount > 0 ? '#ef4444' : '#10b981'} />
+        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem' }}>
+          <div style={{ 
+            background: unpaidRentAmount > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)', 
+            padding: '0.85rem', 
+            borderRadius: '0.75rem',
+            border: `1px solid ${unpaidRentAmount > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}` 
+          }}>
+            <AlertCircle size={24} color={unpaidRentAmount > 0 ? '#ef4444' : '#10b981'} />
           </div>
           <div>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Unpaid Rent</span>
-            <h2 style={{ fontSize: '1.8rem', margin: '0.15rem 0 0 0', fontWeight: 800, color: unpaidRentAmount > 0 ? '#ef4444' : 'var(--text-main)' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Unpaid Rent</span>
+            <h2 style={{ fontSize: '1.85rem', margin: '0.15rem 0 0 0', fontWeight: 800, color: unpaidRentAmount > 0 ? '#ef4444' : 'var(--text-main)' }}>
               Rs. {unpaidRentAmount.toLocaleString()}
             </h2>
           </div>
@@ -260,54 +294,72 @@ export default function LandlordOverview() {
 
       </div>
 
-      {/* 3. MAIN SPLIT LAYOUT */}
+      {/* 3. MAIN SPLIT SECTION */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.75rem' }}>
         
         {/* LEFT COLUMN: NEW LEASE APPLICATIONS */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Clock size={18} color="#d97706" /> New Lease Applications
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+              <Clock size={20} color="#f59e0b" /> Lease Application Screening
             </h3>
             <button 
               onClick={() => navigate('/dashboard/applications')} 
-              style={{ background: 'none', border: 'none', color: 'var(--primary-indigo)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.85rem', fontWeight: 700 }}
+              style={{ background: 'none', border: 'none', color: 'var(--accent-amber)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.85rem', fontWeight: 700 }}
             >
               View All <ChevronRight size={15} />
             </button>
           </div>
 
           {pendingApps.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)' }}>
-              <Users size={36} color="var(--text-muted)" style={{ opacity: 0.4, marginBottom: '0.5rem' }} />
-              <p style={{ margin: 0, fontSize: '0.9rem' }}>No pending lease applications right now.</p>
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+              <Users size={38} color="var(--text-muted)" style={{ opacity: 0.35, marginBottom: '0.5rem' }} />
+              <p style={{ margin: 0, fontSize: '0.925rem', fontWeight: 600 }}>No pending lease applications at the moment.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {pendingApps.slice(0, 5).map((app) => (
-                <div key={app.id} style={{ padding: '1rem', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div key={app.id} style={{ 
+                  padding: '1.15rem', 
+                  background: 'var(--bg-input)', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: '0.75rem', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '0.85rem' 
+                }}>
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-main)' }}>
                           {app.tenant.full_name || app.tenant.email}
                         </span>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '0.8rem', background: 'var(--pill-bg)', color: 'var(--primary-indigo)', border: '1px solid var(--pill-border)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Award size={11} /> Score: {app.tenant.rental_score || 98}/100
+                        <span style={{ fontSize: '0.725rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '0.8rem', background: 'var(--pill-bg)', color: 'var(--pill-text)', border: '1px solid var(--pill-border)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <Award size={12} /> Score: {app.tenant.rental_score || 98}/100
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                        Applied for: <strong>{app.property.title}</strong>
+                      <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                        Property: <strong style={{ color: 'var(--text-main)' }}>{app.property.title}</strong>
                       </div>
                     </div>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary-indigo)' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
                       Rs. {parseFloat(app.property.rent_amount).toLocaleString()}/mo
                     </span>
                   </div>
 
                   {app.message && (
-                    <p style={{ margin: 0, padding: '0.5rem 0.75rem', background: 'var(--bg-card)', borderRadius: '0.35rem', fontSize: '0.825rem', color: 'var(--text-muted)', borderLeft: '3px solid var(--primary-indigo)', fontStyle: 'italic' }}>
+                    <p style={{ 
+                      margin: 0, 
+                      padding: '0.65rem 0.85rem', 
+                      background: 'var(--bg-card)', 
+                      borderRadius: '0.5rem', 
+                      fontSize: '0.85rem', 
+                      color: 'var(--text-muted)', 
+                      borderLeft: '3px solid var(--accent-amber)', 
+                      fontStyle: 'italic',
+                      lineHeight: 1.5
+                    }}>
                       "{app.message}"
                     </p>
                   )}
@@ -316,10 +368,9 @@ export default function LandlordOverview() {
                     <button 
                       disabled={processingId !== null}
                       onClick={() => handleUpdateStatus(app.id, 'accepted')}
-                      className="btn-primary" 
+                      className="btn-primary btn-emerald" 
                       style={{ 
                         flex: 1, 
-                        backgroundColor: '#10b981', 
                         padding: '0.55rem 1rem', 
                         fontSize: '0.85rem',
                         display: 'flex',
@@ -336,12 +387,12 @@ export default function LandlordOverview() {
                       style={{ 
                         flex: 1, 
                         background: 'transparent',
-                        border: '1px solid var(--border-color)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
                         color: '#ef4444',
                         padding: '0.55rem 1rem', 
                         fontSize: '0.85rem',
-                        fontWeight: 600,
-                        borderRadius: '0.5rem',
+                        fontWeight: 700,
+                        borderRadius: '0.625rem',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -360,62 +411,75 @@ export default function LandlordOverview() {
 
         {/* RIGHT COLUMN: ACTIVE TENANTS */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Users size={18} color="var(--primary-indigo)" /> Active Tenants
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+              <Users size={20} color="var(--accent-amber)" /> Active Tenancies Ledger
             </h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>{activeTenanciesCount} Active Leases</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700 }}>{activeTenanciesCount} Active Leases</span>
           </div>
 
           {activeAgreements.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)' }}>
-              <Building2 size={36} color="var(--text-muted)" style={{ opacity: 0.4, marginBottom: '0.5rem' }} />
-              <p style={{ margin: 0, fontSize: '0.9rem' }}>No active tenants at the moment.</p>
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+              <Building2 size={38} color="var(--text-muted)" style={{ opacity: 0.35, marginBottom: '0.5rem' }} />
+              <p style={{ margin: 0, fontSize: '0.925rem', fontWeight: 600 }}>No active tenants registered currently.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {activeAgreements.map((agreement) => {
                 const overdue = isRentOverdue(agreement);
                 return (
-                  <div key={agreement.id} style={{ padding: '1rem', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={agreement.id} style={{ 
+                    padding: '1.15rem', 
+                    background: 'var(--bg-input)', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: '0.75rem', 
+                    display: 'flex', 
+                    justify: 'space-between', 
+                    alignItems: 'center',
+                    gap: '1rem',
+                    flexWrap: 'wrap'
+                  }}>
                     <div>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)' }}>
                         {agreement.tenant.full_name || agreement.tenant.email}
                       </h4>
-                      <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{agreement.property.title}</p>
+                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+                        {agreement.property.title}
+                      </p>
                     </div>
 
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary-indigo)' }}>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--accent-amber)' }}>
                         Rs. {parseFloat(agreement.rent_amount).toLocaleString()}/mo
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
                           onClick={() => handleSendReminder(agreement.id)}
                           style={{
                             background: 'var(--pill-bg)',
                             border: '1px solid var(--pill-border)',
-                            color: 'var(--primary-indigo)',
-                            padding: '0.2rem 0.6rem',
-                            borderRadius: '0.4rem',
-                            fontSize: '0.725rem',
+                            color: 'var(--pill-text)',
+                            padding: '0.25rem 0.65rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.75rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.25rem'
+                            gap: '0.3rem'
                           }}
                           title="Send Email Reminder with 1-Click Payment Link"
                         >
-                          <Mail size={11} /> Send Email Reminder
+                          <Mail size={12} /> Send Email Reminder
                         </button>
+                        
                         <span style={{ 
                           display: 'inline-flex', 
                           alignItems: 'center', 
-                          gap: '0.25rem',
+                          gap: '0.3rem',
                           fontSize: '0.75rem',
                           fontWeight: 700,
-                          padding: '0.15rem 0.55rem',
+                          padding: '0.25rem 0.65rem',
                           borderRadius: '1rem',
                           color: overdue ? '#ef4444' : '#10b981',
                           background: overdue ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
@@ -423,11 +487,11 @@ export default function LandlordOverview() {
                         }}>
                           {overdue ? (
                             <>
-                              <AlertTriangle size={12} /> Overdue
+                              <AlertTriangle size={13} /> Overdue
                             </>
                           ) : (
                             <>
-                              <CheckCircle2 size={12} /> Rent Paid
+                              <CheckCircle2 size={13} /> Paid
                             </>
                           )}
                         </span>

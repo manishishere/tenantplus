@@ -30,6 +30,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
             'furnishing_status',
             'rent_amount',
             'is_available',
+            'verification_status',
             'created_at',
             'photo_count',
             'landlord_name',
@@ -61,6 +62,10 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     landlord_is_verified = serializers.SerializerMethodField()
     photo_count = serializers.SerializerMethodField()
 
+    # Admin/Landlord restricted document URLs
+    lalpurja_doc_url = serializers.SerializerMethodField()
+    electricity_bill_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Property
         fields = (
@@ -73,6 +78,9 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'furnishing_status',
             'rent_amount',
             'is_available',
+            'verification_status',
+            'lalpurja_doc_url',
+            'electricity_bill_url',
             'created_at',
             'updated_at',
             'photos',
@@ -82,6 +90,20 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'landlord_is_verified',
             'photo_count',
         )
+
+    def get_lalpurja_doc_url(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            if request.user == obj.landlord or request.user.role == 'admin':
+                return obj.lalpurja_doc_url
+        return None  # Hidden from tenants for privacy & security
+
+    def get_electricity_bill_url(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            if request.user == obj.landlord or request.user.role == 'admin':
+                return obj.electricity_bill_url
+        return None  # Hidden from tenants for privacy & security
 
     def get_landlord_name(self, obj):
         return obj.landlord.full_name
@@ -135,6 +157,9 @@ class PropertyCreateUpdateSerializer(serializers.ModelSerializer):
             'room_type',
             'furnishing_status',
             'rent_amount',
+            'lalpurja_doc_url',
+            'electricity_bill_url',
+            'verification_status',
             'landlord',
             'is_available',
         )
@@ -165,4 +190,4 @@ class SavedPropertySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SavedProperty
-        fields = ('id', 'property', 'tenant', 'saved_at')
+        fields = ('id', 'property', 'tenant', 'created_at')

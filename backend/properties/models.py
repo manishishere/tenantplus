@@ -18,6 +18,11 @@ class Property(models.Model):
         ('unfurnished', 'Unfurnished'),
         ('semi_furnished', 'Semi Furnished'),
     )
+    VERIFICATION_STATUS_CHOICES = (
+        ('pending', 'Pending Audit'),
+        ('verified', 'Verified Listing'),
+        ('flagged', 'Physical Agent Inspection Required'),
+    )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     landlord = models.ForeignKey(
@@ -30,10 +35,16 @@ class Property(models.Model):
     description = models.TextField()
     district = models.CharField(max_length=100)
     address = models.TextField()
-    room_type = models.CharField(max_length=30, choices=ROOM_TYPE_CHOICES)
-    furnishing_status = models.CharField(max_length=30, choices=FURNISHING_STATUS_CHOICES)
+    room_type = models.CharField(max_length=30, choices=ROOM_TYPE_CHOICES, default='flat')
+    furnishing_status = models.CharField(max_length=30, choices=FURNISHING_STATUS_CHOICES, default='unfurnished')
     rent_amount = models.DecimalField(max_digits=10, decimal_places=2)
     is_available = models.BooleanField(default=True)
+
+    # Property-specific Verification Documents (Admin Only)
+    lalpurja_doc_url = models.TextField(blank=True, null=True)
+    electricity_bill_url = models.TextField(blank=True, null=True)
+    verification_status = models.CharField(max_length=30, default='verified', choices=VERIFICATION_STATUS_CHOICES)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -58,25 +69,28 @@ class PropertyPhoto(models.Model):
         ordering = ['sort_order']
 
     def __str__(self):
-        return f"Photo for {self.property.title} (order {self.sort_order})"
+        return f"Photo for {self.property.title}"
 
 
 class SavedProperty(models.Model):
-    """Track properties saved by tenants."""
+    """Allow tenants to bookmark properties for quick reference."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='saved_properties',
-        limit_choices_to={'role': 'tenant'},
     )
-    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='saved_by')
-    saved_at = models.DateTimeField(auto_now_add=True)
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name='saved_by',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        ordering = ['-created_at']
         unique_together = ('tenant', 'property')
-        ordering = ['-saved_at']
 
     def __str__(self):
         return f"{self.tenant.email} saved {self.property.title}"

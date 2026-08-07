@@ -22,9 +22,14 @@ from .views import (
     admin_system_health,
     admin_system_activity,
     test_email_view,
+    broadcast_notice_api,
 )
 
 urlpatterns = [
+    path('broadcast-notice', broadcast_notice_api),
+    path('broadcast-notice/', broadcast_notice_api, name='broadcast-notice'),
+    path('admin/broadcast-notice', broadcast_notice_api),
+    path('admin/broadcast-notice/', broadcast_notice_api),
     path('test-email', test_email_view),
     path('test-email/', test_email_view, name='test-email'),
     path('register', RegisterView.as_view()),

@@ -46,9 +46,16 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Run on mount
+  // Run on mount and poll periodically for live status updates (e.g. KYC approval)
   useEffect(() => {
     checkAuth();
+    const interval = setInterval(() => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        checkAuth();
+      }
+    }, 15000); // 15s live sync interval
+    return () => clearInterval(interval);
   }, [checkAuth]);
 
   // Listen for global 401s to force logout

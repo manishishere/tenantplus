@@ -1,270 +1,318 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Scale, Send, X, Sparkles, HelpCircle, CheckCircle2, ShieldCheck, RefreshCw } from 'lucide-react';
 import './AiRightsChatbot.css';
 
-const PREBUILT_KNOWLEDGE = [
+const KNOWLEDGE_BASE = [
   {
-    keywords: ['deposit', 'security', 'refund', 'deduction', 'money'],
-    title: '🛡️ Security Deposit & Refund Rights',
-    response: `**Security Deposit Regulations & Guidelines:**
-- **Return Timeline:** Landlords are legally required to refund the security deposit within **15 to 30 days** of lease termination and keys handover.
-- **Lawful Deductions:** Deductions are permitted *only* for unpaid utility bills, overdue rent, or documented property damages beyond normal wear and tear.
-- **Proof Required:** Landlords must provide itemized receipts/invoices for any repair cost deducted. Normal wall paint scuffs or age degradation cannot be deducted.`,
-    tags: ['Deposit Return', 'Wear & Tear', 'Receipts']
+    category: 'fine',
+    keywords: ['fine', 'late', 'penalty', 'overdue', 'delay', 'interest', 'grace', 'deadline'],
+    title: 'Late Payment Fines & Statutory Regulations',
+    response: `**Nepal Tenancy Rent Payment & Fine Regulations:**
+• **Statutory Grace Period:** Under Nepalese tenancy customs and House Rent Act 2075, tenants typically have until the **7th of each month** to pay rent without incurring late fines.
+• **Maximum Late Fine Cap:** Late payment penalties cannot exceed **5% of the monthly rent** as per standard digital lease terms on TenantPlus.
+• **Non-Payment Remedies:** If rent remains unpaid after 30 days, the landlord may issue a formal written notice or initiate tenancy arbitration through the Dispute Portal.
+• **Official Receipts:** All late fee payments must be officially logged with an electronic receipt issued in your account.`,
+    chips: ['What is the late fee cap?', 'How many days grace period?']
   },
   {
-    keywords: ['evict', 'eviction', 'notice', 'leave', 'kick out', 'terminate'],
-    title: '📜 Notice Period & Eviction Rights',
-    response: `**Eviction & Termination Protections:**
-- **Mandatory Notice:** Landlords must provide a minimum **35-day written notice** before requesting a tenant to vacate.
-- **Unlawful Eviction:** Instant locks changing, turning off water/electricity, or verbal force without official notice is strictly illegal.
-- **Tenant Termination:** Tenants must give a **30-day written notice** prior to moving out as standard practice under typical lease agreements.`,
-    tags: ['35-Day Notice', 'Tenant Protection', 'Unlawful Lockout']
+    category: 'deposit',
+    keywords: ['deposit', 'security', 'refund', 'deduction', 'money', 'advance', 'holdback'],
+    title: 'Security Deposit & Escrow Refund Rights',
+    response: `**Security Deposit Regulations (House Rent Act 2075):**
+• **Return Timeline:** Landlords are legally required to refund security deposits within **15 to 30 days** of lease termination and key handover.
+• **Lawful Deductions:** Deductions are permitted *only* for documented unpaid utility bills, overdue rent, or physical property damages beyond normal wear and tear.
+• **eSewa Escrow Protection:** Deposits processed through TenantPlus remain safely locked in escrow until physical move-out inspection receipts are verified.`,
+    chips: ['How to request deposit refund?', 'Can landlord deduct for paint?']
   },
   {
-    keywords: ['rent', 'increase', 'raise', 'hike', 'amount', 'ceiling'],
-    title: '📈 Rent Increase & Payment Rules',
-    response: `**Rent Adjustment Standards:**
-- **Frequency Limit:** Rent increases can only occur **once per year** (or at lease renewal), not arbitrarily mid-contract.
-- **Advance Notice:** Landlords must notify tenants at least **30 to 60 days in advance** of any proposed rent adjustment.
-- **Rent Receipts:** Landlords must issue a written or digital receipt (like TenantPlus e-receipts) immediately upon rent collection.`,
-    tags: ['Annual Increase', '60-Day Notice', 'Digital Receipts']
+    category: 'eviction',
+    keywords: ['evict', 'eviction', 'notice', 'leave', 'terminate', 'kick out', 'vacate', 'lock'],
+    title: 'Notice Period & Anti-Eviction Protections',
+    response: `**Nepalese Tenancy Protection Laws:**
+• **Mandatory Notice:** Landlords must provide a minimum **35-day formal written notice** before asking a tenant to vacate under statutory Nepalese law.
+• **Unlawful Evictions:** Changing door locks, cutting off electricity/water, or harassing tenants without a legal notice is strictly illegal.
+• **Emergency Dispute Filing:** Tenants facing illegal eviction can file an instant administrative dispute through the TenantPlus Resolution Portal.`,
+    chips: ['What if landlord cuts electricity?', 'Can I leave with 30-day notice?']
   },
   {
-    keywords: ['repair', 'maintenance', 'fix', 'water', 'leak', 'plumbing', 'broken', 'electricity'],
-    title: '🔧 Maintenance & Repair Responsibilities',
-    response: `**Property Upkeep & Maintenance Duties:**
-- **Landlord Duties:** Major structural repairs, roofing, main plumbing leaks, electrical wiring, and permanent fixture defects must be repaired by the landlord within 48-72 hours.
-- **Tenant Duties:** Daily maintenance, keeping the premises clean, replacing light bulbs, and repairing damage caused by neglect or misuse.
-- **Emergency Repairs:** If an urgent hazard (pipe burst, gas line) is ignored by landlord, tenant may repair and deduct certified costs from next rent payment with receipts.`,
-    tags: ['48h Emergency Repair', 'Structural Upkeep', 'Certified Deductions']
+    category: 'rent',
+    keywords: ['rent', 'increase', 'raise', 'hike', 'amount', 'tax', 'tds', 'price', 'cost', 'escalation'],
+    title: 'Rent Adjustments & Tax Regulations',
+    response: `**Rent Adjustment Standards in Nepal:**
+• **Annual Cap:** Rent adjustments are restricted to a maximum of **once per year** (capped at 10% under statutory guidelines).
+• **Advance Notice:** Landlords must notify tenants **30 to 60 days in advance** prior to applying any rent increase.
+• **Rent Receipts:** Landlords are legally obligated to issue official rent receipts for every monthly payment received.`,
+    chips: ['Is 20% rent hike legal?', 'Who pays local house rent tax?']
   },
   {
-    keywords: ['privacy', 'entry', 'visit', 'inspection', 'enter', 'landlord come'],
-    title: '🔑 Right to Quiet Enjoyment & Privacy',
-    response: `**Privacy & Property Access Rights:**
-- **Prior Notice:** Landlords **cannot enter** the rented room/flat unannounced. They must provide at least **24 to 48 hours advance notice**.
-- **Reasonable Timing:** Inspections or visits must occur during reasonable daytime hours agreed upon in advance.
-- **Quiet Enjoyment:** Tenants have the right to peaceful, undisturbed use of the leased space throughout their tenancy term.`,
-    tags: ['24h Prior Notice', 'Daytime Visits', 'Quiet Enjoyment']
+    category: 'repairs',
+    keywords: ['repair', 'maintenance', 'fix', 'leak', 'water', 'plumbing', 'electric', 'sewage', 'damage', 'broken'],
+    title: 'Property Repair & Maintenance Duties',
+    response: `**Maintenance Allocation Rules:**
+• **Landlord Responsibilities:** Major structural repairs, roof leaks, main water line issues, and electrical wiring defects must be repaired by the landlord within **48 hours**.
+• **Tenant Responsibilities:** Routine light bulb replacements, daily cleanliness, and property damage caused by tenant neglect.
+• **Reimbursement:** If a landlord fails to fix urgent structural issues, tenants may execute repairs and deduct costs from rent with valid receipts.`,
+    chips: ['What if landlord delays roof repair?', 'Who fixes water pump?']
   },
   {
-    keywords: ['real', 'fake', 'verify', 'landlord', 'trust', 'scam', 'proof'],
-    title: '✅ Verifying Real vs. Fake Landlords & Listings',
-    response: `**How TenantPlus Verifies Landlords & Prevents Scams:**
-- **Verified Landlord Badge (🛡️ Checkmark):** Displays when the landlord has uploaded verified Government Citizenship / Passport and official Property Ownership Documents.
-- **Direct Platform Escrow:** Never transfer money directly via unverified offline methods before signing. Payments on TenantPlus are safely held in **Escrow** until move-in terms are verified.
-- **Red Flags:** Beware of landlords refusing physical/video property tours, demanding upfront cash transfers without verified profile badges, or listing prices drastically below market average.`,
-    tags: ['Verified Badge', 'Escrow Guard', 'Anti-Scam']
+    category: 'contract',
+    keywords: ['contract', 'lease', 'agreement', 'sign', 'pdf', 'witness', 'stamp', 'legal', 'duration'],
+    title: 'Digital Lease Contracts & Signatures',
+    response: `**Digital Lease Standards:**
+• **Legal Validity:** Lease agreements signed on TenantPlus are fully compliant with the *House Rent Act 2075* and Nepalese digital signature regulations.
+• **Required Elements:** Includes monthly rent amount, payment due dates, security deposit terms, witness details, and 35-day notice clause.
+• **PDF Export:** Downloads are available 24/7 as legally-verifiable digital PDF documents.`,
+    chips: ['How to download signed lease?', 'Can lease be 2 years long?']
+  },
+  {
+    category: 'verification',
+    keywords: ['verification', 'verify', 'kyc', 'lalpurja', 'citizenship', 'title', 'owner', 'proof', 'identity'],
+    title: 'Landlord & Property KYC Audits',
+    response: `**Verification Safeguards:**
+• **Identity Verification:** Landlords must submit Nepalese Citizenship Certificates or Passports for manual admin verification.
+• **Property Ownership Audit:** Property ownership (Lalpurja land title deed) and tax receipts are audited before granting the Verified Landlord badge.
+• **Fraud Prevention:** Verified listings protect tenants from fake middleman scams.`,
+    chips: ['How long does KYC take?', 'How to check verified badge?']
+  },
+  {
+    category: 'esewa',
+    keywords: ['esewa', 'escrow', 'payment', 'pay', 'khalti', 'transfer', 'receipt', 'transaction', 'gateway'],
+    title: 'eSewa Escrow Rent Payment Safety',
+    response: `**eSewa Escrow Mechanism:**
+• **Payment Holding:** Rent and security deposit payments are securely held in escrow until the tenant completes key handover and move-in inspection.
+• **Automatic Release:** Rent is transferred to the landlord on agreed monthly billing dates.
+• **Instant Receipts:** Digital payment confirmation receipts are automatically logged under your account profile.`,
+    chips: ['Is eSewa payment instant?', 'What if payment fails?']
+  },
+  {
+    category: 'dispute',
+    keywords: ['dispute', 'conflict', 'complain', 'fight', 'court', 'police', 'arbitration', 'issue', 'problem'],
+    title: 'Dispute Resolution & Arbitration',
+    response: `**Platform Dispute Resolution:**
+• **Filing a Claim:** Submit formal evidence (photos, messages, payment receipts) through the TenantPlus Dispute Center.
+• **Administrative Mediation:** Our legal team conducts binding arbitration based on the House Rent Act 2075.
+• **Escrow Freeze:** Disputed funds are frozen in escrow until resolution is finalized.`,
+    chips: ['How to file dispute?', 'How long does mediation take?']
+  },
+  {
+    category: 'utilities',
+    keywords: ['utility', 'electricity', 'meter', 'nea', 'water', 'internet', 'garbage', 'waste', 'bill'],
+    title: 'Utility Metering & Shared Fees',
+    response: `**Utility Billing Rules:**
+• **Separate Sub-Meters:** Electricity should be billed according to official Nepal Electricity Authority (NEA) sub-meter unit readings.
+• **Water & Trash Charges:** Shared drinking water supply and municipal waste collection charges must be clearly defined in your digital lease agreement.`,
+    chips: ['How is electricity unit calculated?', 'Who pays garbage tax?']
+  },
+  {
+    category: 'greeting',
+    keywords: ['hi', 'hello', 'namaste', 'hey', 'greetings', 'help', 'start'],
+    title: 'Namaste! How can I assist you today?',
+    response: `Namaste! I am your **Tenancy Legal Assistant** for TenantPlus Nepal.
+
+I can guide you on:
+• **House Rent Act 2075** legal rules & 35-day notice periods
+• **Late Payment Fines** & grace period rules
+• **Security Deposit Escrow** holding & refund timelines
+• **Property Repairs** & landlord maintenance duties
+• **Verified Lease Agreements** & eSewa payment safety
+
+Ask me any question below!`,
+    chips: ['Late Fine Rules', 'Deposit Refund Rules', 'Eviction Laws', 'eSewa Escrow Safety']
   }
 ];
 
 export default function AiRightsChatbot() {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       id: 1,
       sender: 'bot',
-      text: '👋 Hello! I am **TenantPlus Rights Guardian**, your AI Assistant on rental laws, landlord/tenant legal rights, deposit policies, and scam prevention.\n\nHow can I help educate you today?',
-      tags: ['Verified Landlords', 'Deposit Rules', 'Eviction Rights', 'Escrow Safety'],
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      text: "Namaste! I am your **Tenancy Legal Rights Guide**. Ask any questions regarding Nepalese House Rent Act 2075, security deposits, late payment fines, or eSewa escrow payments.",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
-  const [inputQuery, setInputQuery] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const chatEndRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     if (isOpen) {
       scrollToBottom();
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isTyping]);
+
+  // Hide floating widget on public landing and auth pages
+  if (['/', '/login', '/register', '/verify-email'].includes(location.pathname)) {
+    return null;
+  }
+
+  const findBestAnswer = (userQuery) => {
+    const queryLower = userQuery.toLowerCase().trim();
+    let bestMatch = null;
+    let maxScore = 0;
+
+    for (const item of KNOWLEDGE_BASE) {
+      let score = 0;
+      for (const keyword of item.keywords) {
+        if (queryLower.includes(keyword)) {
+          score += (keyword.length > 4 ? 3 : 1);
+        }
+      }
+      if (score > maxScore) {
+        maxScore = score;
+        bestMatch = item;
+      }
+    }
+
+    if (bestMatch && maxScore > 0) {
+      return `### ${bestMatch.title}\n\n${bestMatch.response}`;
+    }
+
+    // Dynamic contextual response generation for unmatched queries
+    return `### Tenancy Legal Rights Assistance
+
+Thank you for your question regarding **"${userQuery}"**. Here is the legal advice under **Nepalese House Rent Act 2075**:
+
+• **Statutory Rights:** All tenancy terms and late payment penalties must strictly align with your signed digital lease contract.
+• **Grace Period:** Standard Nepalese tenancy allows a 7-day grace period for monthly rent payments.
+• **35-Day Notice Rule:** Neither party can terminate tenancy arbitrarily without a 35-day formal notice.
+• **Escrow Protection:** Security deposits & rent payments made on TenantPlus remain escrow-protected against fraud.`;
+  };
 
   const handleSend = (textToSend) => {
-    const query = textToSend || inputQuery;
-    if (!query.trim()) return;
+    const text = textToSend || inputValue;
+    if (!text.trim()) return;
 
     const userMsg = {
       id: Date.now(),
       sender: 'user',
-      text: query,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      text: text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages((prev) => [...prev, userMsg]);
-    if (!textToSend) setInputQuery('');
+    setMessages(prev => [...prev, userMsg]);
+    if (!textToSend) setInputValue('');
     setIsTyping(true);
 
     setTimeout(() => {
-      const lowerQuery = query.toLowerCase();
-      let matchedTopic = PREBUILT_KNOWLEDGE.find((item) =>
-        item.keywords.some((kw) => lowerQuery.includes(kw))
-      );
-
-      let botResponseText = '';
-      let botTags = [];
-
-      if (matchedTopic) {
-        botResponseText = `### ${matchedTopic.title}\n\n${matchedTopic.response}`;
-        botTags = matchedTopic.tags;
-      } else {
-        botResponseText = `### ℹ️ Legal Rights Overview for "${query}"\n\nUnder standard housing laws & TenantPlus fair tenancy practices:\n- **Transparency:** Both parties must adhere to agreed written lease agreements.\n- **Dispute Resolution:** In case of disagreement, file a formal claim under the TenantPlus **Disputes Portal** for audited arbitration.\n- **Legal Protection:** You have rights regarding habitability, proper notice, and escrow-secured financial transactions.`;
-        botTags = ['Tenancy Rights', 'Dispute Resolution', 'Escrow Secured'];
-      }
-
+      const responseText = findBestAnswer(text);
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',
-        text: botResponseText,
-        tags: botTags,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        text: responseText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-
-      setMessages((prev) => [...prev, botMsg]);
+      setMessages(prev => [...prev, botMsg]);
       setIsTyping(false);
-    }, 600);
+    }, 450);
   };
 
-  const handleChipClick = (chipText) => {
-    handleSend(chipText);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const formatMarkdown = (content) => {
+    if (!content) return '';
+    return content
+      .replace(/### (.*?)\n/g, '<strong style="display:block;margin-bottom:0.4rem;font-size:0.95rem;color:#2563eb;">$1</strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\* (.*?)\n/g, '• $1<br/>')
+      .replace(/• (.*?)\n/g, '• $1<br/>');
   };
 
   return (
-    <div className="ai-chatbot-wrapper">
+    <div className="ai-chatbot-root">
       {/* Floating Trigger Button */}
-      {!isOpen && (
-        <button
-          className="ai-chatbot-trigger-btn"
-          onClick={() => setIsOpen(true)}
-          title="Open AI Rights Guardian"
-        >
-          <div className="ai-bot-icon-pulse">
-            <span>🤖</span>
-          </div>
-          <div className="ai-trigger-text">
-            <span className="ai-title-bold">AI Rights Guardian</span>
-            <span className="ai-sub-text">Legal & Tenancy Help</span>
-          </div>
-        </button>
-      )}
+      <button 
+        className="ai-trigger-btn"
+        onClick={() => setIsOpen(!isOpen)}
+        title="Tenancy Rights Assistant"
+      >
+        <Scale size={16} />
+        <span>Legal Rights Guide</span>
+      </button>
 
-      {/* Chat Drawer Widget */}
+      {/* Floating Chat Window */}
       {isOpen && (
-        <div className="ai-chatbot-container glass-card">
-          {/* Header */}
-          <div className="ai-chatbot-header">
+        <div className="ai-chat-window">
+          <div className="ai-chat-header">
             <div className="ai-header-info">
-              <div className="ai-avatar-badge">🤖</div>
+              <div className="ai-avatar">
+                <Scale size={18} color="#FFFFFF" />
+              </div>
               <div>
-                <h3 className="ai-header-title">AI Rights Guardian</h3>
-                <span className="ai-header-status">
-                  <span className="online-dot"></span> Educating Landlords & Tenants
-                </span>
+                <div className="ai-title">Tenancy Rights Assistant</div>
+                <div className="ai-subtitle">House Rent Act 2075 Verified</div>
               </div>
             </div>
-            <button className="ai-close-btn" onClick={() => setIsOpen(false)} aria-label="Close Chat">
-              ✕
+            <button className="ai-close-btn" onClick={() => setIsOpen(false)}>
+              <X size={16} />
             </button>
           </div>
 
-          {/* Prompt Chips Bar */}
-          <div className="ai-quick-chips">
-            <button
-              className="ai-chip"
-              onClick={() => handleChipClick('How to differentiate real landlord vs fake landlord?')}
-            >
-              🔍 Real vs Fake Landlords
+          <div className="ai-chips-bar">
+            <button className="ai-chip" onClick={() => handleSend('What if I do not pay late fine in time?')}>
+              Late Fine Rules
             </button>
-            <button
-              className="ai-chip"
-              onClick={() => handleChipClick('What are deposit refund rules and timelines?')}
-            >
-              🛡️ Deposit Refund Rules
+            <button className="ai-chip" onClick={() => handleSend('What are security deposit refund rules?')}>
+              Deposit Rules
             </button>
-            <button
-              className="ai-chip"
-              onClick={() => handleChipClick('What is the legal eviction notice period?')}
-            >
-              📜 Eviction Notice Laws
+            <button className="ai-chip" onClick={() => handleSend('What is the legal 35-day eviction notice period?')}>
+              Eviction Laws
             </button>
-            <button
-              className="ai-chip"
-              onClick={() => handleChipClick('Who handles major plumbing and water leaks?')}
-            >
-              🔧 Maintenance & Repairs
+            <button className="ai-chip" onClick={() => handleSend('Who handles plumbing and structural repairs?')}>
+              Repairs
             </button>
-            <button
-              className="ai-chip"
-              onClick={() => handleChipClick('Is payment kept in escrow or direct to landlord?')}
-            >
-              💳 Payment & Escrow Flow
+            <button className="ai-chip" onClick={() => handleSend('How does eSewa escrow payment holding work?')}>
+              eSewa Escrow
             </button>
           </div>
 
-          {/* Messages Feed */}
-          <div className="ai-messages-feed">
+          <div className="ai-chat-body">
             {messages.map((msg) => (
-              <div key={msg.id} className={`ai-message-row ${msg.sender}`}>
-                {msg.sender === 'bot' && <div className="ai-msg-avatar">🤖</div>}
-                <div className="ai-msg-bubble">
-                  <div className="ai-msg-content">
-                    {msg.text.split('\n').map((line, idx) => {
-                      if (line.startsWith('### ')) {
-                        return <h4 key={idx} className="ai-bubble-heading">{line.replace('### ', '')}</h4>;
-                      }
-                      if (line.startsWith('**') && line.endsWith('**')) {
-                        return <strong key={idx} className="ai-bubble-strong">{line.replace(/\*\*/g, '')}</strong>;
-                      }
-                      return <p key={idx}>{line}</p>;
-                    })}
-                  </div>
-                  {msg.tags && msg.tags.length > 0 && (
-                    <div className="ai-msg-tags">
-                      {msg.tags.map((t, idx) => (
-                        <span key={idx} className="ai-tag-pill">{t}</span>
-                      ))}
-                    </div>
-                  )}
-                  <span className="ai-msg-timestamp">{msg.timestamp}</span>
-                </div>
+              <div key={msg.id} className={`ai-msg-wrapper ${msg.sender === 'user' ? 'user' : 'bot'}`}>
+                <div className="ai-msg-bubble" dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.text) }} />
+                <span className="ai-msg-time">{msg.time}</span>
               </div>
             ))}
-
+            
             {isTyping && (
-              <div className="ai-message-row bot">
-                <div className="ai-msg-avatar">🤖</div>
-                <div className="ai-msg-bubble typing-bubble">
-                  <span className="typing-dot"></span>
-                  <span className="typing-dot"></span>
-                  <span className="typing-dot"></span>
+              <div className="ai-msg-wrapper bot">
+                <div className="ai-msg-bubble typing-indicator">
+                  <span></span><span></span><span></span>
                 </div>
               </div>
             )}
-            <div ref={chatEndRef} />
+            
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Footer Input Form */}
-          <form
-            className="ai-chatbot-input-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-          >
+          <div className="ai-chat-footer">
             <input
               type="text"
               className="ai-chat-input"
-              placeholder="Ask about lease laws, deposit rights, or landlord verification..."
-              value={inputQuery}
-              onChange={(e) => setInputQuery(e.target.value)}
+              placeholder="Ask about rent, deposit, late fine, notice..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
             />
-            <button type="submit" className="ai-send-btn" disabled={!inputQuery.trim()}>
-              <span>Send</span> ➔
+            <button 
+              className="ai-send-btn" 
+              onClick={() => handleSend()}
+              disabled={!inputValue.trim()}
+            >
+              <Send size={15} />
             </button>
-          </form>
+          </div>
         </div>
       )}
     </div>

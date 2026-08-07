@@ -26,13 +26,24 @@ class DisputeSerializer(serializers.ModelSerializer):
 
 
 class DisputeCreateSerializer(serializers.ModelSerializer):
-    agreement = serializers.PrimaryKeyRelatedField(queryset=Agreement.objects.select_related('tenant', 'landlord'))
+    agreement = serializers.PrimaryKeyRelatedField(queryset=Agreement.objects.select_related('tenant', 'landlord'), required=False, allow_null=True)
+    subject = serializers.CharField(required=False, allow_blank=True)
+    title = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = Dispute
-        fields = ('agreement', 'dispute_type', 'subject', 'description')
+        fields = ('agreement', 'dispute_type', 'subject', 'title', 'description')
+
+    def validate(self, attrs):
+        if 'title' in attrs and not attrs.get('subject'):
+            attrs['subject'] = attrs.pop('title')
+        if not attrs.get('subject'):
+            attrs['subject'] = 'General Rental Dispute'
+        return attrs
 
     def validate_agreement(self, value):
+        if not value:
+            return value
         request = self.context.get('request')
         user = getattr(request, 'user', None)
         if user != value.tenant and user != value.landlord:

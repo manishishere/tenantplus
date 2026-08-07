@@ -81,7 +81,12 @@ class UserDocumentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserDocument
-        fields = ('id', 'user', 'doc_type', 'doc_number', 'doc_url', 'back_doc_url', 'status', 'verified_at', 'created_at')
+        fields = (
+            'id', 'user', 'gender', 'father_name', 'mother_name', 'spouse_name',
+            'permanent_address', 'temporary_address', 'emergency_contact_name', 'emergency_contact_phone',
+            'user_photo', 'doc_type', 'doc_number', 'doc_url', 'back_doc_url',
+            'house_doc_url', 'electricity_bill_url', 'status', 'rejection_reason', 'verified_at', 'created_at'
+        )
         read_only_fields = ('user', 'status', 'verified_at', 'created_at')
 
 

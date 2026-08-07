@@ -540,10 +540,33 @@ export default function AgreementsList() {
                   </p>
                 </div>
 
-                {/* Primary Download PDF Button */}
+                {/* Primary Action 1: Pay Advance & Activate Lease (For Tenants) */}
+                {role === 'tenant' && activeAgreement.status !== 'active' && (
+                  <button 
+                    onClick={() => {
+                      navigate('/dashboard');
+                    }}
+                    className="btn-primary btn-emerald"
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem',
+                      fontSize: '0.9rem',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35)'
+                    }}
+                  >
+                    <CreditCard size={18} /> Pay Advance & Activate Lease ↗
+                  </button>
+                )}
+
+                {/* Primary Action 2: Download PDF */}
                 <button 
                   onClick={() => handleDownloadPDF(activeAgreement.id)}
-                  className="btn-primary"
+                  className={role === 'tenant' && activeAgreement.status !== 'active' ? "btn-secondary" : "btn-primary"}
                   style={{
                     width: '100%',
                     padding: '0.75rem',

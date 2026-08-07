@@ -1,28 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { 
-  Building2, 
-  Search, 
-  ShieldCheck, 
-  CreditCard, 
-  Wrench, 
-  Calendar, 
-  Sparkles, 
-  ArrowRight, 
-  MapPin, 
-  CheckCircle2, 
-  UserCheck, 
-  FileText, 
-  Sun, 
-  Moon, 
-  ExternalLink, 
-  Lock, 
-  Scale,
-  X,
-  Filter
+  Building2, ShieldCheck, Lock, FileText, Scale, Search, 
+  MapPin, Check, ArrowRight, Sun, Moon, Compass,
+  UserCheck, CheckCircle2
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -30,341 +14,362 @@ export default function LandingPage() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  // Public Property Catalog State
-  const [properties, setProperties] = useState([]);
-  const [loadingProps, setLoadingProps] = useState(true);
+  // Nav state
+  const [activeNav, setActiveNav] = useState('browse');
+
+  // Filter & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoomType, setSelectedRoomType] = useState('all');
   const [selectedDistrict, setSelectedDistrict] = useState('all');
-
-  // GPS Location Near Me State
   const [geoLocating, setGeoLocating] = useState(false);
-  const [nearMeActive, setNearMeActive] = useState(false);
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
-      return;
-    }
-    setGeoLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setNearMeActive(true);
-        setGeoLocating(false);
-      },
-      (error) => {
-        // Fallback for simulation or permissions
-        setNearMeActive(true);
-        setGeoLocating(false);
-      }
-    );
-  };
-  
-  // Property Detail Modal for Public Visitors
+  // Properties State
+  const [properties, setProperties] = useState([]);
+  const [loadingProps, setLoadingProps] = useState(true);
   const [selectedProp, setSelectedProp] = useState(null);
 
   useEffect(() => {
-    fetchPublicProperties();
+    fetchProperties();
   }, []);
 
-  const fetchPublicProperties = async () => {
+  const fetchProperties = async () => {
+    setLoadingProps(true);
     try {
-      setLoadingProps(true);
       const res = await api.get('/properties/');
-      const list = res.data.results || res.data || [];
-      setProperties(list);
+      const raw = res.data?.results || res.data;
+      setProperties(Array.isArray(raw) ? raw : []);
     } catch (err) {
-      console.error('Failed to load public properties:', err);
+      console.error('Failed to fetch catalog properties:', err);
     } finally {
       setLoadingProps(false);
     }
   };
 
-  const filteredProperties = useMemo(() => {
-    return properties.filter(prop => {
-      const matchesSearch = !searchQuery || 
-        prop.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        prop.district.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = selectedRoomType === 'all' || prop.room_type === selectedRoomType;
-      const matchesDistrict = selectedDistrict === 'all' || prop.district === selectedDistrict;
-      return matchesSearch && matchesType && matchesDistrict;
-    });
-  }, [properties, searchQuery, selectedRoomType, selectedDistrict]);
-
-  const uniqueDistricts = useMemo(() => {
-    const set = new Set(properties.map(p => p.district).filter(Boolean));
-    return Array.from(set).sort();
-  }, [properties]);
-
-  const scrollToCatalog = () => {
-    const catalogEl = document.getElementById('public-properties-catalog');
-    if (catalogEl) {
-      catalogEl.scrollIntoView({ behavior: 'smooth' });
+  const scrollToSection = (id, key) => {
+    setActiveNav(key);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  // High-res fallback images for property cards
-  const getPropertyPhoto = (prop) => {
-    if (prop.first_photo && !prop.first_photo.startsWith('/mock-media/')) {
-      return prop.first_photo;
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
     }
-    const fallbackPhotos = [
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80'
-    ];
-    const index = Math.abs(prop.id.charCodeAt(0) || 0) % fallbackPhotos.length;
-    return fallbackPhotos[index];
+    setGeoLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeoLocating(false);
+        setSelectedDistrict('Kathmandu');
+        setSearchQuery('Kathmandu');
+      },
+      () => {
+        setGeoLocating(false);
+        alert('Unable to retrieve your location. Showing all districts.');
+      }
+    );
   };
+
+  // Filter logic
+  const filteredProperties = properties.filter((p) => {
+    const matchesSearch = 
+      p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.district?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesType = selectedRoomType === 'all' || p.room_type === selectedRoomType;
+    const matchesDistrict = selectedDistrict === 'all' || p.district?.toLowerCase() === selectedDistrict.toLowerCase();
+
+    return matchesSearch && matchesType && matchesDistrict;
+  });
+
+  const uniqueDistricts = Array.from(new Set(properties.map(p => p.district).filter(Boolean)));
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', transition: 'all 0.3s ease' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', transition: 'all 0.2s ease' }}>
       
-      {/* 1. TOP STICKY NAVBAR */}
+      {/* 1. TOP NAVBAR */}
       <header style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        padding: '1.15rem 2.5rem', 
         borderBottom: '1px solid var(--border-color)',
         background: 'var(--bg-surface)',
-        backdropFilter: 'blur(16px)',
         position: 'sticky',
         top: 0,
         zIndex: 100
       }}>
-        {/* Brand Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }} onClick={() => navigate('/')}>
-          <div style={{ background: 'linear-gradient(135deg, var(--primary-indigo), #4338ca)', padding: '0.6rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center' }}>
-            <Building2 size={24} color="#ffffff" />
-          </div>
-          <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.03em' }}>
-            Tenant<span style={{ color: 'var(--primary-indigo)' }}>Plus</span>
-          </span>
-        </div>
+        <div style={{
+          maxWidth: '1280px',
+          margin: '0 auto',
+          padding: '0.85rem 2rem',
+          display: 'flex',
+          alignItems: 'center',
+          justify: 'space-between',
+          gap: '2rem'
+        }}>
 
-        {/* Center Quick Navigation Links */}
-        <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center', fontSize: '0.925rem', fontWeight: 600 }}>
-          <span onClick={scrollToCatalog} style={{ cursor: 'pointer', color: 'var(--text-main)', transition: 'color 0.2s' }}>
-            🏠 Browse Properties
-          </span>
-          <a href="#why-tenantplus" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
-            Why TenantPlus
-          </a>
-          <a href="#escrow-security" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
-            Escrow Security
-          </a>
-          <a href="#legal-rights" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
-            Legal Rights
-          </a>
-        </nav>
-
-        {/* Right Action Controls */}
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          {/* Theme Switcher Button */}
-          <button
-            onClick={toggleTheme}
-            style={{
-              background: 'var(--pill-bg)',
-              border: '1px solid var(--pill-border)',
-              color: 'var(--pill-text)',
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
-            }}
-            title="Toggle Theme"
+          {/* BRAND LOGO */}
+          <div 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', flexShrink: 0 }} 
+            onClick={() => navigate('/')}
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+            <div style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '0.45rem', borderRadius: '0.5rem', display: 'flex', alignItems: 'center' }}>
+              <Building2 size={19} />
+            </div>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.035em' }}>
+              TenantPlus
+            </span>
+          </div>
 
-          {user ? (
-            <button 
-              onClick={() => navigate('/dashboard')} 
-              className="btn-primary" 
-              style={{ padding: '0.6rem 1.35rem', fontSize: '0.9rem' }}
+          {/* CENTER NAVIGATION LINKS */}
+          <nav style={{ display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {[
+              { id: 'public-properties-catalog', key: 'browse', label: 'Browse Properties', icon: Compass },
+              { id: 'platform-security', key: 'security', label: 'Platform Security', icon: ShieldCheck },
+              { id: 'legal-framework', key: 'legal', label: 'Legal Framework', icon: Scale }
+            ].map(item => {
+              const isActive = activeNav === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => scrollToSection(item.id, item.key)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.4rem 0.6rem',
+                    borderRadius: '0.5rem',
+                    backgroundColor: isActive ? 'var(--pill-bg)' : 'transparent',
+                    transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  <item.icon size={15} color={isActive ? '#2563eb' : 'var(--text-muted)'} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* RIGHT ACTION CONTROLS */}
+          <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', flexShrink: 0 }}>
+            <button
+              onClick={toggleTheme}
+              style={{
+                background: 'var(--pill-bg)',
+                border: '1px solid var(--pill-border)',
+                color: 'var(--pill-text)',
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'transform 0.18s ease'
+              }}
+              title="Toggle Theme"
             >
-              Dashboard ↗
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
             </button>
-          ) : (
-            <>
+
+            {user ? (
               <button 
-                onClick={() => navigate('/login')} 
-                style={{ 
-                  background: 'transparent', 
-                  color: 'var(--text-main)', 
-                  border: '1px solid var(--border-color)', 
-                  borderRadius: '0.5rem', 
-                  padding: '0.6rem 1.25rem', 
-                  fontWeight: 600, 
-                  cursor: 'pointer',
-                  fontSize: '0.9rem'
-                }}
+                onClick={() => navigate('/dashboard')} 
+                className="btn-apple btn-blue" 
+                style={{ padding: '0.55rem 1.25rem', fontSize: '0.875rem' }}
               >
-                Sign In
+                Dashboard ↗
               </button>
-              <button 
-                onClick={() => navigate('/register')} 
-                className="btn-primary" 
-                style={{ padding: '0.6rem 1.35rem', fontSize: '0.9rem' }}
-              >
-                Get Started
-              </button>
-            </>
-          )}
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigate('/login')} 
+                  style={{ 
+                    background: 'transparent', 
+                    color: 'var(--text-main)', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: '980px', 
+                    padding: '0.55rem 1.25rem', 
+                    fontWeight: 600, 
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    transition: 'all 0.18s ease'
+                  }}
+                >
+                  Sign In
+                </button>
+                <button 
+                  onClick={() => navigate('/register')} 
+                  className="btn-apple btn-blue" 
+                  style={{ padding: '0.55rem 1.35rem', fontSize: '0.875rem' }}
+                >
+                  Get Started
+                </button>
+              </>
+            )}
+          </div>
+
         </div>
       </header>
 
       {/* 2. HERO SECTION */}
       <section style={{ 
         position: 'relative', 
-        padding: '5rem 2rem 4rem 2rem', 
+        padding: '3rem 2rem 3rem 2rem', 
         maxWidth: '1280px', 
         margin: '0 auto', 
         width: '100%',
+        minHeight: 'calc(100vh - 65px)',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        textAlign: 'center',
-        gap: '2.5rem'
+        justifyContent: 'center'
       }}>
-        
-        {/* Animated Pill Announcement */}
-        <div style={{ 
-          display: 'inline-flex', 
-          alignItems: 'center', 
-          gap: '0.6rem', 
-          background: 'var(--pill-bg)', 
-          color: 'var(--primary-indigo)', 
-          border: '1px solid var(--pill-border)',
-          padding: '0.45rem 1rem', 
-          borderRadius: '2rem', 
-          fontSize: '0.875rem',
-          fontWeight: 700
-        }}>
-          <Sparkles size={16} /> Nepal's #1 Verified Rental Escrow & Legal Lease Platform
-        </div>
-
-        {/* Main Headline */}
-        <h1 style={{ 
-          fontSize: 'clamp(2.5rem, 6vw, 4.2rem)', 
-          lineHeight: 1.15, 
-          margin: 0, 
-          fontWeight: 800,
-          letterSpacing: '-0.03em',
-          maxWidth: '900px'
-        }}>
-          Find Verified Rental Rooms & <br/>
-          <span style={{ 
-            background: 'linear-gradient(135deg, var(--primary-indigo) 0%, #a5b4fc 100%)', 
-            WebkitBackgroundClip: 'text', 
-            WebkitTextFillColor: 'transparent' 
-          }}>
-            Execute Leases Without Fraud.
-          </span>
-        </h1>
-
-        <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', lineHeight: 1.6, margin: 0, maxWidth: '720px' }}>
-          Connect directly with <strong>🛡️ Verified Landlords</strong>, sign legal contracts compliant with <em>House Rent Act 2075</em>, pay rent via <strong>TenantPlus Escrow</strong>, and enjoy 24/7 AI legal rights guidance.
-        </p>
-
-        {/* Hero CTAs */}
-        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button 
-            onClick={scrollToCatalog}
-            className="btn-primary" 
-            style={{ 
-              padding: '0.9rem 2.25rem', 
-              fontSize: '1.05rem', 
-              display: 'inline-flex', 
-              gap: '0.6rem', 
-              alignItems: 'center',
-              boxShadow: '0 10px 20px -5px rgba(99, 102, 241, 0.4)'
-            }}
-          >
-            🏠 Browse Available Properties
-          </button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '2.5rem', alignItems: 'center' }}>
           
-          <button 
-            onClick={() => navigate('/register')} 
-            style={{ 
-              background: 'var(--bg-card)', 
-              color: 'var(--text-main)', 
-              border: '1px solid var(--border-color)', 
-              borderRadius: '0.5rem', 
-              padding: '0.9rem 2rem', 
-              fontSize: '1.05rem',
-              fontWeight: 600, 
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              boxShadow: 'var(--card-shadow)'
-            }}
-          >
-            Get Started <ArrowRight size={18} />
-          </button>
+          {/* Left Text Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '0.45rem', 
+              background: 'rgba(37, 99, 235, 0.1)', 
+              color: '#2563eb', 
+              border: '1px solid rgba(37, 99, 235, 0.25)',
+              padding: '0.35rem 0.85rem', 
+              borderRadius: '980px', 
+              fontSize: '0.775rem',
+              fontWeight: 700,
+              width: 'fit-content'
+            }}>
+              <ShieldCheck size={14} color="#2563eb" /> Verified Rental Escrow & Legal Lease Platform
+            </div>
+
+            <h1 className="apple-heading" style={{ fontSize: 'clamp(2.2rem, 4.5vw, 3.5rem)', margin: 0, lineHeight: 1.15 }}>
+              Find Verified Rental Homes &<br />
+              <span style={{ color: 'var(--text-muted)' }}>Execute Leases Without Fraud.</span>
+            </h1>
+
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', lineHeight: 1.5, margin: 0, letterSpacing: '-0.015em', maxWidth: '520px' }}>
+              Connect directly with verified landlords, sign legal lease agreements compliant with <em>House Rent Act 2075 of Nepal</em>, and process escrow rent payments safely.
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => scrollToSection('public-properties-catalog', 'browse')}
+                className="btn-apple btn-blue" 
+                style={{ 
+                  padding: '0.75rem 1.75rem', 
+                  fontSize: '0.9rem', 
+                  display: 'inline-flex', 
+                  gap: '0.45rem', 
+                  alignItems: 'center'
+                }}
+              >
+                <Compass size={17} /> Browse Rentals
+              </button>
+              
+              <button 
+                onClick={() => navigate('/register')} 
+                style={{ 
+                  background: 'var(--bg-card)', 
+                  color: 'var(--text-main)', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: '980px', 
+                  padding: '0.75rem 1.5rem', 
+                  fontSize: '0.9rem',
+                  fontWeight: 600, 
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  boxShadow: 'var(--card-shadow)'
+                }}
+              >
+                Get Started <ArrowRight size={16} />
+              </button>
+            </div>
+
+            {/* Clean Inline Trust Verification Points */}
+            <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <ShieldCheck size={15} color="#2563eb" /> 100% Verified Ownership
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <Lock size={15} color="#2563eb" /> eSewa Escrow Protected
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <FileText size={15} color="#2563eb" /> House Rent Act 2075
+              </div>
+            </div>
+          </div>
+
+          {/* Right Hero Image Card */}
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              borderRadius: '1.25rem',
+              overflow: 'hidden',
+              boxShadow: 'var(--card-shadow-hover)',
+              border: '1px solid var(--border-color)',
+              height: '420px',
+              position: 'relative'
+            }}>
+              <img 
+                src="/hero_apartment.png" 
+                alt="Modern Kathmandu Rental Apartment" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div style={{
+                position: 'absolute',
+                bottom: '1.25rem',
+                left: '1.25rem',
+                right: '1.25rem',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
+                padding: '0.95rem 1.25rem',
+                borderRadius: '0.875rem',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                gap: '1.25rem'
+              }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Kathmandu Residency</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Executive Suite</div>
+                </div>
+                <span className="badge-verified" style={{ flexShrink: 0, padding: '0.35rem 0.75rem', fontSize: '0.775rem' }}>
+                  <Check size={13} color="#2563eb" /> Verified
+                </span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        {/* Platform Trust Metrics */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '1.5rem', 
-          width: '100%', 
-          marginTop: '2rem' 
-        }}>
-          <div className="premium-card" style={{ padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <ShieldCheck size={28} color="var(--primary-indigo)" style={{ marginBottom: '0.5rem' }} />
-            <div style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--text-main)' }}>100% Verified</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Government ID & Ownership Proof</div>
-          </div>
-
-          <div className="premium-card" style={{ padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Lock size={28} color="var(--primary-indigo)" style={{ marginBottom: '0.5rem' }} />
-            <div style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--primary-indigo)' }}>Managing Escrow</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Funds Protected Until Verification</div>
-          </div>
-
-          <div className="premium-card" style={{ padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <FileText size={28} color="#10b981" style={{ marginBottom: '0.5rem' }} />
-            <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#10b981' }}>Legal Contracts</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Dual Signature PDF Generation</div>
-          </div>
-
-          <div className="premium-card" style={{ padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Scale size={28} color="#f59e0b" style={{ marginBottom: '0.5rem' }} />
-            <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#f59e0b' }}>AI Rights Assistant</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>24/7 Nepalese Tenancy Law Guide</div>
-          </div>
-        </div>
       </section>
 
-      {/* 3. 🔥 FRICTIONLESS PUBLIC PROPERTY CATALOG SHOWCASE */}
+      {/* 3. PUBLIC PROPERTY CATALOG SHOWCASE */}
       <section id="public-properties-catalog" style={{ 
         background: 'var(--bg-darker)', 
         borderTop: '1px solid var(--border-color)', 
         borderBottom: '1px solid var(--border-color)',
-        padding: '5rem 2rem' 
+        padding: '4.5rem 2rem' 
       }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1.5rem' }}>
             <div>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-indigo)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Instant Room & Flat Discovery
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Instant Search
               </span>
-              <h2 style={{ fontSize: '2.25rem', margin: '0.25rem 0 0 0', fontWeight: 800 }}>
-                Explore Verified Rentals Right Away
+              <h2 style={{ fontSize: '2rem', margin: '0.2rem 0 0 0', fontWeight: 800 }}>
+                Explore Verified Rentals
               </h2>
-              <p style={{ color: 'var(--text-muted)', marginTop: '0.35rem', margin: 0 }}>
-                Browse live available properties across Nepal. Click any property to inspect photos, map coordinates, and landlord contacts.
-              </p>
             </div>
 
             {/* Room Type Category Pills */}
@@ -374,16 +379,16 @@ export default function LandingPage() {
                   key={type}
                   onClick={() => setSelectedRoomType(type)}
                   style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '2rem',
-                    fontSize: '0.85rem',
+                    padding: '0.45rem 0.95rem',
+                    borderRadius: '980px',
+                    fontSize: '0.825rem',
                     fontWeight: 600,
                     cursor: 'pointer',
                     textTransform: 'capitalize',
-                    border: selectedRoomType === type ? '1px solid var(--primary-indigo)' : '1px solid var(--border-color)',
-                    background: selectedRoomType === type ? 'var(--primary-indigo)' : 'var(--bg-card)',
+                    border: selectedRoomType === type ? '1px solid #2563eb' : '1px solid var(--border-color)',
+                    background: selectedRoomType === type ? '#2563eb' : 'var(--bg-card)',
                     color: selectedRoomType === type ? '#ffffff' : 'var(--text-main)',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.18s ease'
                   }}
                 >
                   {type.replace('_', ' ')}
@@ -392,15 +397,15 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Search & District Filter Controls */}
-          <div className="premium-card" style={{ padding: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Search Controls */}
+          <div className="premium-card" style={{ padding: '0.85rem 1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ flex: '1 1 240px', position: 'relative' }}>
-              <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <Search size={17} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input
                 type="text"
                 className="form-input"
-                style={{ paddingLeft: '2.75rem', width: '100%' }}
-                placeholder="Search location, Kathmandu, Lalitpur, title..."
+                style={{ paddingLeft: '2.5rem', width: '100%' }}
+                placeholder="Search Kathmandu, Lalitpur, Pokhara, title..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -420,123 +425,102 @@ export default function LandingPage() {
               </select>
             </div>
 
-            {/* GPS Location Button */}
             <button
               onClick={handleGetLocation}
               disabled={geoLocating}
+              className="btn-secondary"
               style={{
-                background: nearMeActive ? 'rgba(16, 185, 129, 0.15)' : 'var(--pill-bg)',
-                border: nearMeActive ? '1px solid #10b981' : '1px solid var(--pill-border)',
-                color: nearMeActive ? '#10b981' : 'var(--primary-indigo)',
-                padding: '0.6rem 1rem',
-                borderRadius: '0.5rem',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                transition: 'all 0.2s ease'
+                padding: '0.55rem 1.15rem'
               }}
             >
-              <MapPin size={16} />
-              {geoLocating ? 'Locating...' : nearMeActive ? '📍 Near Me Active' : '📍 Find Properties Near Me'}
+              <MapPin size={16} color="#2563eb" />
+              <span>{geoLocating ? 'Locating...' : 'Find Near Me'}</span>
             </button>
           </div>
 
           {/* Property Cards Grid */}
           {loadingProps ? (
-            <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-              <div style={{
-                width: '40px', height: '40px',
-                border: '3px solid rgba(99, 102, 241, 0.2)',
-                borderTopColor: 'var(--primary-indigo)',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto 1rem auto'
-              }} />
-              <p style={{ color: 'var(--text-muted)' }}>Loading live rental properties...</p>
+            <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Loading verified properties...
             </div>
           ) : filteredProperties.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'var(--bg-card)', borderRadius: '1rem', border: '1px dashed var(--border-color)' }}>
-              <Building2 size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem auto', opacity: 0.5 }} />
-              <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem 0' }}>No Properties Matched Your Search</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Try clearing filters or searching for different districts.</p>
+            <div className="premium-card" style={{ padding: '3.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.85rem' }}>
+              <Building2 size={36} color="var(--text-muted)" />
+              <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>No Properties Matched Your Search</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Try clearing filters or selecting another district.</div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.75rem' }}>
               {filteredProperties.map((prop) => (
                 <div 
                   key={prop.id} 
-                  className="premium-card" 
+                  className="premium-card"
                   style={{ 
+                    borderRadius: '1rem', 
+                    overflow: 'hidden', 
                     display: 'flex', 
-                    flexDirection: 'column', 
-                    padding: 0, 
-                    overflow: 'hidden',
-                    cursor: 'pointer'
+                    flexDirection: 'column',
+                    transition: 'all 0.2s ease'
                   }}
-                  onClick={() => setSelectedProp(prop)}
                 >
-                  {/* Property Image Container */}
-                  <div style={{ height: '210px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ height: '210px', position: 'relative' }}>
                     <img 
-                      src={getPropertyPhoto(prop)} 
+                      src={prop.image || '/hero_apartment.png'} 
                       alt={prop.title} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s ease' }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.src = '/hero_apartment.png'; }}
                     />
-                    <div style={{ 
-                      position: 'absolute', 
-                      top: '0.75rem', 
+                    <div style={{
+                      position: 'absolute',
+                      top: '0.75rem',
                       left: '0.75rem',
-                      background: 'rgba(15, 23, 42, 0.75)',
-                      backdropFilter: 'blur(8px)',
-                      color: '#ffffff',
-                      padding: '0.25rem 0.6rem',
-                      borderRadius: '1rem',
-                      fontSize: '0.75rem',
+                      background: 'var(--bg-surface)',
+                      color: 'var(--text-main)',
+                      border: '1px solid var(--border-color)',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '980px',
+                      fontSize: '0.725rem',
                       fontWeight: 700,
                       textTransform: 'capitalize'
                     }}>
                       {prop.room_type?.replace('_', ' ')}
                     </div>
                     {prop.landlord_is_verified && (
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: '0.75rem', 
-                        right: '0.75rem'
-                      }}>
+                      <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}>
                         <span className="badge-verified">
-                          🛡️ Verified
+                          <Check size={12} color="#2563eb" /> Verified
                         </span>
                       </div>
                     )}
                   </div>
 
-                  {/* Property Details */}
                   <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1, justifyContent: 'space-between' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '0.35rem' }}>
-                        <MapPin size={14} color="var(--primary-indigo)" />
+                        <MapPin size={14} color="#2563eb" />
                         <span>{prop.district}</span>
                       </div>
 
-                      <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700, color: 'var(--text-main)' }}>
+                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, color: 'var(--text-main)' }}>
                         {prop.title}
                       </h3>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem' }}>
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Rent</span>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary-indigo)' }}>
+                        <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>Monthly Rent</span>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2563eb' }}>
                           Rs. {parseFloat(prop.rent_amount).toLocaleString()}
                         </div>
                       </div>
 
                       <button 
-                        className="btn-primary" 
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', gap: '0.35rem' }}
+                        onClick={() => setSelectedProp(prop)}
+                        className="btn-apple btn-blue" 
+                        style={{ padding: '0.45rem 0.95rem', fontSize: '0.825rem' }}
                       >
                         Inspect ↗
                       </button>
@@ -550,141 +534,176 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 4. WHY TENANTPLUS (FEATURES & SECURITY) */}
-      <section id="why-tenantplus" style={{ padding: '5rem 2rem', maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
-        <div style={{ textAlign: 'center', maxWidth: '700px', margin: '0 auto 3.5rem auto' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-indigo)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Built For Trust & Transparency
-          </span>
-          <h2 style={{ fontSize: '2.25rem', margin: '0.35rem 0 0.5rem 0', fontWeight: 800 }}>
-            Solving Nepal's Biggest Rental Scams
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: 1.6 }}>
-            Say goodbye to fake property agents, sudden rent hikes, and unreturned security deposits.
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
+      {/* 4. PLATFORM SECURITY SECTION */}
+      <section id="platform-security" style={{ padding: '5rem 2rem', maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '3.5rem', alignItems: 'center' }}>
           
-          <div className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ background: 'rgba(99, 102, 241, 0.1)', width: '52px', height: '52px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <UserCheck color="var(--primary-indigo)" size={28} />
-            </div>
-            <h3 style={{ fontSize: '1.2rem', margin: 0 }}>🛡️ Verified Landlords & Tenants</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.925rem', lineHeight: 1.6, margin: 0 }}>
-              Landlords upload citizenship and land ownership deeds to get verified. Tenants earn genuine applicant badges via OTP verification.
-            </p>
+          <div style={{
+            borderRadius: '1.25rem',
+            overflow: 'hidden',
+            boxShadow: 'var(--card-shadow)',
+            border: '1px solid var(--border-color)',
+            height: '380px'
+          }}>
+            <img 
+              src="/key_exchange.png" 
+              alt="Key Handover Safety" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
           </div>
 
-          <div className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ background: 'rgba(16, 185, 129, 0.1)', width: '52px', height: '52px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Lock color="#10b981" size={28} />
-            </div>
-            <h3 style={{ fontSize: '1.2rem', margin: 0 }}>🔒 Escrow Payment Safety</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.925rem', lineHeight: 1.6, margin: 0 }}>
-              Rent payments are held safely in TenantPlus Escrow until move-in verification, eliminating upfront deposit theft and fraud.
-            </p>
-          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Trust & Verification
+            </span>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', margin: 0, fontWeight: 800 }}>
+              Protected Key Handovers & Legal Contracts
+            </h2>
 
-          <div className="premium-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ background: 'rgba(245, 158, 11, 0.1)', width: '52px', height: '52px', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FileText color="#f59e0b" size={28} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                <div style={{ background: 'rgba(37, 99, 235, 0.12)', padding: '0.65rem', borderRadius: '0.65rem', flexShrink: 0 }}>
+                  <UserCheck size={20} color="#2563eb" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1rem' }}>Government ID Verified Identity</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.5 }}>
+                    Landlords upload verified Nepalese Citizenship / Passport credentials and land deeds before listing.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                <div style={{ background: 'rgba(37, 99, 235, 0.12)', padding: '0.65rem', borderRadius: '0.65rem', flexShrink: 0 }}>
+                  <Lock size={20} color="#2563eb" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '1rem' }}>Escrow Payment Protection</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.2rem', lineHeight: 1.5 }}>
+                    Rent and security deposits are held safely in platform escrow until tenancy physical inspection is complete.
+                  </div>
+                </div>
+              </div>
             </div>
-            <h3 style={{ fontSize: '1.2rem', margin: 0 }}>📜 Digital 2-Page Agreements</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.925rem', lineHeight: 1.6, margin: 0 }}>
-              Automated PDF generation under Nepalese House Rent Act 2075 featuring 35-day eviction notice limits and 10% rent escalation caps.
-            </p>
           </div>
 
         </div>
       </section>
 
-      {/* 5. PUBLIC PROPERTY DETAIL MODAL */}
-      {selectedProp && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'capitalize', fontWeight: 600 }}>
-                  {selectedProp.room_type?.replace('_', ' ')} &bull; {selectedProp.district}
-                </span>
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0.25rem 0 0 0' }}>{selectedProp.title}</h3>
-              </div>
-              <button 
-                onClick={() => setSelectedProp(null)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer' }}
-              >
-                <X size={24} />
-              </button>
-            </div>
+      {/* 5. LEGAL FRAMEWORK SECTION */}
+      <section id="legal-framework" style={{ 
+        background: 'var(--bg-darker)', 
+        borderTop: '1px solid var(--border-color)', 
+        padding: '5rem 2rem' 
+      }}>
+        <div id="legal-rights" style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2.5rem', textAlign: 'center' }}>
+          <div>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              House Rent Act 2075
+            </span>
+            <h2 style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', margin: '0.2rem 0 0.5rem 0', fontWeight: 800 }}>
+              Fully Compliant Nepalese Tenancy Framework
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', maxWidth: '640px', margin: '0 auto' }}>
+              Automated PDF lease generation under Nepalese law featuring 35-day mandatory eviction notice protection and statutory rent escalation caps.
+            </p>
+          </div>
 
-            <div style={{ height: '240px', borderRadius: '0.75rem', overflow: 'hidden' }}>
-              <img src={getPropertyPhoto(selectedProp)} alt={selectedProp.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
-              <div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Rent</span>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary-indigo)' }}>
-                  Rs. {parseFloat(selectedProp.rent_amount).toLocaleString()} / month
-                </div>
-              </div>
-
-              {selectedProp.landlord_is_verified && (
-                <span className="badge-verified">
-                  🛡️ Verified Landlord Listing
-                </span>
-              )}
-            </div>
-
-            <div>
-              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.95rem' }}>About this listing:</h4>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6, margin: 0 }}>
-                {selectedProp.description || 'Verified rental property listed on TenantPlus platform.'}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', textAlign: 'left' }}>
+            <div className="premium-card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <Scale size={28} color="#2563eb" />
+              <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>35-Day Eviction Notice</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>
+                Statutory mandatory notice period protects tenants from arbitrary eviction and sudden lock changes.
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <button
-                onClick={() => { setSelectedProp(null); navigate('/register'); }}
-                className="btn-primary"
-                style={{ flex: 1, padding: '0.75rem', fontSize: '0.95rem', display: 'flex', justifyContent: 'center', gap: '0.5rem' }}
-              >
-                Apply for this Property ↗
-              </button>
-              <button
+            <div className="premium-card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <FileText size={28} color="#2563eb" />
+              <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>Dual Digital Signatures</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>
+                Legally binding PDF contract signed digitally by landlord and tenant with two witness verifications.
+              </p>
+            </div>
+
+            <div className="premium-card" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <ShieldCheck size={28} color="#2563eb" />
+              <h3 style={{ fontSize: '1.15rem', margin: 0, fontWeight: 700 }}>Escrow Refund Guarantee</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>
+                Security deposit refunds processed strictly within 15-30 days of key handover with verified damage receipts.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '3rem 2rem', textAlign: 'center', background: 'var(--bg-surface)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Building2 size={20} color="#2563eb" />
+            <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>TenantPlus Nepal</span>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+            Verified Landlords & Tenants, Escrow Protection, and Legal Rental Contracts.
+          </p>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            &copy; {new Date().getFullYear()} TenantPlus Inc. All rights reserved.
+          </div>
+        </div>
+      </footer>
+
+      {/* PROPERTY INSPECTION MODAL */}
+      {selectedProp && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1.5rem' }}>
+          <div className="premium-card" style={{ maxWidth: '520px', width: '100%', overflow: 'hidden', color: 'var(--text-main)', boxShadow: 'var(--card-shadow-hover)' }}>
+            <div style={{ height: '220px', position: 'relative' }}>
+              <img src={selectedProp.image || '/hero_apartment.png'} alt="Prop" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <button 
                 onClick={() => setSelectedProp(null)}
-                style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', padding: '0.75rem 1.25rem', borderRadius: '0.5rem', cursor: 'pointer' }}
+                style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'rgba(0,0,0,0.6)', color: '#ffffff', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 700 }}
               >
-                Close
+                ✕
               </button>
             </div>
 
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 700, textTransform: 'capitalize' }}>{selectedProp.room_type?.replace('_', ' ')}</span>
+                <h3 style={{ margin: '0.2rem 0 0 0', fontSize: '1.35rem', fontWeight: 800 }}>{selectedProp.title}</h3>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
+                  <MapPin size={14} color="#2563eb" /> {selectedProp.district}
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>Monthly Rent</div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#2563eb' }}>Rs. {parseFloat(selectedProp.rent_amount).toLocaleString()}</div>
+                </div>
+                {selectedProp.landlord_is_verified && (
+                  <span className="badge-verified">
+                    <Check size={12} color="#2563eb" /> Verified Owner
+                  </span>
+                )}
+              </div>
+
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5, margin: 0 }}>
+                {selectedProp.description || 'Verified rental property listed on TenantPlus Nepal platform.'}
+              </p>
+
+              <button
+                onClick={() => { setSelectedProp(null); navigate('/register'); }}
+                className="btn-apple btn-blue"
+                style={{ width: '100%', padding: '0.85rem', fontWeight: 700, fontSize: '0.9rem', justifyContent: 'center' }}
+              >
+                Sign In to Apply & Rent Property ↗
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 6. FOOTER */}
-      <footer style={{ 
-        padding: '3rem 2.5rem', 
-        borderTop: '1px solid var(--border-color)', 
-        background: 'var(--bg-surface)', 
-        textAlign: 'center', 
-        color: 'var(--text-muted)', 
-        fontSize: '0.9rem' 
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <Building2 size={20} color="var(--primary-indigo)" />
-          <span style={{ fontWeight: 800, color: 'var(--text-main)' }}>TenantPlus Nepal</span>
-        </div>
-        <p style={{ margin: '0 0 0.5rem 0' }}>Empowering Landlords & Tenants with Escrow Protection, Legal Leases, and AI Guidance.</p>
-        <p style={{ margin: 0, fontSize: '0.8rem' }}>&copy; {new Date().getFullYear()} TenantPlus Inc. All rights reserved. Support: inquire@tenantplus.com</p>
-      </footer>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }

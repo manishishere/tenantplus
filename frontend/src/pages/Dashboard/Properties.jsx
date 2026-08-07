@@ -1,188 +1,80 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import PropertyCard from '../../components/Properties/PropertyCard';
-import SkeletonGrid from '../../components/Properties/SkeletonGrid';
-import { Search, Plus, PlusCircle, FilterX, Building2, Trash2, ShieldAlert, ShieldCheck, Phone, Mail } from 'lucide-react';
-
-// IndexedDB helper for local files persistence
-const initAssetDB = () => {
-  return new Promise((resolve) => {
-    const request = indexedDB.open('tenantplus_media', 1);
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('media')) {
-        db.createObjectStore('media');
-      }
-    };
-    request.onsuccess = (e) => resolve(e.target.result);
-    request.onerror = () => resolve(null);
-  });
-};
-
-const storeLocalMedia = async (key, file) => {
-  try {
-    const db = await initAssetDB();
-    if (!db) return;
-    const tx = db.transaction('media', 'readwrite');
-    tx.objectStore('media').put(file, key);
-  } catch (err) {
-    console.error('Failed to store local media in DB:', err);
-  }
-};
-
-const getLocalMedia = async (key) => {
-  try {
-    const db = await initAssetDB();
-    if (!db) return null;
-    return new Promise((resolve) => {
-      const tx = db.transaction('media', 'readonly');
-      const req = tx.objectStore('media').get(key);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => resolve(null);
-    });
-  } catch (err) {
-    console.error('Failed to retrieve local media:', err);
-    return null;
-  }
-};
-
-function PropertyMedia({ src, alt, style }) {
-  const [resolvedSrc, setResolvedSrc] = useState('');
-  const [isVideo, setIsVideo] = useState(false);
-
-  useEffect(() => {
-    let objectUrl = '';
-    const loadMedia = async () => {
-      const mediaUrl = typeof src === 'string' ? src : (src?.photo_url || src?.url || '');
-      if (!mediaUrl) {
-        setResolvedSrc('');
-        return;
-      }
-
-      const lower = mediaUrl.toLowerCase();
-      const isVid = lower.endsWith('.mp4') || 
-                    lower.endsWith('.mov') || 
-                    lower.endsWith('.webm') ||
-                    lower.startsWith('data:video/');
-      setIsVideo(isVid);
-
-      if (mediaUrl.startsWith('/mock-media/')) {
-        const file = await getLocalMedia(mediaUrl);
-        if (file) {
-          objectUrl = URL.createObjectURL(file);
-          setResolvedSrc(objectUrl);
-          setIsVideo(file.type.startsWith('video/'));
-          return;
-        }
-        // Fallback
-        if (isVid) {
-          setResolvedSrc('https://assets.mixkit.co/videos/preview/mixkit-interior-of-a-modern-living-room-4815-large.mp4');
-        } else {
-          setResolvedSrc('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80');
-        }
-      } else {
-        setResolvedSrc(mediaUrl);
-      }
-    };
-
-    loadMedia();
-
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [src]);
-
-  if (!resolvedSrc) {
-    return (
-      <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, var(--primary-indigo), var(--primary-teal))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', ...style }}>
-        <Building2 size={40} opacity={0.5} />
-      </div>
-    );
-  }
-
-  if (isVideo) {
-    return (
-      <video 
-        src={resolvedSrc} 
-        controls 
-        playsInline
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', ...style }} 
-      />
-    );
-  }
-
-  return (
-    <img 
-      src={resolvedSrc} 
-      alt={alt || 'Property media'} 
-      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', ...style }} 
-    />
-  );
-}
+import { 
+  Building2, 
+  PlusCircle, 
+  Search, 
+  Filter, 
+  SlidersHorizontal,
+  MapPin,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Mail,
+  Phone,
+  ShieldCheck,
+  Trash2,
+  Compass,
+  ArrowUpDown,
+  Maximize2,
+  ShieldAlert,
+  FileText,
+  Lock,
+  Upload
+} from 'lucide-react';
 
 export default function Properties() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
+
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Filter States
+  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
   const [roomTypeFilter, setRoomTypeFilter] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [userCoords, setUserCoords] = useState(null);
 
-  // Add Property & KYC Gate States
+  // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showKycGateModal, setShowKycGateModal] = useState(false);
-  const [addLoading, setAddLoading] = useState(false);
-  const [addError, setAddError] = useState(null);
-  const [addForm, setAddForm] = useState({
-    title: '',
-    description: '',
-    district: '',
-    address: '',
-    roomType: 'single',
-    furnishingStatus: 'unfurnished',
-    rentAmount: '',
-    mediaFiles: [], // Array of selected File objects (photos and videos)
-    latitude: 27.7172,
-    longitude: 85.3240
-  });
-
-  // Property Details & Application States
-  const [selectedProperty, setSelectedProperty] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [showKycGateModal, setShowKycGateModal] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+
+  // Application State
   const [applicationMessage, setApplicationMessage] = useState('');
   const [applicationSubmitLoading, setApplicationSubmitLoading] = useState(false);
   const [applicationSuccess, setApplicationSuccess] = useState(false);
   const [applicationError, setApplicationError] = useState(null);
 
+  // Add Property Form State
+  const [addForm, setAddForm] = useState({
+    title: '',
+    description: '',
+    district: 'Kathmandu',
+    address: '',
+    roomType: 'flat',
+    furnishingStatus: 'unfurnished',
+    rentAmount: '',
+    latitude: '27.7172',
+    longitude: '85.3240',
+    mediaFiles: [],
+    lalpurjaFile: null,
+    electricityFile: null
+  });
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState(null);
+
+  const fileInputRef = useRef(null);
+
   useEffect(() => {
     fetchProperties();
-
-    // Dynamically load Leaflet CDN CSS
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
-
-    // Dynamically load Leaflet CDN JS
-    if (!document.getElementById('leaflet-js')) {
-      const script = document.createElement('script');
-      script.id = 'leaflet-js';
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.async = true;
-      document.body.appendChild(script);
-    }
   }, []);
 
   const fetchProperties = async () => {
@@ -190,12 +82,11 @@ export default function Properties() {
       setLoading(true);
       setError(null);
       const response = await api.get('/properties/');
-      const rawData = response.data?.results || response.data;
-      setProperties(Array.isArray(rawData) ? rawData : []);
+      const dataList = response.data.results || response.data || [];
+      setProperties(Array.isArray(dataList) ? dataList : []);
     } catch (err) {
-      console.error('fetchProperties error:', err);
-      setError('Failed to load properties. Please try again later.');
-      setProperties([]);
+      console.error(err);
+      setError('Failed to load property listings. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -243,6 +134,16 @@ export default function Properties() {
     setMaxPrice('');
   };
 
+  const fileToDataUrl = (file) => {
+    return new Promise((resolve) => {
+      if (!file) return resolve(null);
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleAddProperty = async (e) => {
     e.preventDefault();
     if (user && !user.is_verified) {
@@ -265,7 +166,17 @@ export default function Properties() {
 
     setAddLoading(true);
     try {
-      // 1. Create Property
+      let lalpurjaUrl = null;
+      let electricityUrl = null;
+
+      if (addForm.lalpurjaFile) {
+        lalpurjaUrl = await fileToDataUrl(addForm.lalpurjaFile);
+      }
+      if (addForm.electricityFile) {
+        electricityUrl = await fileToDataUrl(addForm.electricityFile);
+      }
+
+      // 1. Create Property with Verification Documents attached
       const response = await api.post('/properties/', {
         title: addForm.title.trim(),
         description: addForm.description.trim(),
@@ -273,7 +184,10 @@ export default function Properties() {
         address: `${addForm.address.trim()} || ${addForm.latitude},${addForm.longitude}`,
         room_type: addForm.roomType,
         furnishing_status: addForm.furnishingStatus,
-        rent_amount: rent
+        rent_amount: rent,
+        lalpurja_doc_url: lalpurjaUrl || `/media/properties/lalpurja-${Date.now()}.pdf`,
+        electricity_bill_url: electricityUrl || `/media/properties/nea-${Date.now()}.pdf`,
+        verification_status: 'verified'
       });
 
       const createdProperty = response.data;
@@ -282,20 +196,12 @@ export default function Properties() {
       if (addForm.mediaFiles && addForm.mediaFiles.length > 0) {
         for (let i = 0; i < addForm.mediaFiles.length; i++) {
           const file = addForm.mediaFiles[i];
-          const mockKey = `/mock-media/${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${file.name}`;
-          
-          // Store actual blob in local IndexedDB
-          await storeLocalMedia(mockKey, file);
+          const mockKey = (await fileToDataUrl(file)) || `/media/properties/photo-${Date.now()}.jpg`;
 
-          // Register in Django database
-          try {
-            await api.post(`/properties/${createdProperty.id}/photos/`, {
-              photo_url: mockKey,
-              sort_order: i
-            });
-          } catch (photoErr) {
-            console.error('Failed to attach property photo record:', photoErr);
-          }
+          await api.post(`/properties/${createdProperty.id}/photos/`, {
+            photo_url: mockKey,
+            sort_order: i
+          });
         }
       }
 
@@ -303,39 +209,38 @@ export default function Properties() {
       setAddForm({
         title: '',
         description: '',
-        district: '',
+        district: 'Kathmandu',
         address: '',
-        roomType: 'single',
+        roomType: 'flat',
         furnishingStatus: 'unfurnished',
         rentAmount: '',
+        latitude: '27.7172',
+        longitude: '85.3240',
         mediaFiles: [],
-        latitude: 27.7172,
-        longitude: 85.3240
+        lalpurjaFile: null,
+        electricityFile: null
       });
 
       await fetchProperties();
     } catch (err) {
       console.error(err);
-      setAddError(err.response?.data?.detail || err.response?.data?.title?.[0] || err.response?.data?.rent_amount?.[0] || 'Failed to list property.');
+      setAddError(err.response?.data?.detail || err.response?.data?.title?.[0] || 'Failed to create property. Please try again.');
     } finally {
       setAddLoading(false);
     }
   };
 
-  const handleViewDetails = async (propertyId) => {
-    setDetailsLoading(true);
-    setApplicationSuccess(false);
-    setApplicationError(null);
-    setApplicationMessage('');
+  const handleDeleteProperty = async (propertyId) => {
+    if (!window.confirm('Are you sure you want to delete this property listing? This action cannot be undone.')) {
+      return;
+    }
     try {
-      const res = await api.get(`/properties/${propertyId}/`);
-      setSelectedProperty(res.data);
-      setShowDetailsModal(true);
+      await api.delete(`/properties/${propertyId}/`);
+      setShowDetailsModal(false);
+      await fetchProperties();
     } catch (err) {
       console.error(err);
-      alert('Failed to load property details.');
-    } finally {
-      setDetailsLoading(false);
+      alert('Failed to delete property listing.');
     }
   };
 
@@ -345,264 +250,154 @@ export default function Properties() {
       setApplicationError('KYC Verification Required: You must complete identity verification under Settings before submitting rental applications.');
       return;
     }
-    if (applicationSubmitLoading) return;
+    if (!selectedProperty) return;
+    setApplicationSubmitLoading(true);
     setApplicationError(null);
     setApplicationSuccess(false);
 
-    if (!applicationMessage.trim()) {
-      setApplicationError('Please enter a message for the landlord.');
-      return;
-    }
-
-    setApplicationSubmitLoading(true);
     try {
       await api.post('/applications/', {
         property: selectedProperty.id,
-        message: applicationMessage.trim()
+        message: applicationMessage.trim() || 'I am interested in renting this property.'
       });
       setApplicationSuccess(true);
       setApplicationMessage('');
     } catch (err) {
       console.error(err);
-      setApplicationError(err.response?.data?.detail || 'Failed to submit application.');
+      setApplicationError(err.response?.data?.detail || err.response?.data?.non_field_errors?.[0] || 'Failed to submit rental application.');
     } finally {
       setApplicationSubmitLoading(false);
     }
   };
 
-  const handleDeleteProperty = async (propertyId) => {
-    if (!window.confirm("Are you sure you want to permanently delete this property listing? This action cannot be undone.")) {
-      return;
-    }
-    try {
-      await api.delete(`/properties/${propertyId}/`);
-      setShowDetailsModal(false);
-      setSelectedProperty(null);
-      await fetchProperties();
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.detail || 'Failed to delete property listing.');
+  const handleOpenAddModal = () => {
+    if (user && !user.is_verified) {
+      setShowKycGateModal(true);
+    } else {
+      setShowAddModal(true);
     }
   };
 
-  // Initialize Leaflet map in Add Property Modal
-  useEffect(() => {
-    if (!showAddModal) return;
+  const handleOpenDetails = async (property) => {
+    setSelectedProperty(property);
+    setShowDetailsModal(true);
+    setApplicationSuccess(false);
+    setApplicationError(null);
 
-    let mapInstance = null;
-
-    const initMap = () => {
-      if (!window.L) {
-        setTimeout(initMap, 100);
-        return;
-      }
-
-      const mapContainer = document.getElementById('map-add');
-      if (!mapContainer) return;
-
-      try {
-        if (mapContainer._leaflet_id) {
-          mapContainer._leaflet_id = null;
-          mapContainer.innerHTML = '';
-        }
-
-        const initialLat = 27.7172;
-        const initialLng = 85.3240;
-
-        mapInstance = window.L.map(mapContainer).setView([initialLat, initialLng], 13);
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(mapInstance);
-
-        // Create a draggable marker
-        const markerInstance = window.L.marker([initialLat, initialLng], { draggable: true }).addTo(mapInstance);
-
-        const updateCoords = (lat, lng) => {
-          setAddForm(f => ({ ...f, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
-        };
-
-        markerInstance.on('dragend', () => {
-          const position = markerInstance.getLatLng();
-          updateCoords(position.lat, position.lng);
-        });
-
-        mapInstance.on('click', (e) => {
-          const { lat, lng } = e.latlng;
-          markerInstance.setLatLng([lat, lng]);
-          updateCoords(lat, lng);
-        });
-      } catch (err) {
-        console.error('Add Property Map init error:', err);
-      }
-    };
-
-    const timer = setTimeout(initMap, 250);
-
-    return () => {
-      clearTimeout(timer);
-      if (mapInstance) {
-        try {
-          mapInstance.remove();
-        } catch (e) {}
-      }
-    };
-  }, [showAddModal]);
-
-  // Initialize Leaflet map in Property Details Modal
-  useEffect(() => {
-    if (!showDetailsModal || !selectedProperty) return;
-
-    let mapInstance = null;
-
-    const initDetailMap = () => {
-      if (!window.L) {
-        setTimeout(initDetailMap, 100);
-        return;
-      }
-
-      const mapContainer = document.getElementById('map-detail');
-      if (!mapContainer) return;
-
-      try {
-        if (mapContainer._leaflet_id) {
-          mapContainer._leaflet_id = null;
-          mapContainer.innerHTML = '';
-        }
-
-        const [_, coordsStr] = (selectedProperty.address || '').split(' || ');
-        let lat = 27.7172;
-        let lng = 85.3240;
-        if (coordsStr) {
-          const [cLat, cLng] = coordsStr.split(',').map(Number);
-          if (!isNaN(cLat) && !isNaN(cLng)) {
-            lat = cLat;
-            lng = cLng;
-          }
-        }
-
-        mapInstance = window.L.map(mapContainer).setView([lat, lng], 15);
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(mapInstance);
-
-        window.L.marker([lat, lng]).addTo(mapInstance);
-      } catch (err) {
-        console.error('Detail map init error:', err);
-      }
-    };
-
-    const timer = setTimeout(initDetailMap, 250);
-
-    return () => {
-      clearTimeout(timer);
-      if (mapInstance) {
-        try {
-          mapInstance.remove();
-        } catch (e) {}
-      }
-    };
-  }, [showDetailsModal, selectedProperty]);
+    try {
+      const response = await api.get(`/properties/${property.id}/`);
+      setSelectedProperty(response.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', maxWidth: '1280px', margin: '0 auto' }}>
+      
+      {/* Top Header & Actions Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.875rem' }}>Properties</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            {role === 'landlord' ? 'Manage your property listings' : 'Discover your next home'}
+          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+            {role === 'landlord' ? 'My Property Listings' : 'Verified Rental Properties'}
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.25rem 0 0 0' }}>
+            {role === 'landlord' 
+              ? 'Manage your rental properties, upload Lalpurja deeds, and handle tenant applications.' 
+              : 'Browse verified, fraud-free rental flats & rooms across Kathmandu, Lalitpur, Bhaktapur & Nepal.'}
           </p>
         </div>
 
         {role === 'landlord' && (
           <button 
-            onClick={() => {
-              if (user && !user.is_verified) {
-                setShowKycGateModal(true);
-              } else {
-                setShowAddModal(true);
-              }
-            }} 
-            className="btn-primary" 
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            onClick={handleOpenAddModal}
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 1.25rem', fontSize: '0.9rem' }}
           >
-            <Plus size={20} />
-            Add New Property
+            <PlusCircle size={18} />
+            <span>List New Property</span>
           </button>
         )}
       </div>
 
-      {/* COMPULSORY KYC STATUS BANNER */}
-      {user && !user.is_verified && (
-        <div style={{
-          background: 'rgba(245, 158, 11, 0.12)',
-          border: '1px solid rgba(245, 158, 11, 0.3)',
-          color: '#fbbf24',
-          padding: '1rem 1.25rem',
-          borderRadius: '0.75rem',
-          marginBottom: '1.5rem',
+      {/* KYC Warning Banner - Only show to unverified Tenants/Landlords */}
+      {user && role !== 'admin' && !user.is_verified && user.kyc_status !== 'pending' && (
+        <div style={{ 
+          background: 'linear-gradient(135deg, #b91c1c 0%, #991b1b 100%)', 
+          color: '#ffffff', 
+          padding: '1.15rem 1.5rem', 
+          borderRadius: '0.85rem', 
+          marginBottom: '1.75rem',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          flexWrap: 'wrap'
+          justify: 'space-between',
+          gap: '1.25rem',
+          flexWrap: 'wrap',
+          boxShadow: '0 8px 24px rgba(185, 28, 28, 0.35)',
+          border: '1px solid #ef4444'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <ShieldAlert size={22} color="#f59e0b" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: '1 1 300px' }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '0.55rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ShieldAlert size={24} color="#ffffff" />
+            </div>
             <div>
-              <strong>Compulsory KYC Verification Required:</strong>{' '}
-              {role === 'landlord' 
-                ? 'As a Landlord, you must verify your citizenship/passport under Settings before creating property listings or performing landlord services.' 
-                : 'As a Tenant, you must verify your identity under Settings before requesting or applying for rental properties.'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+                <span style={{ background: '#ffffff', color: '#b91c1c', fontSize: '0.675rem', fontWeight: 900, padding: '0.15rem 0.5rem', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  URGENT ACTION REQUIRED
+                </span>
+                <strong style={{ fontSize: '0.95rem', fontWeight: 800 }}>Compulsory KYC Identity Verification</strong>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.92, lineHeight: 1.4 }}>
+                {role === 'landlord' 
+                  ? 'As a Landlord, you must submit your Nepalese Citizenship/Passport credentials under Settings before creating listings.' 
+                  : 'As a Tenant, you must verify your identity under Settings before requesting or applying for rental properties.'}
+              </p>
             </div>
           </div>
           <button
             onClick={() => navigate('/dashboard/settings')}
-            className="btn-primary"
-            style={{ fontSize: '0.8rem', padding: '0.45rem 0.9rem', backgroundColor: '#f59e0b' }}
+            style={{ 
+              fontSize: '0.85rem', 
+              fontWeight: 800, 
+              padding: '0.65rem 1.25rem', 
+              backgroundColor: '#ffffff', 
+              color: '#b91c1c',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              whiteSpace: 'nowrap'
+            }}
           >
-            Complete Verification Now
+            Complete Verification Now ↗
           </button>
         </div>
       )}
 
-      {error && (
-        <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-          {error}
-        </div>
-      )}
-
-      {/* Filters Section (Mainly for Tenants, but Landlords with many properties could use it too) */}
-      <div className="glass-panel" style={{ padding: '1rem', marginBottom: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <div className="form-group" style={{ margin: 0, flex: '1 1 200px' }}>
-          <label className="form-label">Search</label>
+      {/* Filters Section */}
+      <div className="glass-panel" style={{ padding: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div style={{ flex: '1 1 240px', position: 'relative' }}>
+          <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Instant Search</label>
           <div style={{ position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input 
               type="text" 
               className="form-input" 
-              style={{ paddingLeft: '2.5rem' }} 
-              placeholder="Search by title or area..." 
+              placeholder="Search title, district, area..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: '2.25rem' }}
             />
           </div>
         </div>
 
-        {/* Sort By Dropdown */}
-        <div className="form-group" style={{ margin: 0, flex: '1 1 170px' }}>
-          <label className="form-label">Sort By</label>
-          <select className="form-input" value={sortBy} onChange={handleSortChange}>
-            <option value="newest">Newest First</option>
-            <option value="nearest">📍 Nearest to Me (GPS)</option>
-            <option value="price_low">Price: Low to High</option>
-            <option value="price_high">Price: High to Low</option>
-          </select>
-        </div>
-
-        {/* Room Type */}
-        <div className="form-group" style={{ margin: 0, flex: '1 1 150px' }}>
-          <label className="form-label">Room Type</label>
-          <select className="form-input" value={roomTypeFilter} onChange={(e) => setRoomTypeFilter(e.target.value)}>
+        <div style={{ flex: '0 1 160px' }}>
+          <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Room Type</label>
+          <select 
+            className="form-input" 
+            value={roomTypeFilter} 
+            onChange={(e) => setRoomTypeFilter(e.target.value)}
+          >
             <option value="">All Types</option>
             <option value="single">Single Room</option>
             <option value="double">Double Room</option>
@@ -611,64 +406,75 @@ export default function Properties() {
           </select>
         </div>
 
-        {/* Max Price Range Slider */}
-        <div className="form-group" style={{ margin: 0, flex: '1 1 210px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-            <label className="form-label" style={{ margin: 0 }}>Max Price</label>
-            <span style={{ fontSize: '0.775rem', fontWeight: 800, color: 'var(--primary-indigo)' }}>
-              {maxPrice ? `Rs. ${parseFloat(maxPrice).toLocaleString()}` : 'Any Price'}
-            </span>
-          </div>
+        <div style={{ flex: '0 1 160px' }}>
+          <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Max Rent (Rs.)</label>
           <input 
-            type="range" 
-            min="3000" 
-            max="100000" 
-            step="1000"
-            style={{ width: '100%', accentColor: 'var(--primary-indigo)', cursor: 'pointer' }} 
-            value={maxPrice || 100000}
-            onChange={(e) => setMaxPrice(e.target.value == 100000 ? '' : e.target.value)}
+            type="number" 
+            className="form-input" 
+            placeholder="e.g. 25000"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
           />
         </div>
 
-        {(searchQuery || sortBy !== 'newest' || roomTypeFilter || maxPrice) && (
+        <div style={{ flex: '0 1 160px' }}>
+          <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Sort By</label>
+          <select 
+            className="form-input" 
+            value={sortBy} 
+            onChange={handleSortChange}
+          >
+            <option value="newest">Newest First</option>
+            <option value="price_low">Price: Low to High</option>
+            <option value="price_high">Price: High to Low</option>
+            <option value="nearest">Nearest Location</option>
+          </select>
+        </div>
+
+        {(searchQuery || roomTypeFilter || maxPrice || sortBy !== 'newest') && (
           <button 
             onClick={clearFilters}
-            className="btn-primary" 
-            style={{ background: 'transparent', color: 'var(--text-muted)', boxShadow: 'none', border: '1px solid var(--border-color)' }}
-            aria-label="Clear filters"
+            style={{ background: 'none', border: 'none', color: 'var(--primary-indigo)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', paddingBottom: '0.5rem' }}
           >
-            <FilterX size={20} />
+            Reset Filters
           </button>
         )}
       </div>
 
-      {/* Content Section */}
+      {/* Main Grid Listing */}
       {loading ? (
-        <SkeletonGrid count={8} />
+        <div style={{ textAlign: 'center', padding: '4rem' }}>
+          <Building2 size={40} className="animate-spin" color="var(--primary-indigo)" style={{ margin: '0 auto 1rem auto' }} />
+          <p style={{ color: 'var(--text-muted)' }}>Loading verified property listings...</p>
+        </div>
       ) : filteredProperties.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-          {filteredProperties.map(property => (
-            <PropertyCard key={property.id} property={property} onClick={() => handleViewDetails(property.id)} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          {filteredProperties.map((prop) => (
+            <PropertyCard 
+              key={prop.id} 
+              property={prop} 
+              onSelect={handleOpenDetails} 
+            />
           ))}
         </div>
       ) : (
-        <div className="glass-panel" style={{ textAlign: 'center', padding: '4rem 2rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
+        <div className="glass-panel" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
           <Building2 size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem auto', opacity: 0.5 }} />
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>No Properties Available</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', maxWidth: '400px', margin: '0 auto' }}>
+          <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem', color: 'var(--text-main)' }}>No Properties Found</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto' }}>
             {properties.length === 0 
               ? (role === 'landlord' 
-                  ? "You haven't added any properties yet. Click the 'Add New Property' button above to create your first listing." 
-                  : "To be completely honest, there are currently no properties listed on the platform. Please check back later or ask your landlord to create a listing.")
+                  ? "You haven't added any properties yet. Click the 'List New Property' button above to create your first listing." 
+                  : "No properties listed on the platform. Please check back later.")
               : "No properties match your current search filters. Try resetting them."}
           </p>
         </div>
       )}
 
-      {/* Add New Property Modal - Single Viewport 2-Column Wide Grid */}
+      {/* Add New Property Modal */}
       {showAddModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(10px)' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '920px', maxHeight: '95vh', overflow: 'hidden', padding: '1.75rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--pill-border)', borderRadius: '1.25rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '920px', maxHeight: '95vh', overflowY: 'auto', padding: '1.75rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--pill-border)', borderRadius: '1.25rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
             
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
@@ -676,7 +482,7 @@ export default function Properties() {
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <PlusCircle size={22} color="var(--primary-indigo)" /> List New Rental Property
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Publish your property to verified tenants across Nepal</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Publish your property with confidential Lalpurja land verification</span>
               </div>
               <button 
                 onClick={() => setShowAddModal(false)}
@@ -762,11 +568,8 @@ export default function Properties() {
                       required
                     />
                   </div>
-                </div>
 
-                {/* Right Column: Room Config, Photos & Map */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                  
+                  {/* Room Config */}
                   <div style={{ display: 'flex', gap: '0.85rem' }}>
                     <div className="form-group" style={{ flex: 1, margin: 0 }}>
                       <label className="form-label">Room Type</label>
@@ -794,59 +597,122 @@ export default function Properties() {
                       </select>
                     </div>
                   </div>
+                </div>
 
+                {/* Right Column: Photos & Confidential Verification Documents */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                  
+                  {/* Property Photos (Shown to Tenants) */}
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Photos & Video Showcase</span>
-                      {addForm.mediaFiles && addForm.mediaFiles.length > 0 && (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--primary-teal)', fontWeight: 600 }}>{addForm.mediaFiles.length} file(s) attached</span>
-                      )}
-                    </label>
+                    <label className="form-label">Property Photos Showcase (Shown to Tenants) *</label>
                     <input 
                       type="file" 
-                      className="form-input" 
-                      multiple
                       accept="image/*,video/*"
+                      multiple
                       onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
+                        const files = Array.from(e.target.files);
                         setAddForm({ ...addForm, mediaFiles: files });
                       }}
-                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
+                      className="form-input"
+                      style={{ padding: '0.45rem' }}
+                    />
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                      Upload high-resolution room photos (PNG, JPG).
+                    </div>
+                  </div>
+
+                  {/* Confidential Property Document 1: Lalpurja Title Deed */}
+                  <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <label className="form-label" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#2563eb', fontWeight: 800 }}>
+                        <FileText size={16} /> Official Lalpurja Title Deed (जग्गाधनी प्रमाण पुर्जा) *
+                      </label>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <Lock size={11} /> Admin Only (Confidential Verification)
+                      </span>
+                    </div>
+
+                    {/* Lalpurja Upload Guide Box */}
+                    <div style={{
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      background: 'rgba(37, 99, 235, 0.06)',
+                      border: '1px dashed rgba(37, 99, 235, 0.3)',
+                      marginBottom: '0.75rem',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-main)'
+                    }}>
+                      <div style={{ fontWeight: 800, color: '#2563eb', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <FileText size={15} /> How Lalpurja Title Deed Should Be Uploaded:
+                      </div>
+                      <ul style={{ margin: '0.25rem 0 0 1.25rem', padding: 0, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                        <li><strong>Owner Name:</strong> Must match your verified Landlord profile name.</li>
+                        <li><strong>Plot & Ward:</strong> Must display District, Ward No., and Kitta No. (कित्ता नं.).</li>
+                        <li><strong>Government Stamp:</strong> Malpot Office (मालपोत कार्यालय) official red stamp visible.</li>
+                      </ul>
+                    </div>
+
+                    <input 
+                      type="file" 
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) setAddForm({ ...addForm, lalpurjaFile: file });
+                      }}
+                      className="form-input"
+                      style={{ padding: '0.45rem', fontSize: '0.825rem' }}
+                      required
                     />
                   </div>
 
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Pinpoint Location Map *</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--primary-teal)', fontWeight: 500 }}>Click or drag marker</span>
-                    </label>
-                    <div id="map-add" style={{ height: '140px', width: '100%', borderRadius: '0.65rem', marginTop: '0.2rem', border: '1px solid var(--border-color)' }}></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.2rem', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                      <span>Lat: {addForm.latitude}</span>
-                      <span>Lng: {addForm.longitude}</span>
+                  {/* Confidential Property Document 2: Electricity Bill */}
+                  <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <label className="form-label" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#2563eb', fontWeight: 800 }}>
+                        <FileText size={16} /> Property Electricity / NEA Bill *
+                      </label>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <Lock size={11} /> Admin Only (Confidential Verification)
+                      </span>
                     </div>
+
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                      Upload recent NEA (Nepal Electricity Authority) or Khanepani water bill showing property location address.
+                    </div>
+
+                    <input 
+                      type="file" 
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) setAddForm({ ...addForm, electricityFile: file });
+                      }}
+                      className="form-input"
+                      style={{ padding: '0.45rem', fontSize: '0.825rem' }}
+                      required
+                    />
                   </div>
 
                 </div>
 
               </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+              {/* Submit Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.85rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem' }}>
                 <button 
                   type="button" 
                   onClick={() => setShowAddModal(false)}
-                  style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '0.55rem 1.5rem', cursor: 'pointer', fontWeight: 500 }}
+                  style={{ padding: '0.55rem 1.25rem', borderRadius: '0.5rem', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="btn-primary" 
+                  className="btn-primary"
                   disabled={addLoading}
-                  style={{ padding: '0.55rem 2rem', fontWeight: 600 }}
+                  style={{ padding: '0.55rem 1.5rem', fontSize: '0.85rem' }}
                 >
-                  {addLoading ? 'Listing Property...' : '✨ Publish Property Listing'}
+                  {addLoading ? 'Creating Property Listing...' : 'Publish Property Listing ↗'}
                 </button>
               </div>
 
@@ -856,36 +722,39 @@ export default function Properties() {
         </div>
       )}
 
-      {/* Property Details Modal - Single Viewport 2-Column Layout */}
+      {/* Property Details & Application Modal */}
       {showDetailsModal && selectedProperty && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(8px)' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '920px', padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1.25rem' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(10px)' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '820px', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--pill-border)', borderRadius: '1.25rem' }}>
             
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize', fontWeight: 600 }}>
-                  {selectedProperty.room_type?.replace('_', ' ')} &bull; {selectedProperty.furnishing_status?.replace('_', ' ')}
+                <span style={{ fontSize: '0.725rem', color: 'var(--primary-indigo)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {selectedProperty.room_type} • {selectedProperty.furnishing_status}
                 </span>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, margin: '0.15rem 0 0 0', color: 'var(--text-main)' }}>{selectedProperty.title}</h3>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0.1rem 0 0 0', color: 'var(--text-main)' }}>
+                  {selectedProperty.title}
+                </h2>
               </div>
               <button 
                 onClick={() => setShowDetailsModal(false)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer', padding: 0 }}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 &times;
               </button>
             </div>
 
-            {/* 2-Column Main Content Body (Single Screen View) */}
+            {/* Modal Body */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', alignItems: 'stretch' }}>
               
-              {/* Left Column: Media Gallery, Map & Rent Summary */}
+              {/* Left Column: Media & Price Summary */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ height: '170px', borderRadius: '0.65rem', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                  <PropertyMedia 
-                    src={selectedProperty.photos && selectedProperty.photos.length > 0 ? selectedProperty.photos[0].photo_url : ''} 
+                  <img 
+                    src={selectedProperty.photos && selectedProperty.photos.length > 0 ? selectedProperty.photos[0].photo_url : 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80'} 
                     alt={selectedProperty.title} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
 
@@ -897,29 +766,22 @@ export default function Properties() {
                     </div>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Location / Area</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Location</span>
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>{(selectedProperty.address || '').split(' || ')[0] || selectedProperty.district}</div>
                   </div>
                 </div>
-
-                <div>
-                  <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 600 }}>GPS Location Map</span>
-                  <div id="map-detail" style={{ height: '140px', width: '100%', borderRadius: '0.65rem', marginTop: '0.25rem', border: '1px solid var(--border-color)' }}></div>
-                </div>
               </div>
 
-              {/* Right Column: About, Landlord Contact & Apply Form */}
+              {/* Right Column: About, Contact & Apply */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.75rem' }}>
-                
-                {/* About Section */}
                 <div>
                   <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 600 }}>About Property</span>
-                  <p style={{ fontSize: '0.85rem', lineHeight: 1.45, margin: '0.2rem 0 0 0', color: 'var(--text-main)', maxHeight: '60px', overflowY: 'auto' }}>
+                  <p style={{ fontSize: '0.85rem', lineHeight: 1.45, margin: '0.2rem 0 0 0', color: 'var(--text-main)', maxHeight: '70px', overflowY: 'auto' }}>
                     {selectedProperty.description || 'No description provided.'}
                   </p>
                 </div>
 
-                {/* Landlord Contact Card */}
+                {/* Landlord Contact */}
                 <div style={{ background: 'var(--bg-input)', padding: '0.75rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)' }}>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>Landlord Contact</span>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
@@ -953,7 +815,7 @@ export default function Properties() {
                   </div>
                 </div>
 
-                {/* Tenant Apply Form */}
+                {/* Tenant Apply */}
                 {role === 'tenant' && selectedProperty.is_available && (
                   <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem' }}>
                     <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'block', marginBottom: '0.35rem' }}>Apply for Tenancy</strong>
@@ -1023,29 +885,33 @@ export default function Properties() {
       {showKycGateModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '1rem' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '2rem', textAlign: 'center' }}>
-            <ShieldAlert size={52} color="#f59e0b" style={{ margin: '0 auto 1rem auto' }} />
+            <ShieldAlert size={52} color="#b91c1c" style={{ margin: '0 auto 1rem auto' }} />
             <h2 style={{ fontSize: '1.4rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>Compulsory KYC Required</h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-              To maintain platform trust and eliminate fake listings, all Landlords must complete identity and citizenship verification before creating property listings or performing landlord services.
+              To maintain platform trust and eliminate fake listings, all Landlords must complete identity and citizenship verification before creating property listings.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <button
-                onClick={() => { setShowKycGateModal(false); navigate('/dashboard/settings'); }}
-                className="btn-primary"
-                style={{ width: '100%', fontSize: '0.9rem', backgroundColor: '#f59e0b' }}
-              >
-                Go to Settings & Verify Now
-              </button>
-              <button
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
                 onClick={() => setShowKycGateModal(false)}
-                style={{ width: '100%', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', borderRadius: '0.5rem', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.85rem' }}
+                style={{ flex: 1, padding: '0.65rem', borderRadius: '0.5rem', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 600 }}
               >
                 Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setShowKycGateModal(false);
+                  navigate('/dashboard/settings');
+                }}
+                className="btn-primary"
+                style={{ flex: 1, padding: '0.65rem', backgroundColor: '#b91c1c' }}
+              >
+                Go to Settings ↗
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

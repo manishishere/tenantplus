@@ -36,6 +36,6 @@ class PropertyPhotoAdmin(admin.ModelAdmin):
 class SavedPropertyAdmin(admin.ModelAdmin):
     """Admin view for properties saved by tenants."""
 
-    list_display = ('tenant', 'property', 'saved_at')
+    list_display = ('tenant', 'property', 'created_at')
     search_fields = ('tenant__email', 'property__title')
-    ordering = ('-saved_at',)
+    ordering = ('-created_at',)

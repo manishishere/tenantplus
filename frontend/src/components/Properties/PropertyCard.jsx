@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Home as HomeIcon, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
+import { MapPin, Home as HomeIcon, Image as ImageIcon, Video as VideoIcon, ShieldCheck, Lock } from 'lucide-react';
 
 const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
@@ -168,10 +168,9 @@ export default function PropertyCard({ property, onClick }) {
           display: 'flex',
           alignItems: 'center',
           gap: '0.25rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          backdropFilter: 'blur(4px)'
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
         }}>
-          <span>🛡️</span> Verified Landlord
+          <ShieldCheck size={13} /> Verified Landlord
         </div>
 
         {!property.is_available && (
@@ -237,9 +236,12 @@ export default function PropertyCard({ property, onClick }) {
             padding: '0.25rem 0.75rem',
             borderRadius: '1rem',
             fontSize: '0.75rem',
-            fontWeight: 600
+            fontWeight: 600,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.25rem'
           }}>
-            🔒 Escrow Protected
+            <Lock size={12} /> Escrow Protected
           </span>
         </div>
       </div>

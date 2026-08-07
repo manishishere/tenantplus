@@ -4,7 +4,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import NotificationBell from '../Notifications/NotificationBell';
-import { Home, FileText, Wrench, Settings, Menu, X, LogOut, Building2, Users, DollarSign, Sun, Moon, ClipboardCheck, MessageSquare, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { 
+  Home, FileText, Wrench, Settings, Menu, X, LogOut, 
+  Building2, Users, DollarSign, Sun, Moon, ClipboardCheck, 
+  MessageSquare, Megaphone
+} from 'lucide-react';
 
 export default function DashboardLayout() {
   const { user, role, logout } = useAuth();
@@ -12,13 +16,31 @@ export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadMaintenanceCount, setUnreadMaintenanceCount] = useState(0);
+  const [activeBroadcastNotice, setActiveBroadcastNotice] = useState('');
+  const [dismissedNotice, setDismissedNotice] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchNavCounts();
-    const interval = setInterval(fetchNavCounts, 3000);
+    fetchBroadcastNotice();
+    const interval = setInterval(() => {
+      fetchNavCounts();
+      fetchBroadcastNotice();
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const fetchBroadcastNotice = async () => {
+    try {
+      const res = await api.get('/accounts/broadcast-notice/');
+      const msg = res.data?.active_notice || '';
+      if (msg !== activeBroadcastNotice) {
+        setActiveBroadcastNotice(msg);
+      }
+    } catch (err) {
+      // silent catch for notice polling
+    }
+  };
 
   const fetchNavCounts = async () => {
     try {
@@ -37,7 +59,6 @@ export default function DashboardLayout() {
       if (maintRes.status === 'fulfilled') {
         const rawTickets = maintRes.value.data?.results || maintRes.value.data;
         const tickets = Array.isArray(rawTickets) ? rawTickets : [];
-        // Pending or in-progress tickets requiring action/addressing
         const activeCount = tickets.filter(t => t && (t.status === 'pending' || t.status === 'in_progress')).length;
         setUnreadMaintenanceCount(activeCount);
       }
@@ -67,23 +88,36 @@ export default function DashboardLayout() {
     { name: 'Utilities', icon: DollarSign, path: '/dashboard/utilities' },
   ];
 
-
-
   return (
     <div className="dashboard-root">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 35 }}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 35 }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-          <Building2 size={24} color="var(--primary-indigo)" />
-          <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-dark)' }}>TenantPlus</span>
+        {/* Brand Header */}
+        <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.85rem', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{
+            backgroundColor: '#2563eb',
+            color: '#ffffff',
+            padding: '0.55rem',
+            borderRadius: '0.65rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Building2 size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>
+              TenantPlus
+            </span>
+          </div>
           <button 
             className="mobile-menu-btn" 
             style={{ marginLeft: 'auto' }}
@@ -93,6 +127,7 @@ export default function DashboardLayout() {
           </button>
         </div>
 
+        {/* Sidebar Nav Links */}
         <nav className="sidebar-nav">
           {navItems.map((item) => (
             <NavLink 
@@ -100,18 +135,17 @@ export default function DashboardLayout() {
               to={item.path} 
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}
-              style={{ display: 'flex', alignItems: 'center' }}
             >
-              <item.icon size={20} />
+              <item.icon size={19} />
               <span>{item.name}</span>
               
               {item.path === '/dashboard/chat' && unreadChatCount > 0 && (
                 <span style={{
-                  background: '#ef4444',
+                  backgroundColor: '#ef4444',
                   color: '#ffffff',
                   fontSize: '0.7rem',
                   fontWeight: 800,
-                  padding: '0.12rem 0.45rem',
+                  padding: '0.15rem 0.5rem',
                   borderRadius: '1rem',
                   marginLeft: 'auto',
                   lineHeight: 1
@@ -122,11 +156,11 @@ export default function DashboardLayout() {
 
               {item.path === '/dashboard/maintenance' && unreadMaintenanceCount > 0 && (
                 <span style={{
-                  background: '#f59e0b',
+                  backgroundColor: '#f59e0b',
                   color: '#ffffff',
                   fontSize: '0.7rem',
                   fontWeight: 800,
-                  padding: '0.12rem 0.45rem',
+                  padding: '0.15rem 0.5rem',
                   borderRadius: '1rem',
                   marginLeft: 'auto',
                   lineHeight: 1
@@ -137,16 +171,17 @@ export default function DashboardLayout() {
             </NavLink>
           ))}
           
-          <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '1rem' }}>
+          {/* Footer Settings & Logout */}
+          <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
             <NavLink to="/dashboard/settings" className="nav-link">
-              <Settings size={20} /> Settings
+              <Settings size={19} /> Settings
             </NavLink>
             <button 
               onClick={handleLogout} 
               className="nav-link" 
-              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--accent-rose)' }}
             >
-              <LogOut size={20} /> Logout
+              <LogOut size={19} color="var(--accent-rose)" /> Logout
             </button>
           </div>
         </nav>
@@ -155,7 +190,7 @@ export default function DashboardLayout() {
       {/* Main Content */}
       <main className="main-content">
         <header className="top-bar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
             <button 
               className="mobile-menu-btn"
               onClick={() => setSidebarOpen(true)}
@@ -165,7 +200,7 @@ export default function DashboardLayout() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
             {/* Notification Bell Dropdown */}
             <NotificationBell />
 
@@ -174,8 +209,8 @@ export default function DashboardLayout() {
               onClick={toggleTheme}
               title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
               style={{
-                background: 'var(--pill-bg, rgba(255,255,255,0.08))',
-                border: '1px solid var(--border-color, rgba(255,255,255,0.1))',
+                background: 'var(--pill-bg)',
+                border: '1px solid var(--pill-border)',
                 borderRadius: '50%',
                 width: '36px',
                 height: '36px',
@@ -183,48 +218,78 @@ export default function DashboardLayout() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.18s ease'
               }}
             >
-              {theme === 'dark' ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#6366f1" />}
+              {theme === 'dark' ? <Sun size={17} color="var(--text-main)" /> : <Moon size={17} color="var(--text-main)" />}
             </button>
 
+            {/* Clean Professional Profile Info */}
             <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-dark)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <span>{user?.full_name || user?.email}</span>
-                {role === 'admin' || user?.is_staff ? (
-                  <span title="System Administrator" style={{ color: '#a855f7', display: 'inline-flex', alignItems: 'center', background: 'rgba(168, 85, 247, 0.15)', padding: '0.15rem 0.55rem', borderRadius: '1rem', border: '1px solid rgba(168, 85, 247, 0.3)', fontSize: '0.725rem', fontWeight: 700, gap: '0.25rem' }}>
-                    <ShieldCheck size={13} /> System Admin
-                  </span>
-                ) : user?.is_verified ? (
-                  <span title="Verified KYC Account" style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', background: 'rgba(16, 185, 129, 0.15)', padding: '0.15rem 0.55rem', borderRadius: '1rem', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: '0.725rem', fontWeight: 700, gap: '0.25rem' }}>
-                    <CheckCircle2 size={13} /> Verified
-                  </span>
-                ) : (
-                  <span title="Compulsory KYC Verification Required" style={{ color: '#ffffff', fontSize: '0.7rem', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', padding: '0.15rem 0.55rem', borderRadius: '1rem', border: '1px solid rgba(255, 255, 255, 0.2)', fontWeight: 700, boxShadow: '0 2px 8px rgba(99,102,241,0.3)', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                    <ShieldCheck size={12} /> KYC Pending
-                  </span>
-                )}
-
+              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-main)' }}>
+                {user?.full_name || user?.email}
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{role}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                {role}
+              </div>
             </div>
+
+            {/* Avatar Circle */}
             <div style={{ 
               width: '36px', 
               height: '36px', 
               borderRadius: '50%', 
-              backgroundColor: 'var(--primary-indigo)', 
-              color: 'white',
+              backgroundColor: 'var(--text-main)', 
+              color: 'var(--bg-main)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 600
+              fontWeight: 700,
+              fontSize: '0.9rem'
             }}>
               {user?.full_name ? user.full_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
         
+        {/* PLATFORM BROADCAST NOTICE BANNER */}
+        {activeBroadcastNotice && !dismissedNotice && (
+          <div style={{
+            background: 'rgba(245, 158, 11, 0.14)',
+            borderBottom: '1px solid rgba(245, 158, 11, 0.35)',
+            padding: '0.75rem 1.5rem',
+            color: '#f59e0b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            fontWeight: 600,
+            fontSize: '0.875rem'
+          }}>
+            <Megaphone size={18} style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <span style={{
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                fontSize: '0.7rem',
+                background: '#f59e0b',
+                color: '#000000',
+                padding: '0.15rem 0.45rem',
+                borderRadius: '0.3rem',
+                marginRight: '0.6rem'
+              }}>
+                Platform Notice
+              </span>
+              {activeBroadcastNotice}
+            </div>
+            <button
+              onClick={() => setDismissedNotice(true)}
+              style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="content-area">
           <Outlet />
         </div>

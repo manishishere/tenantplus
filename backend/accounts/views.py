@@ -37,98 +37,37 @@ import os
 import threading
 
 def _send_verification_otp_email_sync(user, otp):
-    """Synchronous internal worker function to dispatch email verification OTP."""
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None) or getattr(settings, 'EMAIL_HOST_USER', None) or 'resouk81@gmail.com'
-    if not from_email or from_email == 'noreply@tenantplus.com':
-        from_email = getattr(settings, 'EMAIL_HOST_USER', 'resouk81@gmail.com')
-
+    """Synchronous internal worker function to dispatch email verification OTP via SMTP."""
     subject = 'Verify your TenantPlus account'
     body = (
         f"Hello {user.full_name},\n\n"
         f"Your TenantPlus verification code is: {otp}\n\n"
         "This code will expire in 10 minutes.\n\n"
         "Thank you,\n"
-        "The TenantPlus Team"
+        "— The TenantPlus Team"
     )
+    from_email = getattr(settings, 'EMAIL_HOST_USER', getattr(settings, 'DEFAULT_FROM_EMAIL', 'resouk81@gmail.com'))
 
-    # 0. Check for Resend HTTPS API Key (Port 443 - zero block chance on cloud hosts)
-    resend_api_key = getattr(settings, 'RESEND_API_KEY', None) or os.environ.get('RESEND_API_KEY')
-    if resend_api_key:
-        try:
-            import urllib.request
-            import json
+    # Instant Terminal Output for Instant Development Access
+    print(f"\n=======================================================")
+    print(f"🔑 VERIFICATION OTP FOR {user.email}: [{otp}]")
+    print(f"=======================================================\n")
+    logger.info(f"VERIFICATION OTP FOR {user.email}: [{otp}]")
 
-            resend_from = getattr(settings, 'RESEND_FROM_EMAIL', None) or os.environ.get('RESEND_FROM_EMAIL') or 'TenantPlus <onboarding@resend.dev>'
-            payload = json.dumps({
-                'from': resend_from,
-                'to': [user.email],
-                'subject': subject,
-                'text': body,
-            }).encode('utf-8')
-
-            req = urllib.request.Request(
-                'https://api.resend.com/emails',
-                data=payload,
-                headers={
-                    'Authorization': f'Bearer {resend_api_key}',
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'TenantPlus/1.0',
-                },
-                method='POST'
-            )
-            with urllib.request.urlopen(req, timeout=10) as response:
-                if response.status in (200, 201):
-                    logger.info(f"Successfully dispatched OTP email via Resend HTTP API to {user.email}")
-                    return True, None
-        except Exception as resend_err:
-            logger.warning(f"Resend HTTP API failed ({resend_err}). Proceeding to standard SMTP dispatch...")
-    
-    # Primary direct dispatch
+    # Dispatch email via Django SMTP configuration directly
     try:
-        send_mail(
+        res = send_mail(
             subject=subject,
             message=body,
             from_email=from_email,
             recipient_list=[user.email],
             fail_silently=False,
         )
-        logger.info(f"Successfully dispatched OTP email to {user.email}")
+        logger.info(f"Dispatched OTP email via SMTP to {user.email}: result={res}")
         return True, None
     except Exception as primary_err:
-        logger.warning(f"Primary send_mail failed ({primary_err}). Attempting smtplib fallback...")
-
-    # Secondary fallback dispatch
-    try:
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-
-        host_user = getattr(settings, 'EMAIL_HOST_USER', '') or 'resouk81@gmail.com'
-        host_password = getattr(settings, 'EMAIL_HOST_PASSWORD', '') or 'jefmmxkotupkbdog'
-        host_name = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com')
-        port = getattr(settings, 'EMAIL_PORT', 587)
-        use_ssl = getattr(settings, 'EMAIL_USE_SSL', False) or (port == 465)
-
-        msg = MIMEMultipart()
-        msg['From'] = f"TenantPlus <{host_user}>"
-        msg['To'] = user.email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-
-        if use_ssl:
-            with smtplib.SMTP_SSL(host_name, port, timeout=10) as server:
-                server.login(host_user, host_password)
-                server.send_message(msg)
-        else:
-            with smtplib.SMTP(host_name, port, timeout=10) as server:
-                server.starttls()
-                server.login(host_user, host_password)
-                server.send_message(msg)
-        logger.info(f"Successfully sent OTP email via smtplib fallback to {user.email}")
-        return True, None
-    except Exception as fallback_err:
-        logger.error(f"Failed to dispatch OTP email for {user.email}: {fallback_err}")
-        return False, str(fallback_err)
+        logger.error(f"Failed to dispatch OTP email to {user.email}: {primary_err}")
+        return False, str(primary_err)
 
 
 def _send_verification_otp_email(user, otp, sync=False):
@@ -139,7 +78,7 @@ def _send_verification_otp_email(user, otp, sync=False):
     # Non-blocking background thread for instant response time during user registration
     thread = threading.Thread(target=_send_verification_otp_email_sync, args=(user, otp), daemon=True)
     thread.start()
-    return True, None
+    return True, Noneue, None
 
 
 
@@ -661,10 +600,21 @@ def admin_kyc_list(request):
             'user_full_name': doc.user.full_name,
             'user_phone': doc.user.phone,
             'user_role': doc.user.role,
+            'gender': doc.gender,
+            'father_name': doc.father_name,
+            'mother_name': doc.mother_name,
+            'spouse_name': doc.spouse_name,
+            'permanent_address': doc.permanent_address,
+            'temporary_address': doc.temporary_address,
+            'emergency_contact_name': doc.emergency_contact_name,
+            'emergency_contact_phone': doc.emergency_contact_phone,
+            'user_photo': doc.user_photo,
             'doc_type': doc.doc_type,
             'doc_number': doc.doc_number,
             'doc_url': doc.doc_url,
             'back_doc_url': doc.back_doc_url,
+            'house_doc_url': doc.house_doc_url,
+            'electricity_bill_url': doc.electricity_bill_url,
             'status': doc.status,
             'created_at': doc.created_at,
             'verified_at': doc.verified_at,
@@ -685,19 +635,66 @@ def admin_kyc_review(request):
 
     if action == 'approve':
         doc.status = 'approved'
+        doc.rejection_reason = None
         doc.verified_at = timezone.now()
         doc.save()
         user = doc.user
         user.is_verified = True
         user.save(update_fields=['is_verified'])
+
+        # Send automated email notification to user
+        try:
+            from django.core.mail import send_mail
+            send_mail(
+                subject='TenantPlus — Congratulations! KYC Identity Verification Approved',
+                message=(
+                    f"Hello {user.full_name},\n\n"
+                    "Great news! Your Statutory KYC Identity Verification documents have been reviewed and officially APPROVED by Platform Administration.\n\n"
+                    "Your account now holds a Verified Badge on TenantPlus under House Rent Act 2075.\n\n"
+                    "You can now create rental property listings, submit applications, and execute legal lease agreements.\n\n"
+                    "— TenantPlus Compliance Team"
+                ),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'resouk81@gmail.com'),
+                recipient_list=[user.email],
+                fail_silently=True
+            )
+        except Exception as e:
+            print(f"Error sending KYC approval email: {e}")
+
         return Response({'detail': f'KYC document for {user.full_name or user.email} approved successfully.', 'status': 'approved'})
+
     elif action == 'reject':
+        rejection_reason = request.data.get('rejection_reason', '').strip() or 'Document details did not match statutory verification guidelines.'
         doc.status = 'rejected'
+        doc.rejection_reason = rejection_reason
         doc.save()
         user = doc.user
         user.is_verified = False
         user.save(update_fields=['is_verified'])
-        return Response({'detail': f'KYC document for {user.full_name or user.email} rejected.', 'status': 'rejected'})
+
+        # Send automated rejection email notification to user with reason
+        try:
+            from django.core.mail import send_mail
+            send_mail(
+                subject='TenantPlus — Action Required: KYC Verification Status Update',
+                message=(
+                    f"Hello {user.full_name},\n\n"
+                    "Your recent Statutory KYC Verification submission has been reviewed by Platform Administration.\n\n"
+                    "Status: REJECTED\n"
+                    f"Reason for Rejection:\n» {rejection_reason}\n\n"
+                    "What to do next:\n"
+                    "Please log into your TenantPlus account at https://tenantplus.vercel.app/dashboard/settings\n"
+                    "Update your personal details or re-upload clear identity photos, and click 'Save & Re-submit Statutory KYC Profile'.\n\n"
+                    "— TenantPlus Compliance Team"
+                ),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'resouk81@gmail.com'),
+                recipient_list=[user.email],
+                fail_silently=True
+            )
+        except Exception as e:
+            print(f"Error sending KYC rejection email: {e}")
+
+        return Response({'detail': f'KYC document for {user.full_name or user.email} rejected.', 'status': 'rejected', 'rejection_reason': rejection_reason})
     else:
         return Response({'detail': 'Invalid action. Must be "approve" or "reject".'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -739,7 +736,7 @@ def admin_system_health(request):
     except Exception as e:
         db_ok = False
 
-    return Response({
+    health_data = {
         'status': 'healthy' if db_ok else 'degraded',
         'database': {
             'engine': settings.DATABASES['default']['ENGINE'].split('.')[-1],
@@ -752,6 +749,10 @@ def admin_system_health(request):
             'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL', 'N/A'),
             'q_cluster_sync': getattr(settings, 'Q_CLUSTER_SYNC', True),
         }
+    }
+    return Response({
+        **health_data,
+        'health': health_data
     }, status=status.HTTP_200_OK)
 
 
@@ -815,3 +816,32 @@ class DocumentListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def broadcast_notice_api(request):
+    """GET active platform-wide broadcast notice for all users; POST to publish or unpublish (admin only)."""
+    from .models import BroadcastNotice
+
+    if request.method == 'GET':
+        active = BroadcastNotice.objects.filter(is_active=True).order_by('-created_at').first()
+        return Response({'active_notice': active.message if active else ''}, status=status.HTTP_200_OK)
+
+    if request.method == 'POST':
+        if not request.user.is_authenticated or request.user.role != 'admin':
+            return Response({'detail': 'Only platform administrators can publish broadcast notices.'}, status=status.HTTP_403_FORBIDDEN)
+
+        action = request.data.get('action')
+        if action == 'unpublish':
+            BroadcastNotice.objects.filter(is_active=True).update(is_active=False)
+            return Response({'detail': 'Broadcast notice unpublished.', 'active_notice': ''}, status=status.HTTP_200_OK)
+
+        message = request.data.get('message', '').strip()
+        if not message:
+            return Response({'detail': 'Broadcast message content cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Deactivate older notices and publish the new one
+        BroadcastNotice.objects.filter(is_active=True).update(is_active=False)
+        new_notice = BroadcastNotice.objects.create(message=message, is_active=True)
+        return Response({'detail': 'Broadcast notice published live platform-wide.', 'active_notice': new_notice.message}, status=status.HTTP_201_CREATED)
