@@ -761,7 +761,7 @@ export default function Settings() {
                     <option value="citizenship">Citizenship Certificate (Nagarikta)</option>
                     <option value="passport">Passport</option>
                     <option value="license">Driver's License</option>
-                    <option value="nid">National Identity Card (NID)</option>
+                    <option value="national_id">National Identity Card (NID)</option>
                   </select>
                 </div>
 

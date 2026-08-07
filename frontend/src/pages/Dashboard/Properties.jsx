@@ -185,9 +185,8 @@ export default function Properties() {
         room_type: addForm.roomType,
         furnishing_status: addForm.furnishingStatus,
         rent_amount: rent,
-        lalpurja_doc_url: lalpurjaUrl || `/media/properties/lalpurja-${Date.now()}.pdf`,
-        electricity_bill_url: electricityUrl || `/media/properties/nea-${Date.now()}.pdf`,
-        verification_status: 'verified'
+        lalpurja_doc_url: lalpurjaUrl || null,
+        electricity_bill_url: electricityUrl || null,
       });
 
       const createdProperty = response.data;
