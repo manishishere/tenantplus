@@ -589,10 +589,18 @@ def user_directory(request):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_kyc_list(request):
-    """List submitted KYC documents for admin review."""
+    """List submitted KYC documents for admin review (one latest document per user)."""
     docs = UserDocument.objects.select_related('user').order_by('-created_at')
-    result = []
+    
+    seen_users = set()
+    unique_docs = []
     for doc in docs:
+        if doc.user_id not in seen_users:
+            seen_users.add(doc.user_id)
+            unique_docs.append(doc)
+
+    result = []
+    for doc in unique_docs:
         result.append({
             'id': doc.id,
             'user_id': str(doc.user.id),
@@ -811,11 +819,17 @@ class DocumentListCreateView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
-        """Create a document record linked to the authenticated user."""
-        serializer = UserDocumentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        """Create or update the document record linked to the authenticated user."""
+        existing_doc = UserDocument.objects.filter(user=request.user).first()
+        if existing_doc:
+            serializer = UserDocumentSerializer(existing_doc, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            doc = serializer.save(status='pending', rejection_reason=None)
+        else:
+            serializer = UserDocumentSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            doc = serializer.save(user=request.user, status='pending')
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET', 'POST'])
