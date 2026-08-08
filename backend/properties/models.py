@@ -33,8 +33,18 @@ class Property(models.Model):
     )
     title = models.CharField(max_length=255)
     description = models.TextField()
+
+    # Structured Nepal Address Fields
+    province = models.CharField(max_length=100, blank=True, default='')
     district = models.CharField(max_length=100)
-    address = models.TextField()
+    municipality = models.CharField(max_length=150, blank=True, default='')
+    ward_no = models.CharField(max_length=10, blank=True, default='')
+    tole = models.CharField(max_length=150, blank=True, default='', help_text='Tole/Locality name')
+    landmark = models.CharField(max_length=255, blank=True, default='', help_text='Private landmark (revealed only after agreement)')
+
+    # Legacy field kept for backward compatibility
+    address = models.TextField(blank=True, default='')
+
     room_type = models.CharField(max_length=30, choices=ROOM_TYPE_CHOICES, default='flat')
     furnishing_status = models.CharField(max_length=30, choices=FURNISHING_STATUS_CHOICES, default='unfurnished')
     rent_amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -52,8 +62,41 @@ class Property(models.Model):
         ordering = ['-created_at']
         verbose_name_plural = 'Properties'
 
+    @property
+    def fuzzy_address(self):
+        """Area-level address only — safe to show all tenants."""
+        parts = []
+        if self.tole:
+            parts.append(self.tole)
+        if self.ward_no:
+            parts.append(f"Ward {self.ward_no}")
+        if self.municipality:
+            parts.append(self.municipality)
+        elif self.district:
+            parts.append(self.district)
+        return ', '.join(parts) if parts else self.district
+
+    @property
+    def full_address(self):
+        """Complete address including landmark — shown only after agreement."""
+        parts = []
+        if self.landmark:
+            parts.append(self.landmark)
+        if self.tole:
+            parts.append(self.tole)
+        if self.ward_no:
+            parts.append(f"Ward {self.ward_no}")
+        if self.municipality:
+            parts.append(self.municipality)
+        if self.district:
+            parts.append(self.district)
+        if self.province:
+            parts.append(self.province)
+        return ', '.join(parts) if parts else self.address
+
     def __str__(self):
         return f"{self.title} — {self.district} ({self.room_type})"
+
 
 
 class PropertyPhoto(models.Model):

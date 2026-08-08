@@ -19,13 +19,19 @@ class PropertyListSerializer(serializers.ModelSerializer):
     landlord_name = serializers.SerializerMethodField()
     landlord_is_verified = serializers.SerializerMethodField()
     first_photo = serializers.SerializerMethodField()
+    fuzzy_address = serializers.CharField(source='fuzzy_address', read_only=True)
 
     class Meta:
         model = Property
         fields = (
             'id',
             'title',
+            'province',
             'district',
+            'municipality',
+            'ward_no',
+            'tole',
+            'fuzzy_address',
             'room_type',
             'furnishing_status',
             'rent_amount',
@@ -66,14 +72,26 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     lalpurja_doc_url = serializers.SerializerMethodField()
     electricity_bill_url = serializers.SerializerMethodField()
 
+    # Privacy-controlled address fields
+    display_address = serializers.SerializerMethodField()
+    address_is_full = serializers.SerializerMethodField()
+    fuzzy_address = serializers.CharField(source='fuzzy_address', read_only=True)
+
     class Meta:
         model = Property
         fields = (
             'id',
             'title',
             'description',
+            'province',
             'district',
-            'address',
+            'municipality',
+            'ward_no',
+            'tole',
+            'landmark',
+            'fuzzy_address',
+            'display_address',
+            'address_is_full',
             'room_type',
             'furnishing_status',
             'rent_amount',
@@ -90,6 +108,27 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'landlord_is_verified',
             'photo_count',
         )
+
+    def _can_see_full_address(self, obj):
+        """Return True if the requesting user is allowed to see the full address."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        user = request.user
+        if user == obj.landlord or user.role == 'admin':
+            return True
+        # Reveal if tenant has accepted application or active agreement
+        has_accepted_app = obj.applications.filter(tenant=user, status='accepted').exists()
+        has_agreement = obj.agreements.filter(tenant=user).exists()
+        return has_accepted_app or has_agreement
+
+    def get_display_address(self, obj):
+        if self._can_see_full_address(obj):
+            return obj.full_address
+        return obj.fuzzy_address
+
+    def get_address_is_full(self, obj):
+        return self._can_see_full_address(obj)
 
     def get_lalpurja_doc_url(self, obj):
         request = self.context.get('request')
@@ -152,7 +191,12 @@ class PropertyCreateUpdateSerializer(serializers.ModelSerializer):
         fields = (
             'title',
             'description',
+            'province',
             'district',
+            'municipality',
+            'ward_no',
+            'tole',
+            'landmark',
             'address',
             'room_type',
             'furnishing_status',

@@ -23,8 +23,53 @@ import {
   ShieldAlert,
   FileText,
   Lock,
-  Upload
+  Upload,
+  EyeOff,
+  Eye
 } from 'lucide-react';
+
+// Nepal administrative divisions (Province → District → Municipalities)
+const NEPAL_DIVISIONS = {
+  'Bagmati Province': {
+    'Kathmandu': ['Kathmandu Metropolitan City', 'Kageshwari Manohara Municipality', 'Kirtipur Municipality', 'Gokarneshwar Municipality', 'Chandragiri Municipality', 'Tokha Municipality', 'Tarakeshwar Municipality', 'Dakshinkali Municipality', 'Nagarjun Municipality', 'Budhanilkantha Municipality', 'Shankharapur Municipality'],
+    'Lalitpur': ['Lalitpur Metropolitan City', 'Godawari Municipality', 'Mahalaxmi Municipality'],
+    'Bhaktapur': ['Bhaktapur Municipality', 'Madhyapur Thimi Municipality', 'Suryabinayak Municipality', 'Changunarayan Municipality'],
+    'Chitwan': ['Bharatpur Metropolitan City', 'Ratnanagar Municipality', 'Khairahani Municipality'],
+    'Makwanpur': ['Hetauda Sub-Metropolitan City', 'Thaha Municipality'],
+    'Kavrepalanchok': ['Dhulikhel Municipality', 'Banepa Municipality', 'Panauti Municipality'],
+    'Nuwakot': ['Bidur Municipality', 'Belkotgadhi Municipality'],
+    'Dhading': ['Nilkantha Municipality', 'Dhunibesi Municipality'],
+  },
+  'Koshi Province': {
+    'Morang': ['Biratnagar Metropolitan City', 'Sundarharaicha Municipality', 'Belbari Municipality'],
+    'Sunsari': ['Dharan Sub-Metropolitan City', 'Itahari Sub-Metropolitan City'],
+    'Jhapa': ['Birtamode Municipality', 'Damak Municipality', 'Mechinagar Municipality'],
+    'Ilam': ['Ilam Municipality', 'Suryodaya Municipality'],
+  },
+  'Madhesh Province': {
+    'Dhanusha': ['Janakpurdham Sub-Metropolitan City', 'Mithila Municipality'],
+    'Parsa': ['Birgunj Metropolitan City', 'Pokhariya Municipality'],
+    'Bara': ['Kalaiya Sub-Metropolitan City', 'Jitpursimara Sub-Metropolitan City'],
+  },
+  'Gandaki Province': {
+    'Kaski': ['Pokhara Metropolitan City', 'Annapurna Rural Municipality'],
+    'Tanahun': ['Vyas Municipality', 'Shuklagandaki Municipality'],
+    'Gorkha': ['Gorkha Municipality', 'Palungtar Municipality'],
+  },
+  'Lumbini Province': {
+    'Rupandehi': ['Butwal Sub-Metropolitan City', 'Siddharthanagar Municipality', 'Tilottama Municipality'],
+    'Banke': ['Nepalgunj Sub-Metropolitan City', 'Kohalpur Municipality'],
+    'Dang': ['Ghorahi Sub-Metropolitan City', 'Tulsipur Sub-Metropolitan City'],
+  },
+  'Karnali Province': {
+    'Surkhet': ['Birendranagar Municipality', 'Gurbhakot Municipality'],
+    'Dailekh': ['Narayan Municipality', 'Dullu Municipality'],
+  },
+  'Sudurpashchim Province': {
+    'Kanchanpur': ['Mahendranagar Municipality', 'Punarbas Municipality'],
+    'Kailali': ['Dhangadhi Sub-Metropolitan City', 'Tikapur Municipality'],
+  },
+};
 
 export default function Properties() {
   const { user, role } = useAuth();
@@ -54,20 +99,23 @@ export default function Properties() {
   const [applicationError, setApplicationError] = useState(null);
 
   // Add Property Form State
-  const [addForm, setAddForm] = useState({
+  const EMPTY_FORM = {
     title: '',
     description: '',
+    province: 'Bagmati Province',
     district: 'Kathmandu',
-    address: '',
+    municipality: 'Kathmandu Metropolitan City',
+    ward_no: '',
+    tole: '',
+    landmark: '',
     roomType: 'flat',
     furnishingStatus: 'unfurnished',
     rentAmount: '',
-    latitude: '27.7172',
-    longitude: '85.3240',
     mediaFiles: [],
     lalpurjaFile: null,
     electricityFile: null
-  });
+  };
+  const [addForm, setAddForm] = useState(EMPTY_FORM);
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState(null);
 
@@ -180,8 +228,12 @@ export default function Properties() {
       const response = await api.post('/properties/', {
         title: addForm.title.trim(),
         description: addForm.description.trim(),
-        district: addForm.district.trim(),
-        address: `${addForm.address.trim()} || ${addForm.latitude},${addForm.longitude}`,
+        province: addForm.province,
+        district: addForm.district,
+        municipality: addForm.municipality,
+        ward_no: addForm.ward_no.trim(),
+        tole: addForm.tole.trim(),
+        landmark: addForm.landmark.trim(),
         room_type: addForm.roomType,
         furnishing_status: addForm.furnishingStatus,
         rent_amount: rent,
@@ -205,20 +257,7 @@ export default function Properties() {
       }
 
       setShowAddModal(false);
-      setAddForm({
-        title: '',
-        description: '',
-        district: 'Kathmandu',
-        address: '',
-        roomType: 'flat',
-        furnishingStatus: 'unfurnished',
-        rentAmount: '',
-        latitude: '27.7172',
-        longitude: '85.3240',
-        mediaFiles: [],
-        lalpurjaFile: null,
-        electricityFile: null
-      });
+      setAddForm(EMPTY_FORM);
 
       await fetchProperties();
     } catch (err) {
@@ -531,39 +570,105 @@ export default function Properties() {
                     />
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.85rem' }}>
-                    <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                      <label className="form-label">District *</label>
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        placeholder="e.g. Lalitpur"
-                        value={addForm.district}
-                        onChange={(e) => setAddForm({ ...addForm, district: e.target.value })}
-                        required
-                      />
+                  {/* Nepal Structured Address */}
+                  <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '0.65rem', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-indigo)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <MapPin size={13} /> Property Location
                     </div>
-                    <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                      <label className="form-label">Monthly Rent (Rs.) *</label>
-                      <input 
-                        type="number" 
-                        className="form-input" 
-                        placeholder="e.g. 18000"
-                        value={addForm.rentAmount}
-                        onChange={(e) => setAddForm({ ...addForm, rentAmount: e.target.value })}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem' }}>Province *</label>
+                        <select
+                          className="form-input"
+                          value={addForm.province}
+                          onChange={(e) => {
+                            const districts = Object.keys(NEPAL_DIVISIONS[e.target.value] || {});
+                            const firstDistrict = districts[0] || '';
+                            const municipalities = (NEPAL_DIVISIONS[e.target.value] || {})[firstDistrict] || [];
+                            setAddForm({ ...addForm, province: e.target.value, district: firstDistrict, municipality: municipalities[0] || '' });
+                          }}
+                          required
+                        >
+                          {Object.keys(NEPAL_DIVISIONS).map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem' }}>District *</label>
+                        <select
+                          className="form-input"
+                          value={addForm.district}
+                          onChange={(e) => {
+                            const municipalities = (NEPAL_DIVISIONS[addForm.province] || {})[e.target.value] || [];
+                            setAddForm({ ...addForm, district: e.target.value, municipality: municipalities[0] || '' });
+                          }}
+                          required
+                        >
+                          {Object.keys(NEPAL_DIVISIONS[addForm.province] || {}).map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Municipality / VDC *</label>
+                      <select
+                        className="form-input"
+                        value={addForm.municipality}
+                        onChange={(e) => setAddForm({ ...addForm, municipality: e.target.value })}
                         required
+                      >
+                        {((NEPAL_DIVISIONS[addForm.province] || {})[addForm.district] || []).map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '0.5rem' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem' }}>Ward No. *</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          placeholder="e.g. 10"
+                          min="1" max="33"
+                          value={addForm.ward_no}
+                          onChange={(e) => setAddForm({ ...addForm, ward_no: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.75rem' }}>Tole / Locality</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="e.g. Baneshwor, Thamel, Jhamsikhel"
+                          value={addForm.tole}
+                          onChange={(e) => setAddForm({ ...addForm, tole: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <EyeOff size={12} color="#ef4444" /> Landmark <span style={{ color: '#ef4444' }}>(Private — revealed to tenant only after agreement)</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Near St. Xavier's College, Blue Gate House"
+                        value={addForm.landmark}
+                        onChange={(e) => setAddForm({ ...addForm, landmark: e.target.value })}
                       />
                     </div>
                   </div>
 
+                  {/* Monthly Rent */}
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Detailed Address *</label>
+                    <label className="form-label">Monthly Rent (Rs.) *</label>
                     <input 
-                      type="text" 
+                      type="number" 
                       className="form-input" 
-                      placeholder="e.g. Jhamsikhel, Ward 3, House 42"
-                      value={addForm.address}
-                      onChange={(e) => setAddForm({ ...addForm, address: e.target.value })}
+                      placeholder="e.g. 18000"
+                      value={addForm.rentAmount}
+                      onChange={(e) => setAddForm({ ...addForm, rentAmount: e.target.value })}
                       required
                     />
                   </div>
@@ -766,7 +871,20 @@ export default function Properties() {
                   </div>
                   <div>
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Location</span>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>{(selectedProperty.address || '').split(' || ')[0] || selectedProperty.district}</div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      <MapPin size={13} color="var(--primary-indigo)" />
+                      {selectedProperty.display_address || selectedProperty.fuzzy_address || selectedProperty.district}
+                      {selectedProperty.address_is_full === false && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '0.1rem 0.4rem', borderRadius: '0.3rem', fontWeight: 600 }}>
+                          <Lock size={10} /> Full address after acceptance
+                        </span>
+                      )}
+                      {selectedProperty.address_is_full === true && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: '#10b981', background: 'rgba(16,185,129,0.12)', padding: '0.1rem 0.4rem', borderRadius: '0.3rem', fontWeight: 600 }}>
+                          <Eye size={10} /> Full address
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
