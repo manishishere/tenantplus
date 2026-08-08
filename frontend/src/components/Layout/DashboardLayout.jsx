@@ -133,6 +133,7 @@ export default function DashboardLayout() {
             <NavLink 
               key={item.name} 
               to={item.path} 
+              end={item.path === '/dashboard'}
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}
             >
