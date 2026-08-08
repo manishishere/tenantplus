@@ -1,77 +1,201 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Bell, CheckCircle2, Clock, AlertCircle, FileText, DollarSign, ArrowRight, X } from 'lucide-react';
+import api from '../../services/api';
+import { Bell, CheckCircle2, FileText, DollarSign, Wrench, Users, Clock, AlertCircle } from 'lucide-react';
+
+function formatRelativeTime(dateStr) {
+  if (!dateStr) return 'Just now';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffSec = Math.floor((now - date) / 1000);
+  if (isNaN(diffSec) || diffSec < 60) return 'Just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+  return date.toLocaleDateString();
+}
 
 export default function NotificationBell() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    // Generate dynamic role-based notifications
-    const initialNotifications = role === 'landlord' ? [
-      {
-        id: '1',
-        title: 'New Rental Application',
-        message: 'Manish Gautam applied for Sanagaun Property (Lalitpur).',
-        timestamp: '10 mins ago',
-        read: false,
-        type: 'application',
-        link: '/dashboard/applications'
-      },
-      {
-        id: '2',
-        title: 'Digital Signature Received',
-        message: 'Tenant has signed the House Rent Agreement PDF.',
-        timestamp: '1 hour ago',
-        read: false,
-        type: 'agreement',
-        link: '/dashboard/agreements'
-      },
-      {
-        id: '3',
-        title: 'Rent Paid via eSewa',
-        message: 'Rs. 15,000 rent payment received for July 2026.',
-        timestamp: 'Yesterday',
-        read: true,
-        type: 'payment',
-        link: '/dashboard'
-      }
-    ] : [
-      {
-        id: '1',
-        title: 'Agreement Ready for Signature',
-        message: 'Landlord partner has initialized your House Rent Agreement.',
-        timestamp: '15 mins ago',
-        read: false,
-        type: 'agreement',
-        link: '/dashboard/agreements'
-      },
-      {
-        id: '2',
-        title: 'Utility Bill Generated',
-        message: 'Monthly electricity & water bill (Rs. 1,450) added.',
-        timestamp: '2 hours ago',
-        read: false,
-        type: 'utility',
-        link: '/dashboard/utilities'
-      },
-      {
-        id: '3',
-        title: 'Rent Due Reminder',
-        message: 'Monthly rent for August 2026 due on August 7th.',
-        timestamp: '1 day ago',
-        read: true,
-        type: 'payment',
-        link: '/dashboard'
-      }
-    ];
+  const [readIds, setReadIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('read_notification_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-    setNotifications(initialNotifications);
-  }, [role]);
+  const fetchRealNotifications = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [appsRes, agsRes, utilsRes, maintRes] = await Promise.allSettled([
+        api.get('/applications/'),
+        api.get('/agreements/'),
+        api.get('/utilities/bills/'),
+        api.get('/maintenance/')
+      ]);
+
+      const realList = [];
+
+      const apps = appsRes.status === 'fulfilled' ? (appsRes.value.data?.results || appsRes.value.data || []) : [];
+      const ags = agsRes.status === 'fulfilled' ? (agsRes.value.data?.results || agsRes.value.data || []) : [];
+      const utils = utilsRes.status === 'fulfilled' ? (utilsRes.value.data?.results || utilsRes.value.data || []) : [];
+      const maints = maintRes.status === 'fulfilled' ? (maintRes.value.data?.results || maintRes.value.data || []) : [];
+
+      const safeApps = Array.isArray(apps) ? apps : [];
+      const safeAgs = Array.isArray(ags) ? ags : [];
+      const safeUtils = Array.isArray(utils) ? utils : [];
+      const safeMaints = Array.isArray(maints) ? maints : [];
+
+      if (role === 'landlord') {
+        // Landlord Real Notifications
+        safeApps.forEach(app => {
+          if (app.status === 'pending') {
+            realList.push({
+              id: `app-landlord-${app.id}`,
+              title: 'New Rental Application',
+              message: `${app.tenant?.full_name || app.tenant?.email || 'An applicant'} applied for ${app.property?.title || 'your property'}.`,
+              timestamp: formatRelativeTime(app.created_at),
+              rawDate: new Date(app.created_at || Date.now()),
+              type: 'application',
+              link: '/dashboard/applications'
+            });
+          }
+        });
+
+        safeAgs.forEach(ag => {
+          if (ag.status === 'pending_advance') {
+            realList.push({
+              id: `ag-adv-${ag.id}`,
+              title: 'Awaiting Advance Payment',
+              message: `Tenant has 24h to pay advance rent for ${ag.property?.title || 'property'}.`,
+              timestamp: formatRelativeTime(ag.created_at),
+              rawDate: new Date(ag.created_at || Date.now()),
+              type: 'agreement',
+              link: '/dashboard/agreements'
+            });
+          } else if (!ag.landlord_acknowledged && ag.status === 'active') {
+            realList.push({
+              id: `ag-sig-${ag.id}`,
+              title: 'Signature Required',
+              message: `Tenancy agreement for ${ag.property?.title || 'property'} requires your digital signature.`,
+              timestamp: formatRelativeTime(ag.created_at),
+              rawDate: new Date(ag.created_at || Date.now()),
+              type: 'agreement',
+              link: '/dashboard/agreements'
+            });
+          }
+        });
+
+        safeMaints.forEach(m => {
+          if (m.status === 'pending') {
+            realList.push({
+              id: `maint-landlord-${m.id}`,
+              title: 'New Maintenance Request',
+              message: `"${m.title}" requested by tenant.`,
+              timestamp: formatRelativeTime(m.created_at),
+              rawDate: new Date(m.created_at || Date.now()),
+              type: 'maintenance',
+              link: '/dashboard/maintenance'
+            });
+          }
+        });
+
+      } else {
+        // Tenant Real Notifications
+        safeAgs.forEach(ag => {
+          if (ag.status === 'pending_advance') {
+            realList.push({
+              id: `ag-adv-tenant-${ag.id}`,
+              title: 'Advance Rent Payment Required',
+              message: `Pay Rs. ${parseFloat(ag.advance_amount || ag.rent_amount || 0).toLocaleString()} advance within 24h to activate agreement for ${ag.property?.title || 'property'}.`,
+              timestamp: formatRelativeTime(ag.created_at),
+              rawDate: new Date(ag.created_at || Date.now()),
+              type: 'agreement',
+              link: '/dashboard/agreements'
+            });
+          }
+          if (!ag.tenant_acknowledged && ag.status === 'active') {
+            realList.push({
+              id: `ag-sig-tenant-${ag.id}`,
+              title: 'Agreement Ready for Signature',
+              message: `Your tenancy agreement for ${ag.property?.title || 'property'} is ready to sign.`,
+              timestamp: formatRelativeTime(ag.created_at),
+              rawDate: new Date(ag.created_at || Date.now()),
+              type: 'agreement',
+              link: '/dashboard/agreements'
+            });
+          }
+        });
+
+        safeApps.forEach(app => {
+          if (app.status === 'accepted') {
+            realList.push({
+              id: `app-accepted-${app.id}`,
+              title: 'Application Accepted!',
+              message: `Your application for ${app.property?.title || 'property'} was accepted by the landlord.`,
+              timestamp: formatRelativeTime(app.updated_at || app.created_at),
+              rawDate: new Date(app.updated_at || app.created_at || Date.now()),
+              type: 'application',
+              link: '/dashboard/agreements'
+            });
+          }
+        });
+
+        safeUtils.forEach(u => {
+          if (u.status === 'unpaid' || u.status === 'overdue') {
+            realList.push({
+              id: `util-unpaid-${u.id}`,
+              title: `Utility Bill ${u.status === 'overdue' ? 'Overdue' : 'Issued'}`,
+              message: `Monthly utility bill of Rs. ${parseFloat(u.total_amount || 0).toLocaleString()} is ${u.status === 'overdue' ? 'overdue' : 'due'}.`,
+              timestamp: formatRelativeTime(u.created_at),
+              rawDate: new Date(u.created_at || Date.now()),
+              type: 'utility',
+              link: '/dashboard/utilities'
+            });
+          }
+        });
+
+        safeMaints.forEach(m => {
+          if (m.status === 'in_progress' || m.status === 'completed') {
+            realList.push({
+              id: `maint-tenant-${m.id}`,
+              title: 'Maintenance Update',
+              message: `"${m.title}" status updated to ${m.status.replace('_', ' ')}.`,
+              timestamp: formatRelativeTime(m.updated_at || m.created_at),
+              rawDate: new Date(m.updated_at || m.created_at || Date.now()),
+              type: 'maintenance',
+              link: '/dashboard/maintenance'
+            });
+          }
+        });
+      }
+
+      // Sort by newest first
+      realList.sort((a, b) => b.rawDate - a.rawDate);
+      setNotifications(realList);
+
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRealNotifications();
+    const interval = setInterval(fetchRealNotifications, 15000);
+    return () => clearInterval(interval);
+  }, [user, role]);
 
   // Click outside to close
   useEffect(() => {
@@ -84,29 +208,18 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const [readIds, setReadIds] = useState(() => {
-    try {
-      const saved = localStorage.getItem('read_notification_ids');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const unreadCount = notifications.filter(n => !n.read && !readIds.includes(n.id)).length;
+  const unreadCount = notifications.filter(n => !readIds.includes(n.id)).length;
 
   const markAllAsRead = () => {
     const allIds = notifications.map(n => n.id);
     setReadIds(allIds);
     localStorage.setItem('read_notification_ids', JSON.stringify(allIds));
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
   const handleNotificationClick = (item) => {
     const updated = [...new Set([...readIds, item.id])];
     setReadIds(updated);
     localStorage.setItem('read_notification_ids', JSON.stringify(updated));
-    setNotifications(notifications.map(n => n.id === item.id ? { ...n, read: true } : n));
     setIsOpen(false);
     navigate(item.link);
   };
@@ -127,7 +240,8 @@ export default function NotificationBell() {
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          position: 'relative'
+          position: 'relative',
+          transition: 'all 0.18s ease'
         }}
         title="Notifications"
       >
@@ -169,7 +283,8 @@ export default function NotificationBell() {
           gap: '0.75rem',
           zIndex: 300,
           boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
-          border: '1px solid var(--border-color)'
+          border: '1px solid var(--border-color)',
+          borderRadius: '0.85rem'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
             <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -185,38 +300,50 @@ export default function NotificationBell() {
             )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {notifications.map((n) => {
-              const isRead = n.read || readIds.includes(n.id);
-              return (
-                <div
-                  key={n.id}
-                  onClick={() => handleNotificationClick(n)}
-                  style={{
-                    background: isRead ? 'transparent' : 'var(--bg-input)',
-                    border: isRead ? '1px solid transparent' : '1px solid var(--pill-border)',
-                    padding: '0.65rem 0.75rem',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.2rem',
-                    transition: 'background 0.2s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.825rem', fontWeight: 700, color: isRead ? 'var(--text-main)' : 'var(--primary-indigo)' }}>
-                      {n.title}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{n.timestamp}</span>
+          {loading && notifications.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.825rem' }}>
+              Loading notifications...
+            </div>
+          ) : notifications.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)' }}>
+              <CheckCircle2 size={32} style={{ margin: '0 auto 0.5rem auto', opacity: 0.5, color: '#10b981' }} />
+              <div style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem' }}>All caught up!</div>
+              <div style={{ fontSize: '0.775rem', marginTop: '0.25rem' }}>No new notifications at this time.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {notifications.map((n) => {
+                const isRead = readIds.includes(n.id);
+                return (
+                  <div
+                    key={n.id}
+                    onClick={() => handleNotificationClick(n)}
+                    style={{
+                      background: isRead ? 'transparent' : 'var(--bg-input)',
+                      border: isRead ? '1px solid transparent' : '1px solid var(--pill-border)',
+                      padding: '0.65rem 0.75rem',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.2rem',
+                      transition: 'background 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.825rem', fontWeight: 700, color: isRead ? 'var(--text-main)' : 'var(--primary-indigo)' }}>
+                        {n.title}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{n.timestamp}</span>
+                    </div>
+                    <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.35 }}>
+                      {n.message}
+                    </p>
                   </div>
-                  <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.35 }}>
-                    {n.message}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
