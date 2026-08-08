@@ -1188,17 +1188,17 @@ export default function Properties() {
                 <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                   <FileText size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
                   <div>Document File Available</div>
-                  <a href={docPreviewModal.url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', marginTop: '0.5rem', display: 'inline-block', fontWeight: 700 }}>
-                    Open Document Link
-                  </a>
+                  <button onClick={() => openMediaInNewTab(docPreviewModal.url)} className="btn-secondary" style={{ border: 'none', color: '#3b82f6', marginTop: '0.5rem', display: 'inline-block', fontWeight: 700, cursor: 'pointer', background: 'none', padding: 0 }}>
+                    Open Document Link ↗
+                  </button>
                 </div>
               )}
             </div>
 
             <div style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)' }}>
-              <a href={docPreviewModal.url} target="_blank" rel="noreferrer" className="btn-secondary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}>
+              <button onClick={() => openMediaInNewTab(docPreviewModal.url)} className="btn-secondary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', cursor: 'pointer' }}>
                 Open Original in New Tab ↗
-              </a>
+              </button>
               <button onClick={() => setDocPreviewModal(null)} className="btn-primary" style={{ padding: '0.45rem 1.15rem', fontSize: '0.8rem' }}>
                 Close Preview
               </button>
@@ -1287,4 +1287,37 @@ export default function Properties() {
 
     </div>
   );
+}
+
+function openMediaInNewTab(dataUrl) {
+  if (!dataUrl) return;
+  try {
+    if (dataUrl.startsWith('data:')) {
+      const parts = dataUrl.split(',');
+      const mimeMatch = parts[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const bstr = atob(parts[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: mime });
+      const blobUrl = URL.createObjectURL(blob);
+      const w = window.open(blobUrl, '_blank');
+      if (!w) {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } else {
+      window.open(dataUrl, '_blank', 'noopener,noreferrer');
+    }
+  } catch (err) {
+    console.error('Failed to open media in new tab:', err);
+    window.open(dataUrl, '_blank');
+  }
 }
