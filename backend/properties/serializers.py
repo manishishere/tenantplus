@@ -19,7 +19,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
     landlord_name = serializers.SerializerMethodField()
     landlord_is_verified = serializers.SerializerMethodField()
     first_photo = serializers.SerializerMethodField()
-    fuzzy_address = serializers.CharField(source='fuzzy_address', read_only=True)
+    fuzzy_address = serializers.ReadOnlyField()
 
     class Meta:
         model = Property
@@ -75,7 +75,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     # Privacy-controlled address fields
     display_address = serializers.SerializerMethodField()
     address_is_full = serializers.SerializerMethodField()
-    fuzzy_address = serializers.CharField(source='fuzzy_address', read_only=True)
+    fuzzy_address = serializers.ReadOnlyField()
 
     class Meta:
         model = Property
