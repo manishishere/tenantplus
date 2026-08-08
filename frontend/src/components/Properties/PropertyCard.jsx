@@ -154,24 +154,63 @@ export default function PropertyCard({ property, onClick }) {
           </div>
         )}
         
-        {/* Verified Landlord Badge Overlay */}
-        <div style={{
-          position: 'absolute',
-          top: '0.75rem',
-          left: '0.75rem',
-          background: 'rgba(16, 185, 129, 0.95)',
-          color: '#ffffff',
-          padding: '0.25rem 0.6rem',
-          borderRadius: '1rem',
-          fontSize: '0.7rem',
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.25rem',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-        }}>
-          <ShieldCheck size={13} /> Verified Landlord
-        </div>
+        {/* Verification Status Badge Overlay */}
+        {property.verification_status === 'verified' || (!property.verification_status && property.landlord_is_verified) ? (
+          <div style={{
+            position: 'absolute',
+            top: '0.75rem',
+            left: '0.75rem',
+            background: 'linear-gradient(135deg, #059669, #10b981)',
+            color: '#ffffff',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '1rem',
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            border: '1px solid rgba(255,255,255,0.3)'
+          }}>
+            <ShieldCheck size={13} /> Verified Property
+          </div>
+        ) : property.verification_status === 'flagged' ? (
+          <div style={{
+            position: 'absolute',
+            top: '0.75rem',
+            left: '0.75rem',
+            background: 'rgba(239, 68, 68, 0.95)',
+            color: '#ffffff',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '1rem',
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+          }}>
+            ✕ Listing Delisted
+          </div>
+        ) : (
+          <div style={{
+            position: 'absolute',
+            top: '0.75rem',
+            left: '0.75rem',
+            background: 'rgba(245, 158, 11, 0.95)',
+            color: '#ffffff',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '1rem',
+            fontSize: '0.7rem',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+          }}>
+            ⏱️ Unverified Listing
+          </div>
+        )}
 
         {!property.is_available && (
           <span style={{ 

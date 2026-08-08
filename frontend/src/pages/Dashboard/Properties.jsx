@@ -894,12 +894,41 @@ export default function Properties() {
             {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <div>
-                <span style={{ fontSize: '0.725rem', color: 'var(--primary-indigo)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {selectedProperty.room_type} • {selectedProperty.furnishing_status}
-                </span>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0.1rem 0 0 0', color: 'var(--text-main)' }}>
-                  {selectedProperty.title}
-                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.725rem', color: 'var(--primary-indigo)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {selectedProperty.room_type} • {selectedProperty.furnishing_status}
+                  </span>
+
+                  {/* Verification Status Badge */}
+                  {selectedProperty.verification_status === 'verified' || (!selectedProperty.verification_status && selectedProperty.landlord_is_verified) ? (
+                    <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.15rem 0.55rem', borderRadius: '1rem', fontSize: '0.725rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <ShieldCheck size={13} /> Verified Property
+                    </span>
+                  ) : selectedProperty.verification_status === 'flagged' ? (
+                    <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.15rem 0.55rem', borderRadius: '1rem', fontSize: '0.725rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      ✕ Delisted Listing
+                    </span>
+                  ) : (
+                    <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.15rem 0.55rem', borderRadius: '1rem', fontSize: '0.725rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      ⏱️ Unverified Listing
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
+                    {selectedProperty.title}
+                  </h2>
+                  {role === 'admin' && selectedProperty.verification_status !== 'verified' && (
+                    <button
+                      onClick={() => handleAdminVerifyProperty(selectedProperty.id)}
+                      disabled={adminActionLoading}
+                      style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.25rem 0.65rem', borderRadius: '0.4rem', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                    >
+                      <ShieldCheck size={13} /> Mark as Verified
+                    </button>
+                  )}
+                </div>
               </div>
               <button 
                 onClick={() => setShowDetailsModal(false)}
