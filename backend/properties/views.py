@@ -83,14 +83,34 @@ class PropertyDetailView(APIView):
         return Response(PropertyDetailSerializer(property_obj, context={'request': request}).data, status=status.HTTP_200_OK)
 
     def put(self, request, *args, **kwargs):
-        """Allow the owning landlord to update a property listing."""
+        """Allow the owning landlord to update a property listing before verification."""
         # This view combines landlord access with object-level ownership checks.
         if not IsLandlord().has_permission(request, self):
             return Response({'detail': 'Only landlords can update properties.'}, status=status.HTTP_403_FORBIDDEN)
         property_obj = get_object_or_404(Property, id=kwargs['id'])
         if not IsPropertyOwner().has_object_permission(request, self, property_obj):
             return Response({'detail': 'You do not own this property.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if property_obj.verification_status == 'verified' and request.user.role != 'admin':
+            return Response({'detail': 'Verified listings are locked against editing to preserve identity and document verification integrity. You may delete this listing if you wish to re-submit.'}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = PropertyCreateUpdateSerializer(property_obj, data=request.data, partial=False)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(PropertyDetailSerializer(property_obj).data, status=status.HTTP_200_OK)
+
+    def patch(self, request, *args, **kwargs):
+        """Allow partial updates to property listings before verification."""
+        if not IsLandlord().has_permission(request, self):
+            return Response({'detail': 'Only landlords can update properties.'}, status=status.HTTP_403_FORBIDDEN)
+        property_obj = get_object_or_404(Property, id=kwargs['id'])
+        if not IsPropertyOwner().has_object_permission(request, self, property_obj):
+            return Response({'detail': 'You do not own this property.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if property_obj.verification_status == 'verified' and request.user.role != 'admin':
+            return Response({'detail': 'Verified listings are locked against editing to preserve identity and document verification integrity. You may delete this listing if you wish to re-submit.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PropertyCreateUpdateSerializer(property_obj, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(PropertyDetailSerializer(property_obj).data, status=status.HTTP_200_OK)

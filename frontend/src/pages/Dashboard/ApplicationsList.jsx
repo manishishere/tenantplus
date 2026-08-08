@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { 
   Users, 
@@ -17,11 +18,13 @@ import {
   Phone,
   Eye,
   MapPin,
-  FileText
+  FileText,
+  RotateCcw
 } from 'lucide-react';
 
 export default function ApplicationsList() {
   const navigate = useNavigate();
+  const { user, role } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,6 +43,26 @@ export default function ApplicationsList() {
   useEffect(() => {
     fetchApplications();
   }, []);
+
+  const handleWithdrawApplication = async (appId) => {
+    if (!window.confirm('Are you sure you want to withdraw your rental application? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      setProcessingId(appId);
+      setError('');
+      await api.patch(`/applications/${appId}/withdraw/`);
+      await fetchApplications();
+      if (selectedAppModal && selectedAppModal.id === appId) {
+        setSelectedAppModal(prev => prev ? { ...prev, status: 'withdrawn' } : null);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.detail || 'Failed to withdraw application.');
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   const fetchApplications = async () => {
     try {
@@ -334,34 +357,58 @@ export default function ApplicationsList() {
 
                           {app.status === 'pending' ? (
                             <div style={{ display: 'flex', gap: '0.4rem' }}>
-                              <button 
-                                disabled={processingId !== null}
-                                onClick={() => handleUpdateStatus(app.id, 'accepted')}
-                                className="btn-primary" 
-                                style={{ 
-                                  backgroundColor: '#10B981', 
-                                  boxShadow: 'none', 
-                                  padding: '0.4rem 0.8rem', 
-                                  fontSize: '0.8rem',
-                                  gap: '0.25rem'
-                                }}
-                              >
-                                <Check size={14} /> Accept
-                              </button>
-                              <button 
-                                disabled={processingId !== null}
-                                onClick={() => { setRejectTargetApp(app); setRejectReason(''); setShowRejectModal(true); }}
-                                className="btn-primary" 
-                                style={{ 
-                                  backgroundColor: '#EF4444', 
-                                  boxShadow: 'none', 
-                                  padding: '0.4rem 0.8rem', 
-                                  fontSize: '0.8rem',
-                                  gap: '0.25rem'
-                                }}
-                              >
-                                <X size={14} /> Reject
-                              </button>
+                              {role === 'landlord' ? (
+                                <>
+                                  <button 
+                                    disabled={processingId !== null}
+                                    onClick={() => handleUpdateStatus(app.id, 'accepted')}
+                                    className="btn-primary" 
+                                    style={{ 
+                                      backgroundColor: '#10B981', 
+                                      boxShadow: 'none', 
+                                      padding: '0.4rem 0.8rem', 
+                                      fontSize: '0.8rem',
+                                      gap: '0.25rem'
+                                    }}
+                                  >
+                                    <Check size={14} /> Accept
+                                  </button>
+                                  <button 
+                                    disabled={processingId !== null}
+                                    onClick={() => { setRejectTargetApp(app); setRejectReason(''); setShowRejectModal(true); }}
+                                    className="btn-primary" 
+                                    style={{ 
+                                      backgroundColor: '#EF4444', 
+                                      boxShadow: 'none', 
+                                      padding: '0.4rem 0.8rem', 
+                                      fontSize: '0.8rem',
+                                      gap: '0.25rem'
+                                    }}
+                                  >
+                                    <X size={14} /> Reject
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  disabled={processingId !== null}
+                                  onClick={() => handleWithdrawApplication(app.id)}
+                                  style={{
+                                    background: 'rgba(239, 68, 68, 0.12)',
+                                    color: '#ef4444',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    padding: '0.4rem 0.8rem',
+                                    borderRadius: '0.5rem',
+                                    fontWeight: 700,
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem'
+                                  }}
+                                >
+                                  <RotateCcw size={13} /> Withdraw
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '0.5rem' }}>
@@ -481,22 +528,33 @@ export default function ApplicationsList() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {selectedAppModal.status === 'pending' && (
                   <>
-                    <button
-                      onClick={() => handleUpdateStatus(selectedAppModal.id, 'accepted')}
-                      style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                    >
-                      <Check size={15} /> Accept Application
-                    </button>
-                    <button
-                      onClick={() => {
-                        setRejectTargetApp(selectedAppModal);
-                        setRejectReason('');
-                        setShowRejectModal(true);
-                      }}
-                      style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                    >
-                      <X size={15} /> Reject Application
-                    </button>
+                    {role === 'landlord' ? (
+                      <>
+                        <button
+                          onClick={() => handleUpdateStatus(selectedAppModal.id, 'accepted')}
+                          style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                        >
+                          <Check size={15} /> Accept Application
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRejectTargetApp(selectedAppModal);
+                            setRejectReason('');
+                            setShowRejectModal(true);
+                          }}
+                          style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                        >
+                          <X size={15} /> Reject Application
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => handleWithdrawApplication(selectedAppModal.id)}
+                        style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                      >
+                        <RotateCcw size={15} /> Withdraw Application
+                      </button>
+                    )}
                   </>
                 )}
 

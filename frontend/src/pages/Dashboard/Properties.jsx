@@ -109,7 +109,7 @@ export default function Properties() {
   const [applicationSuccess, setApplicationSuccess] = useState(false);
   const [applicationError, setApplicationError] = useState(null);
 
-  // Add Property Form State
+  // Add/Edit Property Form State
   const EMPTY_FORM = {
     title: '',
     description: '',
@@ -126,9 +126,43 @@ export default function Properties() {
     lalpurjaFile: null,
     electricityFile: null
   };
+  const [editingPropertyId, setEditingPropertyId] = useState(null);
   const [addForm, setAddForm] = useState(EMPTY_FORM);
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState(null);
+
+  const handleOpenAddModal = () => {
+    if (user && !user.is_verified) {
+      setShowKycGateModal(true);
+      return;
+    }
+    setEditingPropertyId(null);
+    setAddForm(EMPTY_FORM);
+    setAddError(null);
+    setShowAddModal(true);
+  };
+
+  const handleOpenEditModal = (property) => {
+    setEditingPropertyId(property.id);
+    setAddForm({
+      title: property.title || '',
+      description: property.description || '',
+      province: property.province || 'Bagmati Province',
+      district: property.district || 'Kathmandu',
+      municipality: property.municipality || 'Kathmandu Metropolitan City',
+      ward_no: property.ward_no || '',
+      tole: property.tole || '',
+      landmark: property.landmark || '',
+      roomType: property.room_type || 'flat',
+      furnishingStatus: property.furnishing_status || 'unfurnished',
+      rentAmount: property.rent_amount ? String(property.rent_amount) : '',
+      mediaFiles: [],
+      lalpurjaFile: null,
+      electricityFile: null
+    });
+    setAddError(null);
+    setShowAddModal(true);
+  };
 
   const fileInputRef = useRef(null);
 
@@ -235,8 +269,7 @@ export default function Properties() {
         electricityUrl = await fileToDataUrl(addForm.electricityFile);
       }
 
-      // 1. Create Property with Verification Documents attached
-      const response = await api.post('/properties/', {
+      const payload = {
         title: addForm.title.trim(),
         description: addForm.description.trim(),
         province: addForm.province,
@@ -248,11 +281,18 @@ export default function Properties() {
         room_type: addForm.roomType,
         furnishing_status: addForm.furnishingStatus,
         rent_amount: rent,
-        lalpurja_doc_url: lalpurjaUrl || null,
-        electricity_bill_url: electricityUrl || null,
-      });
+      };
+      if (lalpurjaUrl) payload.lalpurja_doc_url = lalpurjaUrl;
+      if (electricityUrl) payload.electricity_bill_url = electricityUrl;
 
-      const createdProperty = response.data;
+      let savedProperty;
+      if (editingPropertyId) {
+        const response = await api.put(`/properties/${editingPropertyId}/`, payload);
+        savedProperty = response.data;
+      } else {
+        const response = await api.post('/properties/', payload);
+        savedProperty = response.data;
+      }
 
       // 2. Add Photos/Videos if provided
       if (addForm.mediaFiles && addForm.mediaFiles.length > 0) {
@@ -260,7 +300,7 @@ export default function Properties() {
           const file = addForm.mediaFiles[i];
           const mockKey = (await fileToDataUrl(file)) || `/media/properties/photo-${Date.now()}.jpg`;
 
-          await api.post(`/properties/${createdProperty.id}/photos/`, {
+          await api.post(`/properties/${savedProperty.id}/photos/`, {
             photo_url: mockKey,
             sort_order: i
           });
@@ -268,12 +308,13 @@ export default function Properties() {
       }
 
       setShowAddModal(false);
+      setEditingPropertyId(null);
       setAddForm(EMPTY_FORM);
 
       await fetchProperties();
     } catch (err) {
       console.error(err);
-      let errMsg = 'Failed to create property. Please try again.';
+      let errMsg = 'Failed to save property. Please try again.';
       if (err.response?.data) {
         if (typeof err.response.data === 'string') {
           errMsg = err.response.data;
@@ -389,14 +430,6 @@ export default function Properties() {
       setApplicationError(err.response?.data?.detail || err.response?.data?.non_field_errors?.[0] || 'Failed to submit rental application.');
     } finally {
       setApplicationSubmitLoading(false);
-    }
-  };
-
-  const handleOpenAddModal = () => {
-    if (user && !user.is_verified) {
-      setShowKycGateModal(true);
-    } else {
-      setShowAddModal(true);
     }
   };
 
@@ -602,7 +635,7 @@ export default function Properties() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
               <div>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <PlusCircle size={22} color="var(--primary-indigo)" /> List New Rental Property
+                  <PlusCircle size={22} color="var(--primary-indigo)" /> {editingPropertyId ? 'Edit Property Listing' : 'List New Rental Property'}
                 </h3>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Publish your property with confidential Lalpurja land verification</span>
               </div>
@@ -1136,14 +1169,32 @@ export default function Properties() {
             {/* Footer Actions & Admin Moderation Controls */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
               
-              {/* Landlord Delete */}
+              {/* Landlord Edit / Delete Actions */}
               {role === 'landlord' && user?.id === selectedProperty.landlord && (
-                <button 
-                  onClick={() => handleDeleteProperty(selectedProperty.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '0.5rem', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.825rem' }}
-                >
-                  <Trash2 size={15} /> Delete Listing
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {selectedProperty.verification_status !== 'verified' ? (
+                    <button 
+                      onClick={() => {
+                        setShowDetailsModal(false);
+                        handleOpenEditModal(selectedProperty);
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--pill-bg)', color: 'var(--primary-indigo)', border: '1px solid var(--pill-border)', borderRadius: '0.5rem', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.825rem' }}
+                    >
+                      <Zap size={15} /> Edit Listing
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: '#10b981', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.45rem 0.75rem', borderRadius: '0.5rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <ShieldCheck size={14} /> Verified Listing (Locked against edits &bull; Delete only)
+                    </span>
+                  )}
+
+                  <button 
+                    onClick={() => handleDeleteProperty(selectedProperty.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '0.5rem', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.825rem' }}
+                  >
+                    <Trash2 size={15} /> Delete Listing
+                  </button>
+                </div>
               )}
 
               {/* Admin Moderation Actions */}
