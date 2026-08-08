@@ -103,9 +103,12 @@ class ApplicationStatusUpdateView(APIView):
             return Response({'detail': _serializer_detail_error(serializer)}, status=status.HTTP_400_BAD_REQUEST)
 
         new_status = serializer.validated_data['status']
+        reason = serializer.validated_data.get('reason', '').strip()
         with transaction.atomic():
             application.status = new_status
             application.accepted_at = date.today() if new_status == Application.STATUS_ACCEPTED else None
+            if new_status == Application.STATUS_REJECTED and reason:
+                application.rejection_reason = reason
             application.save()
 
             if new_status == Application.STATUS_ACCEPTED:

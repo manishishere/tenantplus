@@ -31,7 +31,7 @@ class ApplicationListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ('id', 'property', 'tenant', 'status', 'created_at')
+        fields = ('id', 'property', 'tenant', 'status', 'message', 'rejection_reason', 'created_at')
 
 
 class ApplicationDetailSerializer(serializers.ModelSerializer):
@@ -42,7 +42,7 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ('id', 'property', 'tenant', 'status', 'message', 'created_at', 'updated_at')
+        fields = ('id', 'property', 'tenant', 'status', 'message', 'rejection_reason', 'created_at', 'updated_at')
 
 
 class ApplicationCreateSerializer(serializers.ModelSerializer):
@@ -79,3 +79,4 @@ class ApplicationStatusUpdateSerializer(serializers.Serializer):
     """Writable serializer for landlord status updates."""
 
     status = serializers.ChoiceField(choices=(('accepted', 'Accepted'), ('rejected', 'Rejected')))
+    reason = serializers.CharField(required=False, allow_blank=True, default='')

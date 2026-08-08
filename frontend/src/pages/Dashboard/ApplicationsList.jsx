@@ -28,6 +28,19 @@ export default function ApplicationsList() {
   const [processingId, setProcessingId] = useState(null);
   const [selectedAppModal, setSelectedAppModal] = useState(null);
 
+  // Optional Rejection Reason Modal State
+  const [rejectTargetApp, setRejectTargetApp] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
   const fetchApplications = async () => {
     try {
       setLoading(true);
@@ -55,15 +68,18 @@ export default function ApplicationsList() {
     }
   };
 
-  const handleUpdateStatus = async (appId, newStatus) => {
+  const handleUpdateStatus = async (appId, newStatus, reason = '') => {
     try {
       setProcessingId(appId);
       setError('');
-      await api.patch(`/applications/${appId}/status/`, { status: newStatus });
+      await api.patch(`/applications/${appId}/status/`, { status: newStatus, reason: reason.trim() });
       await fetchApplications(); // reload
       if (selectedAppModal && selectedAppModal.id === appId) {
-        setSelectedAppModal(prev => prev ? { ...prev, status: newStatus } : null);
+        setSelectedAppModal(prev => prev ? { ...prev, status: newStatus, rejection_reason: reason.trim() } : null);
       }
+      setShowRejectModal(false);
+      setRejectTargetApp(null);
+      setRejectReason('');
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.detail || `Failed to update application status to ${newStatus}.`);
@@ -71,14 +87,6 @@ export default function ApplicationsList() {
       setProcessingId(null);
     }
   };
-
-  // Filters
-  const [statusFilter, setStatusFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    fetchApplications();
-  }, []);
 
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
@@ -299,28 +307,30 @@ export default function ApplicationsList() {
                               gap: '0.3rem'
                             }}
                           >
-                            <Eye size={13} /> View App
+                            <Eye size={13} /> View Details
                           </button>
 
-                          {/* Chat Button */}
-                          <button
-                            onClick={() => handleStartChat(tenantObj.id, app.property?.id)}
-                            style={{
-                              background: 'var(--pill-bg)',
-                              border: '1px solid var(--pill-border)',
-                              color: 'var(--primary-indigo)',
-                              padding: '0.4rem 0.75rem',
-                              borderRadius: '0.5rem',
-                              fontWeight: 600,
-                              fontSize: '0.8rem',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem'
-                            }}
-                          >
-                            <MessageSquare size={13} /> Chat
-                          </button>
+                          {/* Chat Button (Only available AFTER acceptance) */}
+                          {app.status === 'accepted' && (
+                            <button
+                              onClick={() => handleStartChat(tenantObj.id, app.property?.id)}
+                              style={{
+                                background: 'var(--pill-bg)',
+                                border: '1px solid var(--pill-border)',
+                                color: 'var(--primary-indigo)',
+                                padding: '0.4rem 0.75rem',
+                                borderRadius: '0.5rem',
+                                fontWeight: 600,
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem'
+                              }}
+                            >
+                              <MessageSquare size={13} /> Chat
+                            </button>
+                          )}
 
                           {app.status === 'pending' ? (
                             <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -340,7 +350,7 @@ export default function ApplicationsList() {
                               </button>
                               <button 
                                 disabled={processingId !== null}
-                                onClick={() => handleUpdateStatus(app.id, 'rejected')}
+                                onClick={() => { setRejectTargetApp(app); setRejectReason(''); setShowRejectModal(true); }}
                                 className="btn-primary" 
                                 style={{ 
                                   backgroundColor: '#EF4444', 
@@ -443,19 +453,30 @@ export default function ApplicationsList() {
               </p>
             </div>
 
+            {/* Rejection Note Display if rejected */}
+            {selectedAppModal.rejection_reason && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '0.75rem 1rem', borderRadius: '0.75rem', fontSize: '0.825rem', color: '#ef4444' }}>
+                <strong>Rejection Feedback Note:</strong> {selectedAppModal.rejection_reason}
+              </div>
+            )}
+
             {/* Application Modal Footer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <button
-                onClick={() => {
-                  const tId = selectedAppModal.tenant?.id || selectedAppModal.applicant?.id;
-                  const pId = selectedAppModal.property?.id;
-                  setSelectedAppModal(null);
-                  handleStartChat(tId, pId);
-                }}
-                style={{ background: 'var(--pill-bg)', border: '1px solid var(--pill-border)', color: 'var(--primary-indigo)', padding: '0.5rem 1rem', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-              >
-                <MessageSquare size={15} /> Chat with Tenant
-              </button>
+              <div>
+                {selectedAppModal.status === 'accepted' && (
+                  <button
+                    onClick={() => {
+                      const tId = selectedAppModal.tenant?.id || selectedAppModal.applicant?.id;
+                      const pId = selectedAppModal.property?.id;
+                      setSelectedAppModal(null);
+                      handleStartChat(tId, pId);
+                    }}
+                    style={{ background: 'var(--pill-bg)', border: '1px solid var(--pill-border)', color: 'var(--primary-indigo)', padding: '0.5rem 1rem', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <MessageSquare size={15} /> Chat with Tenant
+                  </button>
+                )}
+              </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {selectedAppModal.status === 'pending' && (
@@ -467,7 +488,11 @@ export default function ApplicationsList() {
                       <Check size={15} /> Accept Application
                     </button>
                     <button
-                      onClick={() => handleUpdateStatus(selectedAppModal.id, 'rejected')}
+                      onClick={() => {
+                        setRejectTargetApp(selectedAppModal);
+                        setRejectReason('');
+                        setShowRejectModal(true);
+                      }}
                       style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                     >
                       <X size={15} /> Reject Application
@@ -484,6 +509,95 @@ export default function ApplicationsList() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* REJECT APPLICATION WITH OPTIONAL MESSAGE MODAL */}
+      {showRejectModal && rejectTargetApp && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '540px', padding: '1.75rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 800, color: '#ef4444' }}>
+              Reject Tenancy Application
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0 0 1.25rem 0', lineHeight: 1.45 }}>
+              Rejecting application for <strong>{rejectTargetApp.property?.title}</strong> from <strong>{rejectTargetApp.tenant?.full_name || rejectTargetApp.tenant?.email}</strong>.
+            </p>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
+                Quick Note Presets (Optional Click to Fill):
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {[
+                  'Property is already booked by another tenant.',
+                  'Move-in timeline is incompatible with landlord terms.',
+                  'Incomplete applicant verification profile.',
+                  'Occupancy terms do not meet property requirements.'
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setRejectReason(preset)}
+                    style={{
+                      padding: '0.35rem 0.65rem',
+                      borderRadius: '0.4rem',
+                      background: 'var(--bg-input)',
+                      border: '1px solid var(--border-color)',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-main)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ fontWeight: 800 }}>Feedback Message for Tenant (Optional)</label>
+              <textarea
+                className="form-input"
+                rows={3}
+                placeholder="Type an optional note explaining why application was not accepted..."
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                style={{ padding: '0.75rem', resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => { setShowRejectModal(false); setRejectTargetApp(null); }}
+                style={{ padding: '0.6rem 1.25rem', borderRadius: '0.5rem', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+              >
+                Cancel
+              </button>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {/* Direct Reject Button (No Message) */}
+                <button
+                  type="button"
+                  onClick={() => handleUpdateStatus(rejectTargetApp.id, 'rejected', '')}
+                  disabled={processingId !== null}
+                  style={{ padding: '0.6rem 1.15rem', borderRadius: '0.5rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem' }}
+                >
+                  Reject Directly
+                </button>
+
+                {/* Reject with Optional Note Button */}
+                <button
+                  type="button"
+                  onClick={() => handleUpdateStatus(rejectTargetApp.id, 'rejected', rejectReason)}
+                  disabled={processingId !== null}
+                  style={{ padding: '0.6rem 1.15rem', borderRadius: '0.5rem', background: '#ef4444', color: '#ffffff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem' }}
+                >
+                  Confirm Reject
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
