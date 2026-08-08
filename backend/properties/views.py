@@ -96,15 +96,20 @@ class PropertyDetailView(APIView):
         return Response(PropertyDetailSerializer(property_obj).data, status=status.HTTP_200_OK)
 
     def delete(self, request, *args, **kwargs):
-        """Delete a property if it has no active agreement and the user owns it."""
-        # Landlords can only delete their own properties, and active tenancies block deletion.
-        if not IsLandlord().has_permission(request, self):
-            return Response({'detail': 'Only landlords can delete properties.'}, status=status.HTTP_403_FORBIDDEN)
+        """Delete a property if it has no active agreement and the user owns it (or is admin)."""
+        if not request.user or not request.user.is_authenticated:
+            return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+            
         property_obj = get_object_or_404(Property, id=kwargs['id'])
-        if not IsPropertyOwner().has_object_permission(request, self, property_obj):
-            return Response({'detail': 'You do not own this property.'}, status=status.HTTP_403_FORBIDDEN)
-        if hasattr(property_obj, 'agreements') and property_obj.agreements.exists():
-            return Response({'detail': 'Cannot delete a property with an active tenancy.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check permissions: must be property owner or admin
+        if request.user.role != 'admin' and property_obj.landlord != request.user:
+            return Response({'detail': 'You do not have permission to delete this property listing.'}, status=status.HTTP_403_FORBIDDEN)
+            
+        # Only block deletion if there is an ACTIVE or SIGNED agreement
+        if hasattr(property_obj, 'agreements') and property_obj.agreements.filter(status__in=['active', 'signed']).exists():
+            return Response({'detail': 'Cannot delete a property with an active or signed tenancy agreement.'}, status=status.HTTP_400_BAD_REQUEST)
+
         property_obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
