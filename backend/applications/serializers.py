@@ -21,15 +21,6 @@ class TenantSummarySerializer(serializers.Serializer):
     email = serializers.EmailField(read_only=True)
     phone = serializers.CharField(read_only=True)
     is_verified = serializers.BooleanField(read_only=True)
-    rental_score = serializers.SerializerMethodField()
-
-    def get_rental_score(self, obj):
-        score = 80
-        if getattr(obj, 'is_verified', False):
-            score += 15
-        if getattr(obj, 'phone', ''):
-            score += 3
-        return min(score, 100)
 
 
 class ApplicationListSerializer(serializers.ModelSerializer):

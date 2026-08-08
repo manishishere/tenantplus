@@ -232,20 +232,6 @@ export default function ApplicationsList() {
                           }}>
                             <ShieldCheck size={12} color="#10b981" /> Genuine Applicant
                           </span>
-                          <span style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            padding: '0.15rem 0.5rem',
-                            borderRadius: '0.8rem',
-                            background: 'var(--pill-bg)',
-                            color: 'var(--primary-indigo)',
-                            border: '1px solid var(--pill-border)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}>
-                            <Award size={12} color="var(--primary-indigo)" /> Rental Passport Score: {app.tenant.rental_score || 98}/100
-                          </span>
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', gap: '0.75rem' }}>
                           <span>📧 {app.tenant.email}</span>

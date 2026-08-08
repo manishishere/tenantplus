@@ -335,9 +335,6 @@ export default function LandlordOverview() {
                         <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-main)' }}>
                           {app.tenant.full_name || app.tenant.email}
                         </span>
-                        <span style={{ fontSize: '0.725rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '0.8rem', background: 'var(--pill-bg)', color: 'var(--pill-text)', border: '1px solid var(--pill-border)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <Award size={12} /> Score: {app.tenant.rental_score || 98}/100
-                        </span>
                       </div>
                       <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                         Property: <strong style={{ color: 'var(--text-main)' }}>{app.property.title}</strong>
