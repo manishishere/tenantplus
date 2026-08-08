@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Home as HomeIcon, Image as ImageIcon, Video as VideoIcon, ShieldCheck, Lock } from 'lucide-react';
+import { MapPin, Home as HomeIcon, Image as ImageIcon, Video as VideoIcon, ShieldCheck, Lock, Clock, XCircle } from 'lucide-react';
 
 const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
@@ -190,7 +190,7 @@ export default function PropertyCard({ property, onClick }) {
             gap: '0.25rem',
             boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
           }}>
-            ✕ Listing Delisted
+            <XCircle size={13} /> Listing Delisted
           </div>
         ) : (
           <div style={{
@@ -208,7 +208,7 @@ export default function PropertyCard({ property, onClick }) {
             gap: '0.25rem',
             boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
           }}>
-            ⏱️ Unverified Listing
+            <Clock size={13} /> Unverified Listing
           </div>
         )}
 

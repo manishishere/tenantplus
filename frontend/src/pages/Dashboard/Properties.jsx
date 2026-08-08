@@ -26,7 +26,11 @@ import {
   Upload,
   EyeOff,
   Eye,
-  Zap
+  Zap,
+  Clock,
+  XCircle,
+  Camera,
+  CheckCircle
 } from 'lucide-react';
 
 // Nepal administrative divisions (Province → District → Municipalities)
@@ -309,8 +313,9 @@ export default function Properties() {
       setAdminActionLoading(true);
       const res = await api.post(`/properties/${propertyId}/admin-moderate/`, { action: 'verify' });
       alert(res.data?.detail || 'Property listing verified successfully!');
-      const updated = await api.get(`/properties/${propertyId}/`);
-      setSelectedProperty(updated.data);
+      if (res.data?.property) {
+        setSelectedProperty(res.data.property);
+      }
       await fetchProperties();
     } catch (err) {
       console.error(err);
@@ -325,8 +330,9 @@ export default function Properties() {
       setAdminActionLoading(true);
       const res = await api.post(`/properties/${propertyId}/admin-moderate/`, { action: 'unverify' });
       alert(res.data?.detail || 'Property verification status reset to pending.');
-      const updated = await api.get(`/properties/${propertyId}/`);
-      setSelectedProperty(updated.data);
+      if (res.data?.property) {
+        setSelectedProperty(res.data.property);
+      }
       await fetchProperties();
     } catch (err) {
       console.error(err);
@@ -348,8 +354,9 @@ export default function Properties() {
       alert(res.data?.detail || 'Property listing delisted.');
       setShowAdminDelistModal(false);
       setAdminDelistReason('');
-      const updated = await api.get(`/properties/${selectedProperty.id}/`);
-      setSelectedProperty(updated.data);
+      if (res.data?.property) {
+        setSelectedProperty(res.data.property);
+      }
       await fetchProperties();
     } catch (err) {
       console.error(err);
@@ -927,7 +934,7 @@ export default function Properties() {
                     </span>
                   ) : (
                     <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.35)', padding: '0.2rem 0.7rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                      ⏱️ Unverified Listing (Pending Audit)
+                      <Clock size={14} /> Unverified Listing (Pending Audit)
                     </span>
                   )}
                 </div>
@@ -957,8 +964,8 @@ export default function Properties() {
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                   {selectedProperty.photos && selectedProperty.photos.length > 0 && (
-                    <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', background: 'rgba(0,0,0,0.75)', color: '#ffffff', padding: '0.25rem 0.65rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, backdropFilter: 'blur(4px)' }}>
-                      📸 {selectedProperty.photos.length} Photo{selectedProperty.photos.length > 1 ? 's' : ''}
+                    <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', background: 'rgba(0,0,0,0.75)', color: '#ffffff', padding: '0.25rem 0.65rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Camera size={13} /> {selectedProperty.photos.length} Photo{selectedProperty.photos.length > 1 ? 's' : ''}
                     </div>
                   )}
                 </div>
@@ -1088,8 +1095,8 @@ export default function Properties() {
                     <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)', display: 'block', marginBottom: '0.5rem' }}>Apply for Tenancy</strong>
                     
                     {applicationSuccess ? (
-                      <div style={{ padding: '0.75rem', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', borderRadius: '0.5rem', fontSize: '0.85rem', textAlign: 'center', fontWeight: 800 }}>
-                        ✅ Application submitted successfully! Landlord will review your request.
+                      <div style={{ padding: '0.75rem', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', borderRadius: '0.5rem', fontSize: '0.85rem', textAlign: 'center', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                        <CheckCircle size={16} /> Application submitted successfully! Landlord will review your request.
                       </div>
                     ) : (
                       <form onSubmit={handleApply} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
@@ -1279,11 +1286,11 @@ export default function Properties() {
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {[
-                    '📄 Invalid or unverified Lalpurja (House Deed) document.',
-                    '⚡ Electricity bill name or address mismatch.',
-                    '❌ Landlord identity verification failed.',
-                    '📍 Inaccurate or fake property address details.',
-                    '⚠️ Property violates platform safety policies.'
+                    'Invalid or unverified Lalpurja (House Deed) document.',
+                    'Electricity bill name or address mismatch.',
+                    'Landlord identity verification failed.',
+                    'Inaccurate or fake property address details.',
+                    'Property violates platform safety policies.'
                   ].map((preset, idx) => (
                     <button
                       key={idx}

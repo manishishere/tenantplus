@@ -238,7 +238,6 @@ def admin_property_list(request):
 @permission_classes([IsAdminUser])
 def admin_moderate_property(request, id):
     """Verify or delist property listing status as an administrator with optional reason."""
-    from notices.models import Notice
     property_obj = get_object_or_404(Property, id=id)
     action = request.data.get('action')
     reason = request.data.get('reason', '').strip()
@@ -249,11 +248,6 @@ def admin_moderate_property(request, id):
         property_obj.is_available = True
         property_obj.rejection_reason = ''
         property_obj.save()
-        Notice.objects.create(
-            user=property_obj.landlord,
-            title='Property Verified',
-            message=f'Your property listing "{property_obj.title}" has been audited & verified by platform admins.'
-        )
         msg = f'Property listing "{property_obj.title}" verified successfully!'
     elif action == 'unverify':
         property_obj.verification_status = 'pending'
@@ -264,11 +258,6 @@ def admin_moderate_property(request, id):
         property_obj.is_available = False
         property_obj.rejection_reason = reason or 'Listing removed following credential & document audit.'
         property_obj.save()
-        Notice.objects.create(
-            user=property_obj.landlord,
-            title='Property Listing Delisted',
-            message=f'Your property listing "{property_obj.title}" was delisted. Reason: {property_obj.rejection_reason}'
-        )
         msg = f'Property listing "{property_obj.title}" delisted.'
     elif is_available is not None:
         property_obj.is_available = bool(is_available)
