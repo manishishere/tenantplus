@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,7 +7,7 @@ import NotificationBell from '../Notifications/NotificationBell';
 import { 
   Home, FileText, Wrench, Settings, Menu, X, LogOut, 
   Building2, Users, DollarSign, Sun, Moon, ClipboardCheck, 
-  MessageSquare, Megaphone
+  MessageSquare, Megaphone, ChevronDown, User as UserIcon
 } from 'lucide-react';
 
 export default function DashboardLayout() {
@@ -18,7 +18,40 @@ export default function DashboardLayout() {
   const [unreadMaintenanceCount, setUnreadMaintenanceCount] = useState(0);
   const [activeBroadcastNotice, setActiveBroadcastNotice] = useState('');
   const [dismissedNotice, setDismissedNotice] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
   const navigate = useNavigate();
+
+  // Fetch KYC passport photo once
+  useEffect(() => {
+    const fetchKycPhoto = async () => {
+      try {
+        const res = await api.get('/accounts/documents/');
+        const docs = res.data?.results || res.data || [];
+        const docsArr = Array.isArray(docs) ? docs : [];
+        // Find the latest approved/submitted doc with a user_photo
+        const withPhoto = docsArr.find(d => d.user_photo && d.user_photo.startsWith('data:'));
+        if (withPhoto) {
+          setProfilePhoto(withPhoto.user_photo);
+        }
+      } catch {
+        // silent — no photo available
+      }
+    };
+    fetchKycPhoto();
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchNavCounts();
@@ -37,8 +70,8 @@ export default function DashboardLayout() {
       if (msg !== activeBroadcastNotice) {
         setActiveBroadcastNotice(msg);
       }
-    } catch (err) {
-      // silent catch for notice polling
+    } catch {
+      // silent
     }
   };
 
@@ -62,12 +95,13 @@ export default function DashboardLayout() {
         const activeCount = tickets.filter(t => t && (t.status === 'pending' || t.status === 'in_progress')).length;
         setUnreadMaintenanceCount(activeCount);
       }
-    } catch (err) {
-      // silent catch for nav polling
+    } catch {
+      // silent
     }
   };
 
   const handleLogout = async () => {
+    setProfileDropdownOpen(false);
     await logout();
     navigate('/login');
   };
@@ -88,40 +122,40 @@ export default function DashboardLayout() {
     { name: 'Utilities', icon: DollarSign, path: '/dashboard/utilities' },
   ];
 
+  const initials = user?.full_name
+    ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : user?.email?.charAt(0).toUpperCase();
+
   return (
-    <div className="dashboard-root">
-      {/* Mobile Sidebar Overlay */}
+    <div className="dashboard-container">
+      {/* Overlay */}
       {sidebarOpen && (
         <div 
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 35 }}
+          className="sidebar-overlay active"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        {/* Brand Header */}
-        <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.85rem', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{
-            backgroundColor: '#2563eb',
-            color: '#ffffff',
-            padding: '0.55rem',
-            borderRadius: '0.65rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Building2 size={20} />
-          </div>
-          <div>
-            <span style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>
-              TenantPlus
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <span style={{ fontWeight: 900, fontSize: '1.2rem', letterSpacing: '-0.03em' }}>
+              Tenant<span style={{ color: 'var(--primary-indigo)' }}>Plus</span>
             </span>
           </div>
-          <button 
-            className="mobile-menu-btn" 
-            style={{ marginLeft: 'auto' }}
+          <button
             onClick={() => setSidebarOpen(false)}
+            style={{
+              display: 'none',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              padding: '0.25rem',
+              borderRadius: '0.4rem'
+            }}
+            className="mobile-close-btn"
           >
             <X size={20} />
           </button>
@@ -171,20 +205,6 @@ export default function DashboardLayout() {
               )}
             </NavLink>
           ))}
-          
-          {/* Footer Settings & Logout */}
-          <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-            <NavLink to="/dashboard/settings" className="nav-link">
-              <Settings size={19} /> Settings
-            </NavLink>
-            <button 
-              onClick={handleLogout} 
-              className="nav-link" 
-              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--accent-rose)' }}
-            >
-              <LogOut size={19} color="var(--accent-rose)" /> Logout
-            </button>
-          </div>
         </nav>
       </aside>
 
@@ -201,11 +221,11 @@ export default function DashboardLayout() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            {/* Notification Bell Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {/* Notification Bell */}
             <NotificationBell />
 
-            {/* Theme Toggle Button */}
+            {/* Theme Toggle */}
             <button 
               onClick={toggleTheme}
               title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
@@ -225,9 +245,9 @@ export default function DashboardLayout() {
               {theme === 'dark' ? <Sun size={17} color="var(--text-main)" /> : <Moon size={17} color="var(--text-main)" />}
             </button>
 
-            {/* Clean Professional Profile Info */}
+            {/* Name + Role */}
             <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-main)' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
                 {user?.full_name || user?.email}
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
@@ -235,20 +255,177 @@ export default function DashboardLayout() {
               </div>
             </div>
 
-            {/* Avatar Circle */}
-            <div style={{ 
-              width: '36px', 
-              height: '36px', 
-              borderRadius: '50%', 
-              backgroundColor: 'var(--text-main)', 
-              color: 'var(--bg-main)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.9rem'
-            }}>
-              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
+            {/* ── Avatar with dropdown ── */}
+            <div ref={dropdownRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setProfileDropdownOpen(o => !o)}
+                title="Account menu"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: profileDropdownOpen
+                    ? '2px solid var(--primary-indigo)'
+                    : '2px solid var(--border-color)',
+                  background: profilePhoto ? 'transparent' : 'var(--text-main)',
+                  color: 'var(--bg-main)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  padding: 0,
+                  transition: 'border-color 0.18s ease',
+                  flexShrink: 0,
+                }}
+              >
+                {profilePhoto ? (
+                  <img
+                    src={profilePhoto}
+                    alt="Profile"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={() => setProfilePhoto(null)}
+                  />
+                ) : (
+                  initials
+                )}
+              </button>
+
+              {/* Dropdown Menu */}
+              {profileDropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 10px)',
+                  right: 0,
+                  minWidth: '220px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '0.85rem',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
+                  zIndex: 9999,
+                  overflow: 'hidden',
+                  animation: 'fadeInDown 0.15s ease'
+                }}>
+                  {/* User Info Header */}
+                  <div style={{
+                    padding: '1rem',
+                    borderBottom: '1px solid var(--border-color)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: '2px solid var(--primary-indigo)',
+                      flexShrink: 0,
+                      background: 'var(--text-main)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700,
+                      color: 'var(--bg-main)',
+                      fontSize: '0.9rem'
+                    }}>
+                      {profilePhoto ? (
+                        <img src={profilePhoto} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : initials}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-main)' }}>
+                        {user?.full_name || user?.email}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                        {role} · {user?.email}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div style={{ padding: '0.4rem' }}>
+                    <button
+                      onClick={() => { setProfileDropdownOpen(false); navigate('/dashboard/settings'); }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.7rem',
+                        padding: '0.65rem 0.85rem',
+                        background: 'none',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        color: 'var(--text-main)',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        textAlign: 'left',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <Settings size={16} />
+                      Settings & Profile
+                    </button>
+
+                    <button
+                      onClick={toggleTheme}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.7rem',
+                        padding: '0.65rem 0.85rem',
+                        background: 'none',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        color: 'var(--text-main)',
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        textAlign: 'left',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    </button>
+
+                    <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.4rem 0' }} />
+
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.7rem',
+                        padding: '0.65rem 0.85rem',
+                        background: 'none',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        color: 'var(--accent-rose)',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        textAlign: 'left',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <LogOut size={16} color="var(--accent-rose)" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -295,6 +472,13 @@ export default function DashboardLayout() {
           <Outlet />
         </div>
       </main>
+
+      <style>{`
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
