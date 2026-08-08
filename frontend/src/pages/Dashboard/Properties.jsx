@@ -25,7 +25,8 @@ import {
   Lock,
   Upload,
   EyeOff,
-  Eye
+  Eye,
+  Zap
 } from 'lucide-react';
 
 // Nepal administrative divisions (Province → District → Municipalities)
