@@ -97,6 +97,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'rent_amount',
             'is_available',
             'verification_status',
+            'rejection_reason',
             'lalpurja_doc_url',
             'electricity_bill_url',
             'created_at',

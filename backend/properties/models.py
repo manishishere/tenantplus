@@ -54,6 +54,7 @@ class Property(models.Model):
     lalpurja_doc_url = models.TextField(blank=True, null=True)
     electricity_bill_url = models.TextField(blank=True, null=True)
     verification_status = models.CharField(max_length=30, default='verified', choices=VERIFICATION_STATUS_CHOICES)
+    rejection_reason = models.TextField(blank=True, default='')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

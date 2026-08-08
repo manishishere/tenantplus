@@ -34,6 +34,9 @@ export default function AdminOverview() {
   const [propertiesList, setPropertiesList] = useState([]);
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [propSearchQuery, setPropSearchQuery] = useState('');
+  const [propDocModal, setPropDocModal] = useState(null);
+  const [delistPropModal, setDelistPropModal] = useState(null);
+  const [delistReason, setDelistReason] = useState('');
 
   const [rentPayments, setRentPayments] = useState([]);
   const [loadingRent, setLoadingRent] = useState(false);
@@ -180,6 +183,35 @@ export default function AdminOverview() {
       fetchMetrics();
     } catch (err) {
       setActionMsg({ type: 'error', text: parseApiError(err, 'Failed to update property status.') });
+    }
+  };
+
+  const handleVerifyProperty = async (propId) => {
+    try {
+      const res = await api.post(`/properties/${propId}/admin-moderate/`, { action: 'verify' });
+      setActionMsg({ type: 'success', text: res.data?.detail || 'Property verified successfully!' });
+      fetchProperties();
+      fetchMetrics();
+    } catch (err) {
+      setActionMsg({ type: 'error', text: parseApiError(err, 'Failed to verify property.') });
+    }
+  };
+
+  const handleDelistProperty = async (e) => {
+    e.preventDefault();
+    if (!delistPropModal) return;
+    try {
+      const res = await api.post(`/properties/${delistPropModal.id}/admin-moderate/`, { 
+        action: 'delist', 
+        reason: delistReason.trim() 
+      });
+      setActionMsg({ type: 'success', text: res.data?.detail || 'Property listing delisted.' });
+      setDelistPropModal(null);
+      setDelistReason('');
+      fetchProperties();
+      fetchMetrics();
+    } catch (err) {
+      setActionMsg({ type: 'error', text: parseApiError(err, 'Failed to delist property.') });
     }
   };
 
@@ -1059,80 +1091,115 @@ export default function AdminOverview() {
           ) : filteredProperties.length === 0 ? (
             <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No properties found.</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-              {filteredProperties.map(p => (
-                <div key={p.id} className="glass-panel" style={{ padding: '1.35rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.65rem' }}>
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{p.title}</h4>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                          Landlord: <strong>{p.landlord_name || 'Verified Landlord'}</strong> ({p.landlord_email || 'N/A'})
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+              {filteredProperties.map(p => {
+                const isVerified = p.verification_status === 'verified';
+                const isFlagged = p.verification_status === 'flagged';
+
+                return (
+                  <div key={p.id} className="glass-panel" style={{ padding: '1.35rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderTop: `4px solid ${isVerified ? '#10b981' : isFlagged ? '#ef4444' : '#f59e0b'}` }}>
+                    <div>
+                      {/* Title & Status Badges */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.65rem', gap: '0.5rem' }}>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>{p.title}</h4>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                            Landlord: <strong>{p.landlord_name || 'Verified Landlord'}</strong> ({p.landlord_email || 'N/A'})
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
+                          <span style={{ padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.725rem', fontWeight: 800, background: isVerified ? 'rgba(16,185,129,0.12)' : isFlagged ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)', color: isVerified ? '#10b981' : isFlagged ? '#ef4444' : '#f59e0b', border: `1px solid ${isVerified ? 'rgba(16,185,129,0.3)' : isFlagged ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}` }}>
+                            {isVerified ? '✓ Verified Listing' : isFlagged ? '✕ Delisted / Flagged' : '⏱️ Pending Verification'}
+                          </span>
+                          <span style={{ padding: '0.15rem 0.5rem', borderRadius: '0.5rem', fontSize: '0.675rem', fontWeight: 700, background: p.is_available ? 'rgba(59,130,246,0.12)' : 'rgba(107,114,128,0.12)', color: p.is_available ? '#3b82f6' : 'var(--text-muted)' }}>
+                            {p.is_available ? 'Available' : 'Paused'}
+                          </span>
                         </div>
                       </div>
-                      <span style={{ padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800, background: p.is_available ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', color: p.is_available ? '#10b981' : '#ef4444', border: `1px solid ${p.is_available ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
-                        {p.is_available ? 'Available' : 'Rented / Suspended'}
-                      </span>
-                    </div>
 
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <MapPin size={14} /> {p.address || p.district}
-                    </div>
-
-                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-amber)', marginBottom: '0.85rem' }}>
-                      Rs. {floatVal(p.rent_amount).toLocaleString()} / month
-                    </div>
-
-                    {/* CONFIDENTIAL PROPERTY VERIFICATION DOCUMENTS (ADMIN ONLY) */}
-                    <div style={{ background: 'var(--bg-input)', padding: '0.85rem', borderRadius: '0.5rem', marginBottom: '0.85rem', border: '1px solid var(--border-color)' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Lock size={13} /> Confidential Property Verification Documents (Admin Only)
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <MapPin size={14} /> {p.full_address || p.address || p.district}
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                        {p.lalpurja_doc_url ? (
-                          <a href={p.lalpurja_doc_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-                            <div style={{ padding: '0.5rem', background: 'rgba(37, 99, 235, 0.08)', borderRadius: '0.35rem', border: '1px solid rgba(37, 99, 235, 0.2)', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                              <FileText size={13} /> Lalpurja Deed <ExternalLink size={11} />
-                            </div>
-                          </a>
-                        ) : (
-                          <div style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.35rem', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center' }}>
-                            Lalpurja On File
-                          </div>
-                        )}
 
-                        {p.electricity_bill_url ? (
-                          <a href={p.electricity_bill_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-                            <div style={{ padding: '0.5rem', background: 'rgba(37, 99, 235, 0.08)', borderRadius: '0.35rem', border: '1px solid rgba(37, 99, 235, 0.2)', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
-                              <Zap size={13} /> Electricity Bill <ExternalLink size={11} />
-                            </div>
-                          </a>
-                        ) : (
-                          <div style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.35rem', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center' }}>
-                            NEA Bill On File
-                          </div>
-                        )}
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--accent-amber)', marginBottom: '0.85rem' }}>
+                        Rs. {floatVal(p.rent_amount).toLocaleString()} / month
                       </div>
+
+                      {/* Rejection / Delisting Reason Callout */}
+                      {p.rejection_reason && (
+                        <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '0.65rem 0.85rem', borderRadius: '0.5rem', marginBottom: '0.85rem', fontSize: '0.775rem', color: '#ef4444' }}>
+                          <strong>Delisting Reason:</strong> {p.rejection_reason}
+                        </div>
+                      )}
+
+                      {/* CONFIDENTIAL PROPERTY VERIFICATION DOCUMENTS (ADMIN ONLY) */}
+                      <div style={{ background: 'var(--bg-input)', padding: '0.85rem', borderRadius: '0.5rem', marginBottom: '0.85rem', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: '0.725rem', fontWeight: 700, color: '#2563eb', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Lock size={13} /> Verification Documents (Audit Required)
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                          {p.lalpurja_doc_url ? (
+                            <button
+                              type="button"
+                              onClick={() => setPropDocModal({ title: 'House Deed / Lalpurja', url: p.lalpurja_doc_url, propertyTitle: p.title })}
+                              style={{ padding: '0.5rem', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '0.35rem', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', cursor: 'pointer' }}
+                            >
+                              <FileText size={13} /> View Lalpurja <Eye size={12} />
+                            </button>
+                          ) : (
+                            <div style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.35rem', color: 'var(--text-muted)', fontSize: '0.725rem', textAlign: 'center' }}>
+                              No Lalpurja File
+                            </div>
+                          )}
+
+                          {p.electricity_bill_url ? (
+                            <button
+                              type="button"
+                              onClick={() => setPropDocModal({ title: 'NEA Electricity Bill', url: p.electricity_bill_url, propertyTitle: p.title })}
+                              style={{ padding: '0.5rem', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '0.35rem', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', cursor: 'pointer' }}
+                            >
+                              <Zap size={13} /> View NEA Bill <Eye size={12} />
+                            </button>
+                          ) : (
+                            <div style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.35rem', color: 'var(--text-muted)', fontSize: '0.725rem', textAlign: 'center' }}>
+                              No NEA Bill File
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Admin Action Buttons */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                      {!isVerified && (
+                        <button
+                          onClick={() => handleVerifyProperty(p.id)}
+                          style={{ flex: 1, minWidth: '110px', background: '#10b981', color: '#ffffff', border: 'none', padding: '0.45rem', borderRadius: '0.4rem', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                        >
+                          <ShieldCheck size={13} /> Verify Listing
+                        </button>
+                      )}
+                      
+                      {!isFlagged && (
+                        <button
+                          onClick={() => { setDelistPropModal(p); setDelistReason(''); }}
+                          style={{ flex: 1, minWidth: '110px', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.45rem', borderRadius: '0.4rem', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                        >
+                          <X size={13} /> Delist / Remove
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleModerateProperty(p.id, p.is_available)}
+                        className="btn-secondary"
+                        style={{ padding: '0.45rem 0.65rem', fontSize: '0.75rem', fontWeight: 700 }}
+                      >
+                        {p.is_available ? 'Pause' : 'Publish'}
+                      </button>
                     </div>
                   </div>
-
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
-                    <button
-                      onClick={() => handleModerateProperty(p.id, p.is_available)}
-                      className="btn-secondary"
-                      style={{ flex: 1, padding: '0.45rem', fontSize: '0.775rem', fontWeight: 700, justifyContent: 'center' }}
-                    >
-                      {p.is_available ? 'Pause Listing' : 'Approve & Publish'}
-                    </button>
-                    <button
-                      onClick={() => alert(`Physical Inspection Order dispatched for property "${p.title}". A field verification agent has been assigned for on-site inspection.`)}
-                      style={{ flex: 1, background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.45rem', borderRadius: '0.5rem', fontSize: '0.775rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
-                    >
-                      <AlertTriangle size={13} /> Dispatch Agent Visit
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1616,6 +1683,130 @@ export default function AdminOverview() {
                 Submit Rejection & Send Email
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROPERTY DOCUMENT AUDIT MODAL (LALPURJA / NEA ELECTRICITY BILL) */}
+      {propDocModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '750px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  {propDocModal.title} — {propDocModal.propertyTitle}
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confidential Landlord Verification Document</span>
+              </div>
+              <button onClick={() => setPropDocModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem', borderRadius: '50%' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0a0a0c' }}>
+              {propDocModal.url?.startsWith('data:image') || propDocModal.url?.match(/\.(jpeg|jpg|png|webp)/i) || propDocModal.url?.includes('http') ? (
+                <img
+                  src={propDocModal.url}
+                  alt={propDocModal.title}
+                  style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}
+                />
+              ) : (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <FileText size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
+                  <div>Document File Available</div>
+                  <a href={propDocModal.url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', marginTop: '0.5rem', display: 'inline-block', fontWeight: 700 }}>
+                    Open Document Link <ExternalLink size={13} />
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)' }}>
+              <a href={propDocModal.url} target="_blank" rel="noreferrer" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}>
+                <ExternalLink size={13} /> Open Original in New Tab
+              </a>
+              <button onClick={() => setPropDocModal(null)} className="btn-primary" style={{ padding: '0.45rem 1.15rem', fontSize: '0.8rem' }}>
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELIST / REMOVE PROPERTY MODAL WITH REASON */}
+      {delistPropModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '580px', padding: '1.75rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 800, color: '#ef4444' }}>
+              Delist Property: {delistPropModal.title}
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0 0 1.25rem 0', lineHeight: 1.45 }}>
+              Provide the exact reason for delisting. This reason will be logged into the audit trail and sent directly to landlord <strong>{delistPropModal.landlord_email || 'Landlord'}</strong>.
+            </p>
+
+            <form onSubmit={handleDelistProperty}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
+                  Quick Delisting Reasons (Click to Select):
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {[
+                    '📄 Invalid or unverified Lalpurja (House Deed) document.',
+                    '⚡ Electricity bill name or address mismatch.',
+                    '❌ Landlord identity verification failed.',
+                    '📍 Inaccurate or fake property address details.',
+                    '⚠️ Property violates platform safety policies.'
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setDelistReason(preset)}
+                      style={{
+                        padding: '0.35rem 0.65rem',
+                        borderRadius: '0.4rem',
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-main)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label" style={{ fontWeight: 800 }}>Delisting / Removal Reason *</label>
+                <textarea
+                  className="form-input"
+                  rows={4}
+                  placeholder="Specify feedback for the landlord explaining why this listing was removed..."
+                  value={delistReason}
+                  onChange={e => setDelistReason(e.target.value)}
+                  style={{ padding: '0.75rem', resize: 'vertical' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setDelistPropModal(null)}
+                  style={{ padding: '0.65rem 1.15rem', borderRadius: '0.5rem', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!delistReason.trim()}
+                  style={{ padding: '0.65rem 1.35rem', borderRadius: '0.5rem', background: '#ef4444', color: '#ffffff', border: 'none', fontWeight: 800, cursor: 'pointer', opacity: !delistReason.trim() ? 0.6 : 1 }}
+                >
+                  Confirm Delist & Notify Landlord
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

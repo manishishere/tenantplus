@@ -228,25 +228,53 @@ from core.permissions import IsAdminUser
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def admin_property_list(request):
-    """Return all property listings regardless of availability for admin moderation."""
+    """Return all property listings with full documents for admin moderation."""
     properties = Property.objects.all().order_by('-created_at')
-    serializer = PropertyListSerializer(properties, many=True)
+    serializer = PropertyDetailSerializer(properties, many=True, context={'request': request})
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_moderate_property(request, id):
-    """Approve or toggle property listing status as an administrator."""
+    """Verify or delist property listing status as an administrator with optional reason."""
+    from notices.models import Notice
     property_obj = get_object_or_404(Property, id=id)
+    action = request.data.get('action')
+    reason = request.data.get('reason', '').strip()
     is_available = request.data.get('is_available')
 
-    if is_available is not None:
+    if action == 'verify':
+        property_obj.verification_status = 'verified'
+        property_obj.is_available = True
+        property_obj.rejection_reason = ''
+        property_obj.save()
+        Notice.objects.create(
+            user=property_obj.landlord,
+            title='Property Verified',
+            message=f'Your property listing "{property_obj.title}" has been audited & verified by platform admins.'
+        )
+        msg = f'Property listing "{property_obj.title}" verified successfully!'
+    elif action in ['delist', 'flag', 'reject']:
+        property_obj.verification_status = 'flagged'
+        property_obj.is_available = False
+        property_obj.rejection_reason = reason or 'Listing removed following credential & document audit.'
+        property_obj.save()
+        Notice.objects.create(
+            user=property_obj.landlord,
+            title='Property Listing Delisted',
+            message=f'Your property listing "{property_obj.title}" was delisted. Reason: {property_obj.rejection_reason}'
+        )
+        msg = f'Property listing "{property_obj.title}" delisted.'
+    elif is_available is not None:
         property_obj.is_available = bool(is_available)
         property_obj.save(update_fields=['is_available'])
+        msg = f'Property listing "{property_obj.title}" availability updated.'
+    else:
+        msg = 'No action taken.'
 
     return Response({
-        'detail': f'Property listing "{property_obj.title}" updated.',
-        'property': PropertyListSerializer(property_obj).data
+        'detail': msg,
+        'property': PropertyDetailSerializer(property_obj, context={'request': request}).data
     }, status=status.HTTP_200_OK)
 
