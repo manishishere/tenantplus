@@ -319,6 +319,22 @@ export default function Properties() {
     }
   };
 
+  const handleAdminUnverifyProperty = async (propertyId) => {
+    try {
+      setAdminActionLoading(true);
+      const res = await api.post(`/properties/${propertyId}/admin-moderate/`, { action: 'unverify' });
+      alert(res.data?.detail || 'Property verification status reset to pending.');
+      const updated = await api.get(`/properties/${propertyId}/`);
+      setSelectedProperty(updated.data);
+      await fetchProperties();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Failed to update property status.');
+    } finally {
+      setAdminActionLoading(false);
+    }
+  };
+
   const handleAdminDelistProperty = async (e) => {
     e.preventDefault();
     if (!selectedProperty) return;
@@ -923,9 +939,18 @@ export default function Properties() {
                     <button
                       onClick={() => handleAdminVerifyProperty(selectedProperty.id)}
                       disabled={adminActionLoading}
-                      style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.25rem 0.65rem', borderRadius: '0.4rem', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                      style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.3rem 0.75rem', borderRadius: '0.4rem', fontSize: '0.775rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
                     >
-                      <ShieldCheck size={13} /> Mark as Verified
+                      <ShieldCheck size={14} /> Mark as Verified
+                    </button>
+                  )}
+                  {role === 'admin' && selectedProperty.verification_status === 'verified' && (
+                    <button
+                      onClick={() => handleAdminUnverifyProperty(selectedProperty.id)}
+                      disabled={adminActionLoading}
+                      style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.25rem 0.65rem', borderRadius: '0.4rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                    >
+                      Mark as Pending
                     </button>
                   )}
                 </div>
@@ -1122,15 +1147,24 @@ export default function Properties() {
                   {/* Admin Moderation Actions */}
                   {role === 'admin' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {selectedProperty.verification_status !== 'verified' && (
+                      {selectedProperty.verification_status !== 'verified' ? (
                         <button
                           onClick={() => handleAdminVerifyProperty(selectedProperty.id)}
                           disabled={adminActionLoading}
                           style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '0.5rem', padding: '0.45rem 0.95rem', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem' }}
                         >
-                          <ShieldCheck size={14} /> Verify Property
+                          <ShieldCheck size={14} /> Mark as Verified
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAdminUnverifyProperty(selectedProperty.id)}
+                          disabled={adminActionLoading}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '0.5rem', padding: '0.45rem 0.85rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
+                        >
+                          Mark as Pending
                         </button>
                       )}
+
                       {selectedProperty.verification_status !== 'flagged' && (
                         <button
                           onClick={() => { setShowAdminDelistModal(true); setAdminDelistReason(''); }}

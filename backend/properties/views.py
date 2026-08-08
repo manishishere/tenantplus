@@ -255,6 +255,10 @@ def admin_moderate_property(request, id):
             message=f'Your property listing "{property_obj.title}" has been audited & verified by platform admins.'
         )
         msg = f'Property listing "{property_obj.title}" verified successfully!'
+    elif action == 'unverify':
+        property_obj.verification_status = 'pending'
+        property_obj.save()
+        msg = f'Property listing "{property_obj.title}" reset to pending verification.'
     elif action in ['delist', 'flag', 'reject']:
         property_obj.verification_status = 'flagged'
         property_obj.is_available = False
