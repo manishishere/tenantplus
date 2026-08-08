@@ -112,7 +112,7 @@ export default function DashboardLayout() {
   ] : [
     { name: 'Dashboard', icon: Home, path: '/dashboard' },
     { name: 'Properties', icon: Building2, path: '/dashboard/properties' },
-    ...(role === 'landlord' ? [{ name: 'Applications', icon: Users, path: '/dashboard/applications' }] : []),
+    { name: 'Applications', icon: Users, path: '/dashboard/applications' },
     { name: 'Agreements', icon: FileText, path: '/dashboard/agreements' },
     { name: 'Direct Chat', icon: MessageSquare, path: '/dashboard/chat' },
     { name: 'Inspection Audit', icon: ClipboardCheck, path: '/dashboard/inspection' },
