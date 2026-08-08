@@ -288,10 +288,12 @@ export default function Properties() {
     try {
       await api.delete(`/properties/${propertyId}/`);
       setShowDetailsModal(false);
+      setSelectedProperty(null);
       await fetchProperties();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete property listing.');
+      const msg = err.response?.data?.detail || err.response?.data?.error || err.message || 'Failed to delete property listing.';
+      alert(`Deletion Failed: ${msg}`);
     }
   };
 
