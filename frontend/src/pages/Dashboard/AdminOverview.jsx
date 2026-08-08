@@ -786,15 +786,25 @@ export default function AdminOverview() {
                     </div>
 
                     {/* Comprehensive KYC Info Box */}
-                    <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.625rem', marginBottom: '1rem', fontSize: '0.85rem', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
-                      <div><strong>Doc Type:</strong> {doc.doc_type?.toUpperCase() || 'CITIZENSHIP'}</div>
-                      <div><strong>ID Number:</strong> {doc.doc_number || 'N/A'}</div>
-                      <div><strong>Father's Name:</strong> {doc.father_name || 'N/A'}</div>
-                      <div><strong>Mother's Name:</strong> {doc.mother_name || 'N/A'}</div>
-                      <div><strong>Permanent Addr:</strong> {doc.permanent_address || 'N/A'}</div>
-                      <div><strong>Temporary Addr:</strong> {doc.temporary_address || 'N/A'}</div>
-                      <div><strong>Emergency Contact:</strong> {doc.emergency_contact_name || 'N/A'} ({doc.emergency_contact_phone || 'N/A'})</div>
-                      <div><strong>Submitted:</strong> {new Date(doc.created_at).toLocaleDateString()}</div>
+                    <div style={{
+                      background: 'var(--bg-input)',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '0.65rem',
+                      marginBottom: '1rem',
+                      fontSize: '0.825rem',
+                      border: '1px solid var(--border-color)',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '0.5rem 1rem'
+                    }}>
+                      <div><span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Doc Type</span><div style={{ fontWeight: 800 }}>{doc.doc_type?.toUpperCase() || 'CITIZENSHIP'}</div></div>
+                      <div><span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>ID Number</span><div style={{ fontWeight: 800 }}>{doc.doc_number || 'N/A'}</div></div>
+                      <div><span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Father's Name</span><div style={{ fontWeight: 600 }}>{doc.father_name || 'N/A'}</div></div>
+                      <div><span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mother's Name</span><div style={{ fontWeight: 600 }}>{doc.mother_name || 'N/A'}</div></div>
+                      <div style={{ gridColumn: 'span 2' }}><span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Permanent Addr</span><div style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-main)', marginTop: '0.1rem' }}>{doc.permanent_address || 'N/A'}</div></div>
+                      <div style={{ gridColumn: 'span 2' }}><span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Temporary Addr</span><div style={{ fontWeight: 500, fontSize: '0.8rem', color: 'var(--text-main)', marginTop: '0.1rem' }}>{doc.temporary_address || 'N/A'}</div></div>
+                      <div><span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Emergency Contact</span><div style={{ fontWeight: 600 }}>{doc.emergency_contact_name || 'N/A'} ({doc.emergency_contact_phone || 'N/A'})</div></div>
+                      <div><span style={{ color: 'var(--text-muted)', fontSize: '0.725rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Submitted Date</span><div style={{ fontWeight: 600 }}>{new Date(doc.created_at).toLocaleDateString()}</div></div>
                     </div>
 
                     {doc.status === 'rejected' && doc.rejection_reason && (
@@ -803,67 +813,55 @@ export default function AdminOverview() {
                       </div>
                     )}
 
-                    {/* 5-Document Image Previews Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
+                    {/* 3-Document Image Previews Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
                       {(doc.doc_url || doc.doc_front) ? (
                         <div 
                           onClick={() => { setSelectedKycDoc(doc); setSelectedKycPhoto('id_front'); }}
-                          style={{ height: '85px', background: 'var(--bg-card)', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', cursor: 'pointer' }}
+                          style={{ height: '90px', background: '#000000', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', cursor: 'pointer' }}
                         >
                           <img src={doc.doc_url || doc.doc_front} alt="ID Front" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display='none'; }} />
-                          <span style={{ position: 'absolute', bottom: 2, left: 4, fontSize: '0.65rem', background: 'rgba(0,0,0,0.75)', color: 'white', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', fontWeight: 700 }}>
+                          <span style={{ position: 'absolute', bottom: 3, left: 3, fontSize: '0.65rem', background: 'rgba(0,0,0,0.85)', color: '#ffffff', padding: '0.15rem 0.4rem', borderRadius: '0.25rem', fontWeight: 800 }}>
                             ID Front
                           </span>
                         </div>
-                      ) : <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>No ID Front</div>}
+                      ) : (
+                        <div style={{ height: '90px', background: 'var(--bg-input)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.725rem', fontWeight: 600 }}>
+                          No ID Front
+                        </div>
+                      )}
 
                       {(doc.back_doc_url || doc.doc_back) ? (
                         <div 
                           onClick={() => { setSelectedKycDoc(doc); setSelectedKycPhoto('id_back'); }}
-                          style={{ height: '85px', background: 'var(--bg-card)', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', cursor: 'pointer' }}
+                          style={{ height: '90px', background: '#000000', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', cursor: 'pointer' }}
                         >
                           <img src={doc.back_doc_url || doc.doc_back} alt="ID Back" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display='none'; }} />
-                          <span style={{ position: 'absolute', bottom: 2, left: 4, fontSize: '0.65rem', background: 'rgba(0,0,0,0.75)', color: 'white', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', fontWeight: 700 }}>
+                          <span style={{ position: 'absolute', bottom: 3, left: 3, fontSize: '0.65rem', background: 'rgba(0,0,0,0.85)', color: '#ffffff', padding: '0.15rem 0.4rem', borderRadius: '0.25rem', fontWeight: 800 }}>
                             ID Back
                           </span>
                         </div>
-                      ) : <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>No ID Back</div>}
+                      ) : (
+                        <div style={{ height: '90px', background: 'var(--bg-input)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.725rem', fontWeight: 600 }}>
+                          No ID Back
+                        </div>
+                      )}
 
                       {doc.user_photo ? (
                         <div 
                           onClick={() => { setSelectedKycDoc(doc); setSelectedKycPhoto('selfie'); }}
-                          style={{ height: '85px', background: 'var(--bg-card)', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', cursor: 'pointer' }}
+                          style={{ height: '90px', background: '#000000', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', cursor: 'pointer' }}
                         >
                           <img src={doc.user_photo} alt="Selfie Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display='none'; }} />
-                          <span style={{ position: 'absolute', bottom: 2, left: 4, fontSize: '0.65rem', background: 'rgba(0,0,0,0.75)', color: '#10b981', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', fontWeight: 700 }}>
+                          <span style={{ position: 'absolute', bottom: 3, left: 3, fontSize: '0.65rem', background: 'rgba(0,0,0,0.85)', color: '#10b981', padding: '0.15rem 0.4rem', borderRadius: '0.25rem', fontWeight: 800 }}>
                             Selfie Photo
                           </span>
                         </div>
-                      ) : <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>No Selfie</div>}
-
-                      {(doc.house_doc_url || doc.house_deed) ? (
-                        <div 
-                          onClick={() => { setSelectedKycDoc(doc); setSelectedKycPhoto('house_deed'); }}
-                          style={{ height: '85px', background: 'var(--bg-card)', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', cursor: 'pointer' }}
-                        >
-                          <img src={doc.house_doc_url || doc.house_deed} alt="House Deed" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display='none'; }} />
-                          <span style={{ position: 'absolute', bottom: 2, left: 4, fontSize: '0.65rem', background: 'rgba(0,0,0,0.75)', color: '#3b82f6', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', fontWeight: 700 }}>
-                            Lalpurja
-                          </span>
+                      ) : (
+                        <div style={{ height: '90px', background: 'var(--bg-input)', borderRadius: '0.5rem', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.725rem', fontWeight: 600 }}>
+                          No Selfie
                         </div>
-                      ) : <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>No Lalpurja</div>}
-
-                      {(doc.electricity_bill_url || doc.utility_bill) ? (
-                        <div 
-                          onClick={() => { setSelectedKycDoc(doc); setSelectedKycPhoto('utility_bill'); }}
-                          style={{ height: '85px', background: 'var(--bg-card)', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', cursor: 'pointer' }}
-                        >
-                          <img src={doc.electricity_bill_url || doc.utility_bill} alt="Electricity Bill" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display='none'; }} />
-                          <span style={{ position: 'absolute', bottom: 2, left: 4, fontSize: '0.65rem', background: 'rgba(0,0,0,0.75)', color: '#f59e0b', padding: '0.15rem 0.4rem', borderRadius: '0.2rem', fontWeight: 700 }}>
-                            Utility Bill
-                          </span>
-                        </div>
-                      ) : <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>No Utility Bill</div>}
+                      )}
                     </div>
 
                     {/* Primary Full Inspection Trigger */}
