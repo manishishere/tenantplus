@@ -277,8 +277,8 @@ export default function AdminOverview() {
     try {
       const res = await api.post('/accounts/admin/broadcast-notice/', { message: text });
       setActiveBroadcast(res.data?.active_notice || text);
-      setActionMsg({ type: 'success', text: `📢 Announcement Published! "${text}" is now live platform-wide.` });
-      setAnnouncementMsg({ type: 'success', text: `✅ Active Notice Live: "${text}" is visible across all user dashboards.` });
+      setActionMsg({ type: 'success', text: `Announcement Published! "${text}" is now live platform-wide.` });
+      setAnnouncementMsg({ type: 'success', text: `Active Notice Live: "${text}" is visible across all user dashboards.` });
     } catch (err) {
       setActionMsg({ type: 'error', text: parseApiError(err, 'Failed to publish broadcast notice.') });
     } finally {
@@ -1109,7 +1109,7 @@ export default function AdminOverview() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.3rem' }}>
                           <span style={{ padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.725rem', fontWeight: 800, background: isVerified ? 'rgba(16,185,129,0.12)' : isFlagged ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)', color: isVerified ? '#10b981' : isFlagged ? '#ef4444' : '#f59e0b', border: `1px solid ${isVerified ? 'rgba(16,185,129,0.3)' : isFlagged ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}` }}>
-                            {isVerified ? '✓ Verified Listing' : isFlagged ? '✕ Delisted / Flagged' : '⏱️ Pending Verification'}
+                            {isVerified ? 'Verified Listing' : isFlagged ? 'Delisted / Flagged' : 'Pending Verification'}
                           </span>
                           <span style={{ padding: '0.15rem 0.5rem', borderRadius: '0.5rem', fontSize: '0.675rem', fontWeight: 700, background: p.is_available ? 'rgba(59,130,246,0.12)' : 'rgba(107,114,128,0.12)', color: p.is_available ? '#3b82f6' : 'var(--text-muted)' }}>
                             {p.is_available ? 'Available' : 'Paused'}
@@ -1628,11 +1628,11 @@ export default function AdminOverview() {
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                 {[
-                  '📷 Blurry or illegible Document Front photo.',
-                  '⚠️ Document Number mismatch with submitted proof.',
-                  '❌ Lineage details (Father/Mother Name) incomplete.',
-                  '📍 Address details unverified or inconsistent.',
-                  '👤 Selfie photo does not match identity document.'
+                  'Blurry or illegible Document Front photo.',
+                  'Document Number mismatch with submitted proof.',
+                  'Lineage details (Father/Mother Name) incomplete.',
+                  'Address details unverified or inconsistent.',
+                  'Selfie photo does not match identity document.'
                 ].map((preset, idx) => (
                   <button
                     key={idx}
@@ -1751,11 +1751,11 @@ export default function AdminOverview() {
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                   {[
-                    '📄 Invalid or unverified Lalpurja (House Deed) document.',
-                    '⚡ Electricity bill name or address mismatch.',
-                    '❌ Landlord identity verification failed.',
-                    '📍 Inaccurate or fake property address details.',
-                    '⚠️ Property violates platform safety policies.'
+                    'Invalid or unverified Lalpurja (House Deed) document.',
+                    'Electricity bill name or address mismatch.',
+                    'Landlord identity verification failed.',
+                    'Inaccurate or fake property address details.',
+                    'Property violates platform safety policies.'
                   ].map((preset, idx) => (
                     <button
                       key={idx}

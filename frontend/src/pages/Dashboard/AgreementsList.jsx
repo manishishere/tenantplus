@@ -366,8 +366,8 @@ export default function AgreementsList() {
               {advanceCountdowns[activeAgreement.id] !== undefined && (
                 <div style={{ marginTop: '0.4rem', fontWeight: 800, fontSize: '1.35rem', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
                   {advanceCountdowns[activeAgreement.id] > 0 
-                    ? `⏱ ${formatCountdown(advanceCountdowns[activeAgreement.id])} remaining`
-                    : '⚠ Window Expired — Contact Support'}
+                    ? `${formatCountdown(advanceCountdowns[activeAgreement.id])} remaining`
+                    : 'Window Expired — Contact Support'}
                 </div>
               )}
             </div>
@@ -546,14 +546,14 @@ export default function AgreementsList() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Witness 1:</span>
                 <span style={{ fontWeight: 600, color: activeAgreement.witness1_name ? '#10b981' : 'var(--text-muted)' }}>
-                  {activeAgreement.witness1_name ? `✅ ${activeAgreement.witness1_name}` : 'Not Specified'}
+                  {activeAgreement.witness1_name || 'Not Specified'}
                 </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Witness 2:</span>
                 <span style={{ fontWeight: 600, color: activeAgreement.witness2_name ? '#10b981' : 'var(--text-muted)' }}>
-                  {activeAgreement.witness2_name ? `✅ ${activeAgreement.witness2_name}` : 'Not Specified'}
+                  {activeAgreement.witness2_name || 'Not Specified'}
                 </span>
               </div>
             </div>
@@ -566,13 +566,12 @@ export default function AgreementsList() {
               Action Hub
             </h3>
 
-            {/* CASE 1: User Has NOT Signed Yet (Prominent 1-Step Digital Signature Pad Button) */}
             {((role === 'tenant' && !activeAgreement.tenant_acknowledged) || (role === 'landlord' && !activeAgreement.landlord_acknowledged) || activeAgreement.signed_doc_status === 'rejected') ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 
                 {activeAgreement.signed_doc_status === 'rejected' && activeAgreement.rejection_reason && (
                   <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.5rem', fontSize: '0.8rem' }}>
-                    ⚠️ Signature Rejected: {activeAgreement.rejection_reason} Please re-sign below.
+                    Signature Rejected: {activeAgreement.rejection_reason} Please re-sign below.
                   </div>
                 )}
 
@@ -857,7 +856,7 @@ export default function AgreementsList() {
                         justifyContent: 'center',
                         gap: '0.35rem'
                       }}>
-                        <CheckCircle2 size={15} /> ✅ Lease Renewal Accepted (+10%)
+                        <CheckCircle2 size={15} /> Lease Renewal Accepted (+10%)
                       </div>
                     );
                   }
@@ -909,7 +908,7 @@ export default function AgreementsList() {
       {showWitnessModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(8px)' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '2rem', borderRadius: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>👥 Register Legal Witnesses</h3>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Register Legal Witnesses</h3>
             <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
               Under Nepal House Rent Act 2075, tenancy contracts require 2 Witnesses. Enter their full names and citizenship numbers to automatically stamp them into your legal PDF.
             </p>
@@ -1012,7 +1011,7 @@ export default function AgreementsList() {
                 </div>
 
                 <div style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid var(--pill-border)', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                  ℹ️ Under Nepalese law, standard 1-year tenancy extensions carry a 10% rent adjustment clause unless mutually revised by both parties.
+                  Under Nepalese law, standard 1-year tenancy extensions carry a 10% rent adjustment clause unless mutually revised by both parties.
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -37,7 +38,9 @@ export class ErrorBoundary extends React.Component {
             maxWidth: '550px',
             width: '100%'
           }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>⚠️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+              <AlertCircle size={44} color="#ef4444" />
+            </div>
             <h2 style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#ef4444' }}>
               Something went wrong loading this view
             </h2>

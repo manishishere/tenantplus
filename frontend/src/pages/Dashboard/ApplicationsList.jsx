@@ -12,7 +12,12 @@ import {
   Calendar,
   ShieldCheck,
   Award,
-  MessageSquare
+  MessageSquare,
+  Mail,
+  Phone,
+  Eye,
+  MapPin,
+  FileText
 } from 'lucide-react';
 
 export default function ApplicationsList() {
@@ -21,27 +26,7 @@ export default function ApplicationsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [processingId, setProcessingId] = useState(null);
-
-  const handleStartChat = async (tenantId, propertyId) => {
-    try {
-      await api.post('/chat/conversations/', {
-        other_user_id: tenantId,
-        property_id: propertyId
-      });
-      navigate('/dashboard/chat');
-    } catch (err) {
-      console.error(err);
-      alert('Failed to start chat session.');
-    }
-  };
-
-  // Filters
-  const [statusFilter, setStatusFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    fetchApplications();
-  }, []);
+  const [selectedAppModal, setSelectedAppModal] = useState(null);
 
   const fetchApplications = async () => {
     try {
@@ -57,12 +42,28 @@ export default function ApplicationsList() {
     }
   };
 
+  const handleStartChat = async (tenantId, propertyId) => {
+    try {
+      const res = await api.post('/chat/conversations/', {
+        other_user_id: tenantId,
+        property_id: propertyId
+      });
+      navigate('/dashboard/chat', { state: { conversationId: res.data?.id } });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to start chat session.');
+    }
+  };
+
   const handleUpdateStatus = async (appId, newStatus) => {
     try {
       setProcessingId(appId);
       setError('');
       await api.patch(`/applications/${appId}/status/`, { status: newStatus });
       await fetchApplications(); // reload
+      if (selectedAppModal && selectedAppModal.id === appId) {
+        setSelectedAppModal(prev => prev ? { ...prev, status: newStatus } : null);
+      }
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.detail || `Failed to update application status to ${newStatus}.`);
@@ -71,11 +72,19 @@ export default function ApplicationsList() {
     }
   };
 
+  // Filters
+  const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
-      const tenantName = (app.tenant.full_name || '').toLowerCase();
-      const tenantEmail = (app.tenant.email || '').toLowerCase();
-      const propertyTitle = (app.property.title || '').toLowerCase();
+      const tenantName = (app.tenant?.full_name || '').toLowerCase();
+      const tenantEmail = (app.tenant?.email || '').toLowerCase();
+      const propertyTitle = (app.property?.title || '').toLowerCase();
       const query = searchQuery.toLowerCase();
 
       const matchSearch = tenantName.includes(query) || 
@@ -150,21 +159,25 @@ export default function ApplicationsList() {
         <div className="form-group" style={{ margin: 0, flex: '1 1 250px' }}>
           <label className="form-label">Search Applications</label>
           <div style={{ position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input 
               type="text" 
               className="form-input" 
-              style={{ paddingLeft: '2.5rem' }} 
-              placeholder="Search by tenant name, email, or property..." 
+              placeholder="Search by tenant or property..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: '2.5rem' }}
             />
           </div>
         </div>
 
-        <div className="form-group" style={{ margin: 0, flex: '1 1 180px' }}>
+        <div className="form-group" style={{ margin: 0, flex: '0 1 200px' }}>
           <label className="form-label">Filter Status</label>
-          <select className="form-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select 
+            className="form-input"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="accepted">Accepted</option>
@@ -175,27 +188,28 @@ export default function ApplicationsList() {
 
         {(searchQuery || statusFilter) && (
           <button 
+            className="btn-secondary"
             onClick={() => { setSearchQuery(''); setStatusFilter(''); }}
-            className="btn-primary" 
-            style={{ background: 'transparent', color: 'var(--text-muted)', boxShadow: 'none', border: '1px solid rgba(255,255,255,0.1)', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            aria-label="Clear filters"
+            style={{ padding: '0.65rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <FilterX size={20} />
+            <FilterX size={16} /> Reset
           </button>
         )}
       </div>
 
-      {/* Main Table */}
+      {/* Applications Table */}
       {filteredApplications.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'var(--bg-darker)', borderRadius: '1rem', border: '1px dashed rgba(255,255,255,0.1)' }}>
-          <Users size={48} color="var(--text-muted)" style={{ margin: '0 auto 1.5rem auto', opacity: 0.5 }} />
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No Applications Found</h2>
-          <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto', lineHeight: 1.5 }}>
-            No tenancy applications match your current search parameters.
+        <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center' }}>
+          <Users size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem', opacity: 0.5 }} />
+          <h3 style={{ margin: 0, fontSize: '1.25rem' }}>No Applications Found</h3>
+          <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+            {searchQuery || statusFilter 
+              ? "No tenancy applications match your current filters."
+              : "You haven't received any tenancy applications yet."}
           </p>
         </div>
       ) : (
-        <div className="glass-panel" style={{ padding: '0.5rem' }}>
+        <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
               <thead>
@@ -211,17 +225,18 @@ export default function ApplicationsList() {
               <tbody>
                 {filteredApplications.map((app) => {
                   const statusStyle = getStatusStyle(app.status);
+                  const tenantObj = app.tenant || app.applicant || {};
                   return (
                     <tr key={app.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9rem' }}>
                       <td style={{ padding: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
-                            {app.tenant.full_name || 'N/A'}
+                          <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                            {tenantObj.full_name || tenantObj.email || 'N/A'}
                           </span>
                           <span style={{
                             fontSize: '0.7rem',
                             fontWeight: 700,
-                            padding: '0.15rem 0.5rem',
+                            padding: '0.15rem 0.55rem',
                             borderRadius: '0.8rem',
                             background: 'rgba(16, 185, 129, 0.15)',
                             color: '#10b981',
@@ -233,15 +248,15 @@ export default function ApplicationsList() {
                             <ShieldCheck size={12} color="#10b981" /> Genuine Applicant
                           </span>
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', gap: '0.75rem' }}>
-                          <span>📧 {app.tenant.email}</span>
-                          {app.tenant.phone && <span>📞 {app.tenant.phone}</span>}
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Mail size={12} /> {tenantObj.email}</span>
+                          {tenantObj.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}><Phone size={12} /> {tenantObj.phone}</span>}
                         </div>
                       </td>
-                      <td style={{ padding: '1rem', fontWeight: 500 }}>{app.property.title}</td>
-                      <td style={{ padding: '1rem' }}>Rs. {parseFloat(app.property.rent_amount).toLocaleString()}</td>
+                      <td style={{ padding: '1rem', fontWeight: 600 }}>{app.property?.title}</td>
+                      <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--primary-indigo)' }}>Rs. {parseFloat(app.property?.rent_amount || 0).toLocaleString()}</td>
                       <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                           <Calendar size={14} />
                           {formatDate(app.created_at)}
                         </span>
@@ -249,13 +264,13 @@ export default function ApplicationsList() {
                       <td style={{ padding: '1rem' }}>
                         <span style={{ 
                           fontSize: '0.75rem', 
-                          fontWeight: 600, 
+                          fontWeight: 700, 
                           textTransform: 'uppercase', 
-                          padding: '0.25rem 0.6rem', 
+                          padding: '0.25rem 0.65rem', 
                           borderRadius: '1rem',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '0.25rem',
+                          gap: '0.3rem',
                           ...statusStyle
                         }}>
                           {app.status === 'pending' && <Clock size={12} />}
@@ -266,8 +281,30 @@ export default function ApplicationsList() {
                       </td>
                       <td style={{ padding: '1rem', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          
+                          {/* Full Application Details Modal Button */}
                           <button
-                            onClick={() => handleStartChat(app.applicant.id, app.property.id)}
+                            onClick={() => setSelectedAppModal(app)}
+                            style={{
+                              background: 'var(--bg-input)',
+                              border: '1px solid var(--border-color)',
+                              color: 'var(--text-main)',
+                              padding: '0.4rem 0.75rem',
+                              borderRadius: '0.5rem',
+                              fontWeight: 600,
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem'
+                            }}
+                          >
+                            <Eye size={13} /> View App
+                          </button>
+
+                          {/* Chat Button */}
+                          <button
+                            onClick={() => handleStartChat(tenantObj.id, app.property?.id)}
                             style={{
                               background: 'var(--pill-bg)',
                               border: '1px solid var(--pill-border)',
@@ -286,7 +323,7 @@ export default function ApplicationsList() {
                           </button>
 
                           {app.status === 'pending' ? (
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
                               <button 
                                 disabled={processingId !== null}
                                 onClick={() => handleUpdateStatus(app.id, 'accepted')}
@@ -298,8 +335,6 @@ export default function ApplicationsList() {
                                   fontSize: '0.8rem',
                                   gap: '0.25rem'
                                 }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = '#10B981'}
                               >
                                 <Check size={14} /> Accept
                               </button>
@@ -314,14 +349,12 @@ export default function ApplicationsList() {
                                   fontSize: '0.8rem',
                                   gap: '0.25rem'
                                 }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = '#EF4444'}
                               >
                                 <X size={14} /> Reject
                               </button>
                             </div>
                           ) : (
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '0.5rem' }}>
                               Processed
                             </span>
                           )}
@@ -335,6 +368,126 @@ export default function ApplicationsList() {
           </div>
         </div>
       )}
+
+      {/* FULL TENANT APPLICATION DETAILS MODAL */}
+      {selectedAppModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1.25rem', backdropFilter: 'blur(10px)' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '720px', maxHeight: '90vh', overflowY: 'auto', padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', borderRadius: '1.25rem' }}>
+            
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--primary-indigo)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+                  Tenancy Application Details
+                </div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
+                  {selectedAppModal.tenant?.full_name || selectedAppModal.tenant?.email}
+                </h2>
+              </div>
+              <button 
+                onClick={() => setSelectedAppModal(null)}
+                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Application Overview Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              
+              {/* Applicant Card */}
+              <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
+                  Tenant Profile
+                </span>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  {selectedAppModal.tenant?.full_name || 'N/A'}
+                  {selectedAppModal.tenant?.is_verified && (
+                    <span style={{ fontSize: '0.65rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.1rem 0.4rem', borderRadius: '0.4rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <ShieldCheck size={10} /> Verified Tenant
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Mail size={13} /> {selectedAppModal.tenant?.email}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Phone size={13} /> {selectedAppModal.tenant?.phone || 'Not Provided'}</div>
+                </div>
+              </div>
+
+              {/* Property Card */}
+              <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
+                  Applied Listing
+                </span>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-main)' }}>
+                  {selectedAppModal.property?.title}
+                </div>
+                <div style={{ fontSize: '0.825rem', color: 'var(--primary-indigo)', fontWeight: 800, marginTop: '0.25rem' }}>
+                  Rs. {parseFloat(selectedAppModal.property?.rent_amount || 0).toLocaleString()} / month
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <MapPin size={13} color="var(--primary-indigo)" />
+                  {selectedAppModal.property?.display_address || selectedAppModal.property?.district || 'Kathmandu Valley'}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Application Intro / Message */}
+            <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <FileText size={14} color="var(--primary-indigo)" /> Tenant Introduction & Move-in Message
+              </div>
+              <p style={{ fontSize: '0.9rem', lineHeight: 1.5, margin: 0, color: 'var(--text-main)', background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                {selectedAppModal.message || 'No additional message provided by the tenant.'}
+              </p>
+            </div>
+
+            {/* Application Modal Footer */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <button
+                onClick={() => {
+                  const tId = selectedAppModal.tenant?.id || selectedAppModal.applicant?.id;
+                  const pId = selectedAppModal.property?.id;
+                  setSelectedAppModal(null);
+                  handleStartChat(tId, pId);
+                }}
+                style={{ background: 'var(--pill-bg)', border: '1px solid var(--pill-border)', color: 'var(--primary-indigo)', padding: '0.5rem 1rem', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <MessageSquare size={15} /> Chat with Tenant
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {selectedAppModal.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => handleUpdateStatus(selectedAppModal.id, 'accepted')}
+                      style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <Check size={15} /> Accept Application
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(selectedAppModal.id, 'rejected')}
+                      style={{ background: '#ef4444', color: '#ffffff', border: 'none', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 800, fontSize: '0.85rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <X size={15} /> Reject Application
+                    </button>
+                  </>
+                )}
+
+                <button
+                  onClick={() => setSelectedAppModal(null)}
+                  style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-color)', padding: '0.5rem 1.15rem', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, CheckCircle2, RotateCcw, PenTool, Type } from 'lucide-react';
+import { X, CheckCircle2, RotateCcw, PenTool, Type, Lock } from 'lucide-react';
 
 export default function DigitalSignatureModal({ agreement, onClose, onSaveSignature }) {
   const [activeTab, setActiveTab] = useState('draw'); // 'draw' or 'type'
@@ -261,13 +261,15 @@ export default function DigitalSignatureModal({ agreement, onClose, onSaveSignat
         <div style={{
           background: 'rgba(99, 102, 241, 0.08)',
           border: '1px solid var(--pill-border)',
-          borderRadius: '0.5rem',
           padding: '0.75rem',
           fontSize: '0.8rem',
           color: 'var(--text-muted)',
-          lineHeight: 1.4
+          lineHeight: 1.4,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.35rem'
         }}>
-          🔒 By executing this digital signature, I legally bind myself to the terms & conditions of the <strong>House Rent Agreement</strong> under the <em>House Rent Act 2075 of Nepal</em>.
+          <Lock size={13} /> By executing this digital signature, I legally bind myself to the terms & conditions of the <strong>House Rent Agreement</strong> under the <em>House Rent Act 2075 of Nepal</em>.
         </div>
 
         {/* Action Buttons */}

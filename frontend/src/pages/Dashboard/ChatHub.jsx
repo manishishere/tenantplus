@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { 
@@ -13,11 +14,13 @@ import {
   CheckCheck, 
   Clock,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 
 export default function ChatHub() {
   const { user, role } = useAuth();
+  const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -30,6 +33,13 @@ export default function ChatHub() {
   useEffect(() => {
     fetchConversations();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.conversationId && conversations.length > 0) {
+      const target = conversations.find(c => c.id === location.state.conversationId);
+      if (target) setActiveConversation(target);
+    }
+  }, [location.state, conversations]);
 
   useEffect(() => {
     if (activeConversation) {
@@ -154,8 +164,9 @@ export default function ChatHub() {
                 Loading conversations...
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                💬 No active chat threads. Start a conversation from the Agreements or Properties tab!
+              <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <MessageSquare size={24} style={{ opacity: 0.4 }} />
+                <span>No active chat threads. Start a conversation from the Applications, Agreements, or Properties tab!</span>
               </div>
             ) : (
               filteredConversations.map((conv) => {
@@ -322,8 +333,8 @@ export default function ChatHub() {
             <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               
               <div style={{ textAlign: 'center', margin: '0.5rem 0 1rem 0' }}>
-                <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', background: 'var(--bg-input)', padding: '0.3rem 0.75rem', borderRadius: '1rem', border: '1px solid var(--border-color)' }}>
-                  🔒 Official Tenancy Chat Thread &bull; Encrypted Audit History
+                <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', background: 'var(--bg-input)', padding: '0.3rem 0.75rem', borderRadius: '1rem', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Lock size={12} /> Official Tenancy Chat Thread &bull; Encrypted Audit History
                 </span>
               </div>
 

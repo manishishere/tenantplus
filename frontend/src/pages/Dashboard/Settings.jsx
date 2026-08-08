@@ -450,7 +450,7 @@ export default function Settings() {
                     gap: '0.35rem'
                   }}
                 >
-                  {isEditingKyc ? '✕ Cancel Edit Mode' : '✏️ Edit & Re-submit Profile'}
+                  {isEditingKyc ? 'Cancel Edit Mode' : 'Edit & Re-submit Profile'}
                 </button>
               </div>
             )}
