@@ -521,7 +521,7 @@ def admin_dashboard(request):
     total_agreements = Agreement.objects.count()
     active_agreements = Agreement.objects.filter(status='active').count()
 
-    total_rent_collected = RentPayment.objects.filter(status='paid').aggregate(total=Sum('amount'))['total'] or 0
+    total_rent_collected = RentPayment.objects.aggregate(total=Sum('amount'))['total'] or 0
     total_payments_count = RentPayment.objects.count()
 
     open_disputes_count = Dispute.objects.exclude(status='resolved').count()
