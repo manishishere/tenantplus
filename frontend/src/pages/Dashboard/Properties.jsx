@@ -764,8 +764,8 @@ export default function Properties() {
                     </div>
 
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <EyeOff size={12} color="#ef4444" /> Landmark <span style={{ color: '#ef4444' }}>(Private — revealed to tenant only after agreement)</span>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>
+                        Landmark / Nearby Spot
                       </label>
                       <input
                         type="text"
@@ -1016,19 +1016,6 @@ export default function Properties() {
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', lineHeight: 1.4 }}>
                       <MapPin size={16} color="var(--primary-indigo)" />
                       {selectedProperty.display_address || selectedProperty.fuzzy_address || selectedProperty.district}
-                    </div>
-                    
-                    <div style={{ marginTop: '0.4rem' }}>
-                      {selectedProperty.address_is_full === false && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.725rem', color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '0.2rem 0.55rem', borderRadius: '0.4rem', fontWeight: 700 }}>
-                          <Lock size={12} /> Full address revealed upon application acceptance
-                        </span>
-                      )}
-                      {selectedProperty.address_is_full === true && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.725rem', color: '#10b981', background: 'rgba(16,185,129,0.12)', padding: '0.2rem 0.55rem', borderRadius: '0.4rem', fontWeight: 700 }}>
-                          <Eye size={12} /> Full address revealed (Verified agreement)
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
