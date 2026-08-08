@@ -78,7 +78,7 @@ def _send_verification_otp_email(user, otp, sync=False):
     # Non-blocking background thread for instant response time during user registration
     thread = threading.Thread(target=_send_verification_otp_email_sync, args=(user, otp), daemon=True)
     thread.start()
-    return True, Noneue, None
+    return True, None
 
 
 
