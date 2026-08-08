@@ -92,6 +92,12 @@ export default function Properties() {
   const [showKycGateModal, setShowKycGateModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
 
+  // Confidential Document & Admin Moderation Modal State
+  const [docPreviewModal, setDocPreviewModal] = useState(null);
+  const [showAdminDelistModal, setShowAdminDelistModal] = useState(false);
+  const [adminDelistReason, setAdminDelistReason] = useState('');
+  const [adminActionLoading, setAdminActionLoading] = useState(false);
+
   // Application State
   const [applicationMessage, setApplicationMessage] = useState('');
   const [applicationSubmitLoading, setApplicationSubmitLoading] = useState(false);
@@ -294,6 +300,45 @@ export default function Properties() {
       console.error(err);
       const msg = err.response?.data?.detail || err.response?.data?.error || err.message || 'Failed to delete property listing.';
       alert(`Deletion Failed: ${msg}`);
+    }
+  };
+
+  const handleAdminVerifyProperty = async (propertyId) => {
+    try {
+      setAdminActionLoading(true);
+      const res = await api.post(`/properties/${propertyId}/admin-moderate/`, { action: 'verify' });
+      alert(res.data?.detail || 'Property listing verified successfully!');
+      const updated = await api.get(`/properties/${propertyId}/`);
+      setSelectedProperty(updated.data);
+      await fetchProperties();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Failed to verify property.');
+    } finally {
+      setAdminActionLoading(false);
+    }
+  };
+
+  const handleAdminDelistProperty = async (e) => {
+    e.preventDefault();
+    if (!selectedProperty) return;
+    try {
+      setAdminActionLoading(true);
+      const res = await api.post(`/properties/${selectedProperty.id}/admin-moderate/`, { 
+        action: 'delist', 
+        reason: adminDelistReason.trim() 
+      });
+      alert(res.data?.detail || 'Property listing delisted.');
+      setShowAdminDelistModal(false);
+      setAdminDelistReason('');
+      const updated = await api.get(`/properties/${selectedProperty.id}/`);
+      setSelectedProperty(updated.data);
+      await fetchProperties();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Failed to delist property.');
+    } finally {
+      setAdminActionLoading(false);
     }
   };
 
@@ -913,6 +958,51 @@ export default function Properties() {
                   </p>
                 </div>
 
+                {/* Delisting Reason Alert */}
+                {selectedProperty.rejection_reason && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.65rem', borderRadius: '0.5rem', fontSize: '0.8rem', color: '#ef4444' }}>
+                    <strong>Delisting Reason:</strong> {selectedProperty.rejection_reason}
+                  </div>
+                )}
+
+                {/* CONFIDENTIAL VERIFICATION DOCUMENTS (ADMIN & LANDLORD OWNER ONLY) */}
+                {(role === 'admin' || (role === 'landlord' && user?.id === selectedProperty.landlord)) && (
+                  <div style={{ background: 'var(--bg-input)', padding: '0.75rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563eb', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Lock size={12} /> Verification Proof Documents (Admin Audited)
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      {selectedProperty.lalpurja_doc_url ? (
+                        <button
+                          type="button"
+                          onClick={() => setDocPreviewModal({ title: 'House Deed / Lalpurja', url: selectedProperty.lalpurja_doc_url, propertyTitle: selectedProperty.title })}
+                          style={{ padding: '0.45rem', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '0.35rem', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', cursor: 'pointer' }}
+                        >
+                          <FileText size={13} /> View Lalpurja <Eye size={11} />
+                        </button>
+                      ) : (
+                        <div style={{ padding: '0.45rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.35rem', color: 'var(--text-muted)', fontSize: '0.725rem', textAlign: 'center' }}>
+                          No Lalpurja Uploaded
+                        </div>
+                      )}
+
+                      {selectedProperty.electricity_bill_url ? (
+                        <button
+                          type="button"
+                          onClick={() => setDocPreviewModal({ title: 'NEA Electricity Bill', url: selectedProperty.electricity_bill_url, propertyTitle: selectedProperty.title })}
+                          style={{ padding: '0.45rem', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '0.35rem', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', cursor: 'pointer' }}
+                        >
+                          <Upload size={13} /> View NEA Bill <Eye size={11} />
+                        </button>
+                      ) : (
+                        <div style={{ padding: '0.45rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.35rem', color: 'var(--text-muted)', fontSize: '0.725rem', textAlign: 'center' }}>
+                          No NEA Bill Uploaded
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Landlord Contact */}
                 <div style={{ background: 'var(--bg-input)', padding: '0.75rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)' }}>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>Landlord Contact</span>
@@ -987,9 +1077,11 @@ export default function Properties() {
                   </div>
                 )}
 
-                {/* Footer Buttons */}
-                <div style={{ display: 'flex', justifyContent: role === 'landlord' ? 'space-between' : 'flex-end', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem', marginTop: '0.25rem' }}>
-                  {role === 'landlord' && (
+                {/* Footer Buttons & Admin Controls */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                  
+                  {/* Landlord Delete */}
+                  {role === 'landlord' && user?.id === selectedProperty.landlord && (
                     <button 
                       onClick={() => handleDeleteProperty(selectedProperty.id)}
                       style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '0.5rem', padding: '0.4rem 0.85rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
@@ -997,9 +1089,34 @@ export default function Properties() {
                       <Trash2 size={14} /> Delete Listing
                     </button>
                   )}
+
+                  {/* Admin Moderation Actions */}
+                  {role === 'admin' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {selectedProperty.verification_status !== 'verified' && (
+                        <button
+                          onClick={() => handleAdminVerifyProperty(selectedProperty.id)}
+                          disabled={adminActionLoading}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '0.5rem', padding: '0.45rem 0.95rem', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem' }}
+                        >
+                          <ShieldCheck size={14} /> Verify Property
+                        </button>
+                      )}
+                      {selectedProperty.verification_status !== 'flagged' && (
+                        <button
+                          onClick={() => { setShowAdminDelistModal(true); setAdminDelistReason(''); }}
+                          disabled={adminActionLoading}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '0.5rem', padding: '0.45rem 0.95rem', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem' }}
+                        >
+                          <X size={14} /> Delist Property
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <button 
                     onClick={() => setShowDetailsModal(false)}
-                    style={{ background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '0.4rem 1.25rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                    style={{ background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '0.4rem 1.25rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', marginLeft: 'auto' }}
                   >
                     Close Window
                   </button>
@@ -1040,6 +1157,130 @@ export default function Properties() {
                 Go to Settings ↗
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIDENTIAL DOCUMENT PREVIEW MODAL */}
+      {docPreviewModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '750px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  {docPreviewModal.title} — {docPreviewModal.propertyTitle}
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confidential Property Verification File</span>
+              </div>
+              <button onClick={() => setDocPreviewModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.4rem', borderRadius: '50%' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0a0a0c' }}>
+              {docPreviewModal.url?.startsWith('data:image') || docPreviewModal.url?.match(/\.(jpeg|jpg|png|webp)/i) || docPreviewModal.url?.includes('http') ? (
+                <img
+                  src={docPreviewModal.url}
+                  alt={docPreviewModal.title}
+                  style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}
+                />
+              ) : (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <FileText size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
+                  <div>Document File Available</div>
+                  <a href={docPreviewModal.url} target="_blank" rel="noreferrer" style={{ color: '#3b82f6', marginTop: '0.5rem', display: 'inline-block', fontWeight: 700 }}>
+                    Open Document Link
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '0.85rem 1.25rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)' }}>
+              <a href={docPreviewModal.url} target="_blank" rel="noreferrer" className="btn-secondary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}>
+                Open Original in New Tab ↗
+              </a>
+              <button onClick={() => setDocPreviewModal(null)} className="btn-primary" style={{ padding: '0.45rem 1.15rem', fontSize: '0.8rem' }}>
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN DELIST PROPERTY MODAL WITH REASON */}
+      {showAdminDelistModal && selectedProperty && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '1rem', width: '100%', maxWidth: '560px', padding: '1.75rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: 800, color: '#ef4444' }}>
+              Delist Property: {selectedProperty.title}
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0 0 1.25rem 0', lineHeight: 1.45 }}>
+              Specify why this property is being removed from the platform. The landlord will receive a system notification with this reason.
+            </p>
+
+            <form onSubmit={handleAdminDelistProperty}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
+                  Quick Delisting Reasons (Click to Select):
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {[
+                    '📄 Invalid or unverified Lalpurja (House Deed) document.',
+                    '⚡ Electricity bill name or address mismatch.',
+                    '❌ Landlord identity verification failed.',
+                    '📍 Inaccurate or fake property address details.',
+                    '⚠️ Property violates platform safety policies.'
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setAdminDelistReason(preset)}
+                      style={{
+                        padding: '0.35rem 0.65rem',
+                        borderRadius: '0.4rem',
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-color)',
+                        fontSize: '0.75rem',
+                        color: 'var(--text-main)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label" style={{ fontWeight: 800 }}>Delisting / Removal Reason *</label>
+                <textarea
+                  className="form-input"
+                  rows={4}
+                  placeholder="Type feedback for landlord explaining why listing was removed..."
+                  value={adminDelistReason}
+                  onChange={e => setAdminDelistReason(e.target.value)}
+                  style={{ padding: '0.75rem', resize: 'vertical' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAdminDelistModal(false)}
+                  style={{ padding: '0.65rem 1.15rem', borderRadius: '0.5rem', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!adminDelistReason.trim() || adminActionLoading}
+                  style={{ padding: '0.65rem 1.35rem', borderRadius: '0.5rem', background: '#ef4444', color: '#ffffff', border: 'none', fontWeight: 800, cursor: 'pointer', opacity: !adminDelistReason.trim() ? 0.6 : 1 }}
+                >
+                  {adminActionLoading ? 'Delisting...' : 'Confirm Delist & Notify Landlord'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
