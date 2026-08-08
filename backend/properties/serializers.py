@@ -25,6 +25,7 @@ class PropertyListSerializer(serializers.ModelSerializer):
         model = Property
         fields = (
             'id',
+            'landlord',
             'title',
             'province',
             'district',
@@ -81,6 +82,7 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
         model = Property
         fields = (
             'id',
+            'landlord',
             'title',
             'description',
             'province',

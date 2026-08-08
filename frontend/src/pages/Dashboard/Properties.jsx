@@ -1170,7 +1170,7 @@ export default function Properties() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
               
               {/* Landlord Edit / Delete Actions */}
-              {role === 'landlord' && user?.id === selectedProperty.landlord && (
+              {role === 'landlord' && (user?.id === selectedProperty.landlord || user?.id === selectedProperty.landlord?.id || (selectedProperty.landlord_email && user?.email === selectedProperty.landlord_email)) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   {selectedProperty.verification_status !== 'verified' ? (
                     <button 
