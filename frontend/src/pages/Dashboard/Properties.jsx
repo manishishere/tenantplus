@@ -904,98 +904,88 @@ export default function Properties() {
 
       {/* Property Details & Application Modal */}
       {showDetailsModal && selectedProperty && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', backdropFilter: 'blur(10px)' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '820px', maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--pill-border)', borderRadius: '1.25rem' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1.25rem', backdropFilter: 'blur(12px)' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '960px', maxHeight: '92vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid var(--pill-border)', borderRadius: '1.5rem', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.6)' }}>
             
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.725rem', color: 'var(--primary-indigo)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--primary-indigo)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', background: 'rgba(59, 130, 246, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '0.4rem' }}>
                     {selectedProperty.room_type} • {selectedProperty.furnishing_status}
                   </span>
 
                   {/* Verification Status Badge */}
                   {selectedProperty.verification_status === 'verified' || (!selectedProperty.verification_status && selectedProperty.landlord_is_verified) ? (
-                    <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.15rem 0.55rem', borderRadius: '1rem', fontSize: '0.725rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <ShieldCheck size={13} /> Verified Property
+                    <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.35)', padding: '0.2rem 0.7rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <ShieldCheck size={14} /> Verified Property
                     </span>
                   ) : selectedProperty.verification_status === 'flagged' ? (
-                    <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.15rem 0.55rem', borderRadius: '1rem', fontSize: '0.725rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      ✕ Delisted Listing
+                    <span style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.35)', padding: '0.2rem 0.7rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <X size={14} /> Delisted Listing
                     </span>
                   ) : (
-                    <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.15rem 0.55rem', borderRadius: '1rem', fontSize: '0.725rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      ⏱️ Unverified Listing
+                    <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.35)', padding: '0.2rem 0.7rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      ⏱️ Unverified Listing (Pending Audit)
                     </span>
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
-                    {selectedProperty.title}
-                  </h2>
-                  {role === 'admin' && selectedProperty.verification_status !== 'verified' && (
-                    <button
-                      onClick={() => handleAdminVerifyProperty(selectedProperty.id)}
-                      disabled={adminActionLoading}
-                      style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '0.3rem 0.75rem', borderRadius: '0.4rem', fontSize: '0.775rem', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
-                    >
-                      <ShieldCheck size={14} /> Mark as Verified
-                    </button>
-                  )}
-                  {role === 'admin' && selectedProperty.verification_status === 'verified' && (
-                    <button
-                      onClick={() => handleAdminUnverifyProperty(selectedProperty.id)}
-                      disabled={adminActionLoading}
-                      style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.25rem 0.65rem', borderRadius: '0.4rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-                    >
-                      Mark as Pending
-                    </button>
-                  )}
-                </div>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, color: 'var(--text-main)', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+                  {selectedProperty.title}
+                </h2>
               </div>
+
               <button 
                 onClick={() => setShowDetailsModal(false)}
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', transition: 'all 0.2s' }}
               >
                 &times;
               </button>
             </div>
 
             {/* Modal Body */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', alignItems: 'stretch' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '1.75rem', alignItems: 'start' }}>
               
-              {/* Left Column: Media & Price Summary */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ height: '170px', borderRadius: '0.65rem', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+              {/* Left Column: Property Media, Rent & Privacy Location */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ height: '230px', borderRadius: '0.85rem', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
                   <img 
                     src={selectedProperty.photos && selectedProperty.photos.length > 0 ? selectedProperty.photos[0].photo_url : 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80'} 
                     alt={selectedProperty.title} 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
+                  {selectedProperty.photos && selectedProperty.photos.length > 0 && (
+                    <div style={{ position: 'absolute', bottom: '0.75rem', left: '0.75rem', background: 'rgba(0,0,0,0.75)', color: '#ffffff', padding: '0.25rem 0.65rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, backdropFilter: 'blur(4px)' }}>
+                      📸 {selectedProperty.photos.length} Photo{selectedProperty.photos.length > 1 ? 's' : ''}
+                    </div>
+                  )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'var(--bg-input)', padding: '0.65rem 0.85rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)' }}>
-                  <div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monthly Rent</span>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary-indigo)' }}>
-                      Rs. {parseFloat(selectedProperty.rent_amount).toLocaleString()}
+                <div style={{ background: 'var(--bg-input)', padding: '1rem 1.15rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Monthly Rent</span>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--primary-indigo)' }}>
+                      Rs. {parseFloat(selectedProperty.rent_amount).toLocaleString()} <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>/ month</span>
                     </div>
                   </div>
-                  <div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Location</span>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      <MapPin size={13} color="var(--primary-indigo)" />
+
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>Property Location</span>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', lineHeight: 1.4 }}>
+                      <MapPin size={16} color="var(--primary-indigo)" />
                       {selectedProperty.display_address || selectedProperty.fuzzy_address || selectedProperty.district}
+                    </div>
+                    
+                    <div style={{ marginTop: '0.4rem' }}>
                       {selectedProperty.address_is_full === false && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '0.1rem 0.4rem', borderRadius: '0.3rem', fontWeight: 600 }}>
-                          <Lock size={10} /> Full address after acceptance
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.725rem', color: '#f59e0b', background: 'rgba(245,158,11,0.12)', padding: '0.2rem 0.55rem', borderRadius: '0.4rem', fontWeight: 700 }}>
+                          <Lock size={12} /> Full address revealed upon application acceptance
                         </span>
                       )}
                       {selectedProperty.address_is_full === true && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.7rem', color: '#10b981', background: 'rgba(16,185,129,0.12)', padding: '0.1rem 0.4rem', borderRadius: '0.3rem', fontWeight: 600 }}>
-                          <Eye size={10} /> Full address
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.725rem', color: '#10b981', background: 'rgba(16,185,129,0.12)', padding: '0.2rem 0.55rem', borderRadius: '0.4rem', fontWeight: 700 }}>
+                          <Eye size={12} /> Full address revealed (Verified agreement)
                         </span>
                       )}
                     </div>
@@ -1003,40 +993,40 @@ export default function Properties() {
                 </div>
               </div>
 
-              {/* Right Column: About, Contact & Apply */}
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.75rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 600 }}>About Property</span>
-                  <p style={{ fontSize: '0.85rem', lineHeight: 1.45, margin: '0.2rem 0 0 0', color: 'var(--text-main)', maxHeight: '70px', overflowY: 'auto' }}>
-                    {selectedProperty.description || 'No description provided.'}
+              {/* Right Column: About, Documents & Contact */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>About Property</span>
+                  <p style={{ fontSize: '0.875rem', lineHeight: 1.5, margin: 0, color: 'var(--text-main)', maxHeight: '90px', overflowY: 'auto' }}>
+                    {selectedProperty.description || 'No description provided for this listing.'}
                   </p>
                 </div>
 
                 {/* Delisting Reason Alert */}
                 {selectedProperty.rejection_reason && (
-                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.65rem', borderRadius: '0.5rem', fontSize: '0.8rem', color: '#ef4444' }}>
+                  <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '0.75rem 1rem', borderRadius: '0.75rem', fontSize: '0.825rem', color: '#ef4444' }}>
                     <strong>Delisting Reason:</strong> {selectedProperty.rejection_reason}
                   </div>
                 )}
 
                 {/* CONFIDENTIAL VERIFICATION DOCUMENTS (ADMIN & LANDLORD OWNER ONLY) */}
                 {(role === 'admin' || (role === 'landlord' && user?.id === selectedProperty.landlord)) && (
-                  <div style={{ background: 'var(--bg-input)', padding: '0.75rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)' }}>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#2563eb', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Lock size={12} /> Verification Proof Documents (Admin Audited)
+                  <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#2563eb', marginBottom: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Lock size={14} /> Verification Proof Documents (Admin Audited)
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
                       {selectedProperty.lalpurja_doc_url ? (
                         <button
                           type="button"
                           onClick={() => setDocPreviewModal({ title: 'House Deed / Lalpurja', url: selectedProperty.lalpurja_doc_url, propertyTitle: selectedProperty.title })}
-                          style={{ padding: '0.45rem', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '0.35rem', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', cursor: 'pointer' }}
+                          style={{ padding: '0.6rem 0.75rem', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '0.5rem', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#2563eb', fontSize: '0.775rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', cursor: 'pointer', transition: 'transform 0.15s' }}
                         >
-                          <FileText size={13} /> View Lalpurja <Eye size={11} />
+                          <FileText size={15} /> View Lalpurja <Eye size={13} />
                         </button>
                       ) : (
-                        <div style={{ padding: '0.45rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.35rem', color: 'var(--text-muted)', fontSize: '0.725rem', textAlign: 'center' }}>
-                          No Lalpurja Uploaded
+                        <div style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center' }}>
+                          No Lalpurja File
                         </div>
                       )}
 
@@ -1044,13 +1034,13 @@ export default function Properties() {
                         <button
                           type="button"
                           onClick={() => setDocPreviewModal({ title: 'NEA Electricity Bill', url: selectedProperty.electricity_bill_url, propertyTitle: selectedProperty.title })}
-                          style={{ padding: '0.45rem', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '0.35rem', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', cursor: 'pointer' }}
+                          style={{ padding: '0.6rem 0.75rem', background: 'rgba(37, 99, 235, 0.1)', borderRadius: '0.5rem', border: '1px solid rgba(37, 99, 235, 0.3)', color: '#2563eb', fontSize: '0.775rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', cursor: 'pointer', transition: 'transform 0.15s' }}
                         >
-                          <Upload size={13} /> View NEA Bill <Eye size={11} />
+                          <Zap size={15} /> View NEA Bill <Eye size={13} />
                         </button>
                       ) : (
-                        <div style={{ padding: '0.45rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.35rem', color: 'var(--text-muted)', fontSize: '0.725rem', textAlign: 'center' }}>
-                          No NEA Bill Uploaded
+                        <div style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.04)', borderRadius: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center' }}>
+                          No NEA Bill File
                         </div>
                       )}
                     </div>
@@ -1058,52 +1048,52 @@ export default function Properties() {
                 )}
 
                 {/* Landlord Contact */}
-                <div style={{ background: 'var(--bg-input)', padding: '0.75rem', borderRadius: '0.65rem', border: '1px solid var(--border-color)' }}>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>Landlord Contact</span>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
+                <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Landlord Contact</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         {selectedProperty.landlord_name}
                         {selectedProperty.landlord_is_verified && (
-                          <span className="badge-verified" style={{ fontSize: '0.6rem', padding: '0.1rem 0.35rem' }}>
-                            <ShieldCheck size={10} /> Verified
+                          <span className="badge-verified" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
+                            <ShieldCheck size={11} /> Verified
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '0.1rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Mail size={12} /> {selectedProperty.landlord_email}
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Mail size={13} /> {selectedProperty.landlord_email}
                       </div>
                     </div>
                     <div style={{
                       background: 'var(--pill-bg)',
                       color: 'var(--primary-indigo)',
                       border: '1px solid var(--pill-border)',
-                      padding: '0.35rem 0.65rem',
+                      padding: '0.4rem 0.75rem',
                       borderRadius: '0.5rem',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      fontSize: '0.825rem',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.3rem'
+                      gap: '0.35rem'
                     }}>
-                      <Phone size={13} color="var(--primary-indigo)" /> {selectedProperty.landlord_phone || '+977 9801234567'}
+                      <Phone size={14} color="var(--primary-indigo)" /> {selectedProperty.landlord_phone || '+977 9801234567'}
                     </div>
                   </div>
                 </div>
 
-                {/* Tenant Apply */}
+                {/* Tenant Apply Form */}
                 {role === 'tenant' && selectedProperty.is_available && (
-                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem' }}>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)', display: 'block', marginBottom: '0.35rem' }}>Apply for Tenancy</strong>
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.85rem' }}>
+                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)', display: 'block', marginBottom: '0.5rem' }}>Apply for Tenancy</strong>
                     
                     {applicationSuccess ? (
-                      <div style={{ padding: '0.65rem', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', borderRadius: '0.5rem', fontSize: '0.825rem', textAlign: 'center', fontWeight: 700 }}>
+                      <div style={{ padding: '0.75rem', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', borderRadius: '0.5rem', fontSize: '0.85rem', textAlign: 'center', fontWeight: 800 }}>
                         ✅ Application submitted successfully! Landlord will review your request.
                       </div>
                     ) : (
-                      <form onSubmit={handleApply} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <form onSubmit={handleApply} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                         {applicationError && (
-                          <div style={{ padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.35rem', fontSize: '0.8rem' }}>
+                          <div style={{ padding: '0.6rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.4rem', fontSize: '0.825rem' }}>
                             {applicationError}
                           </div>
                         )}
@@ -1114,7 +1104,7 @@ export default function Properties() {
                           rows={2}
                           value={applicationMessage}
                           onChange={(e) => setApplicationMessage(e.target.value)}
-                          style={{ fontSize: '0.825rem', padding: '0.5rem' }}
+                          style={{ fontSize: '0.85rem', padding: '0.65rem' }}
                           required
                         />
 
@@ -1122,71 +1112,71 @@ export default function Properties() {
                           type="submit" 
                           className="btn-primary" 
                           disabled={applicationSubmitLoading}
-                          style={{ width: '100%', padding: '0.55rem', fontSize: '0.85rem' }}
+                          style={{ width: '100%', padding: '0.65rem', fontSize: '0.875rem', fontWeight: 800 }}
                         >
-                          {applicationSubmitLoading ? 'Submitting Application...' : 'Submit Application'}
+                          {applicationSubmitLoading ? 'Submitting Application...' : 'Submit Application ↗'}
                         </button>
                       </form>
                     )}
                   </div>
                 )}
 
-                {/* Footer Buttons & Admin Controls */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
-                  
-                  {/* Landlord Delete */}
-                  {role === 'landlord' && user?.id === selectedProperty.landlord && (
-                    <button 
-                      onClick={() => handleDeleteProperty(selectedProperty.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '0.5rem', padding: '0.4rem 0.85rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+              </div>
+
+            </div>
+
+            {/* Footer Actions & Admin Moderation Controls */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+              
+              {/* Landlord Delete */}
+              {role === 'landlord' && user?.id === selectedProperty.landlord && (
+                <button 
+                  onClick={() => handleDeleteProperty(selectedProperty.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '0.5rem', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.825rem' }}
+                >
+                  <Trash2 size={15} /> Delete Listing
+                </button>
+              )}
+
+              {/* Admin Moderation Actions */}
+              {role === 'admin' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  {selectedProperty.verification_status !== 'verified' ? (
+                    <button
+                      onClick={() => handleAdminVerifyProperty(selectedProperty.id)}
+                      disabled={adminActionLoading}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '0.5rem', padding: '0.55rem 1.15rem', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)' }}
                     >
-                      <Trash2 size={14} /> Delete Listing
+                      <ShieldCheck size={16} /> Mark as Verified
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleAdminUnverifyProperty(selectedProperty.id)}
+                      disabled={adminActionLoading}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.35)', borderRadius: '0.5rem', padding: '0.55rem 1rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.825rem' }}
+                    >
+                      Mark as Pending
                     </button>
                   )}
 
-                  {/* Admin Moderation Actions */}
-                  {role === 'admin' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {selectedProperty.verification_status !== 'verified' ? (
-                        <button
-                          onClick={() => handleAdminVerifyProperty(selectedProperty.id)}
-                          disabled={adminActionLoading}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '0.5rem', padding: '0.45rem 0.95rem', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem' }}
-                        >
-                          <ShieldCheck size={14} /> Mark as Verified
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleAdminUnverifyProperty(selectedProperty.id)}
-                          disabled={adminActionLoading}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '0.5rem', padding: '0.45rem 0.85rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
-                        >
-                          Mark as Pending
-                        </button>
-                      )}
-
-                      {selectedProperty.verification_status !== 'flagged' && (
-                        <button
-                          onClick={() => { setShowAdminDelistModal(true); setAdminDelistReason(''); }}
-                          disabled={adminActionLoading}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '0.5rem', padding: '0.45rem 0.95rem', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem' }}
-                        >
-                          <X size={14} /> Delist Property
-                        </button>
-                      )}
-                    </div>
+                  {selectedProperty.verification_status !== 'flagged' && (
+                    <button
+                      onClick={() => { setShowAdminDelistModal(true); setAdminDelistReason(''); }}
+                      disabled={adminActionLoading}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.35)', borderRadius: '0.5rem', padding: '0.55rem 1.15rem', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem' }}
+                    >
+                      <X size={16} /> Delist Property
+                    </button>
                   )}
-
-                  <button 
-                    onClick={() => setShowDetailsModal(false)}
-                    style={{ background: 'transparent', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '0.4rem 1.25rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', marginLeft: 'auto' }}
-                  >
-                    Close Window
-                  </button>
                 </div>
+              )}
 
-              </div>
-
+              <button 
+                onClick={() => setShowDetailsModal(false)}
+                style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-color)', borderRadius: '0.5rem', padding: '0.55rem 1.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', marginLeft: 'auto' }}
+              >
+                Close Window
+              </button>
             </div>
 
           </div>
