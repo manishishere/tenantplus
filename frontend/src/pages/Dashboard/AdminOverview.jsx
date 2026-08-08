@@ -4,7 +4,7 @@ import { parseApiError } from '../../utils/errorUtils';
 import { 
   Users, Building2, ShieldCheck, DollarSign, AlertTriangle, 
   CheckCircle, CheckCircle2, Search, RefreshCw, Mail, Activity, Megaphone,
-  Database, Server, Layers, Download, Check, Eye, Camera, UserCheck, FileText, Zap, ExternalLink, Lock, MapPin
+  Database, Server, Layers, Download, Check, Eye, Camera, UserCheck, FileText, Zap, ExternalLink, Lock, MapPin, X
 } from 'lucide-react';
 
 export default function AdminOverview() {
@@ -1264,12 +1264,12 @@ export default function AdminOverview() {
               padding: '1.25rem 1.5rem',
               borderBottom: '1px solid var(--border-color)',
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center',
               background: 'var(--bg-input)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: 'var(--bg-card)', border: '1px solid var(--border-color)', flexShrink: 0 }}>
                   {selectedKycDoc.user_photo ? (
                     <img src={selectedKycDoc.user_photo} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -1277,7 +1277,7 @@ export default function AdminOverview() {
                   )}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
                     KYC Credential Audit: {selectedKycDoc.user_full_name}
                   </h3>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -1288,9 +1288,34 @@ export default function AdminOverview() {
 
               <button
                 onClick={() => setSelectedKycDoc(null)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer', padding: '0.2rem 0.6rem' }}
+                style={{
+                  background: 'var(--pill-bg)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-muted)',
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                  marginLeft: '1rem'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+                  e.currentTarget.style.color = '#ef4444';
+                  e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'var(--pill-bg)';
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
+                }}
+                title="Close Audit View"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
@@ -1304,8 +1329,6 @@ export default function AdminOverview() {
                     { key: 'id_front', label: 'ID Front', icon: Camera, url: selectedKycDoc.doc_url || selectedKycDoc.doc_front },
                     { key: 'id_back', label: 'ID Back', icon: Camera, url: selectedKycDoc.back_doc_url || selectedKycDoc.doc_back },
                     { key: 'selfie', label: 'Selfie Photo', icon: UserCheck, url: selectedKycDoc.user_photo },
-                    { key: 'house_deed', label: 'House Deed / Lalpurja', icon: FileText, url: selectedKycDoc.house_doc_url || selectedKycDoc.house_deed },
-                    { key: 'utility_bill', label: 'Utility Bill', icon: Zap, url: selectedKycDoc.electricity_bill_url || selectedKycDoc.utility_bill },
                   ].map(tab => {
                     const IconComp = tab.icon;
                     const isSelected = selectedKycPhoto === tab.key || (selectedKycPhoto === 'doc_url' && tab.key === 'id_front');
