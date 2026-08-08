@@ -71,7 +71,7 @@ export default function AdminOverview() {
   const fetchMetrics = async () => {
     try {
       const res = await api.get('/accounts/admin/dashboard/');
-      setMetrics(res.data?.metrics || null);
+      setMetrics(res.data?.metrics || res.data || null);
     } catch (err) {
       console.error('Failed to fetch admin metrics:', err);
     }
