@@ -186,6 +186,17 @@ class PropertyCreateUpdateSerializer(serializers.ModelSerializer):
     landlord = serializers.PrimaryKeyRelatedField(read_only=True)
     is_available = serializers.BooleanField(read_only=True)
 
+    province = serializers.CharField(required=False, allow_blank=True, default='')
+    district = serializers.CharField(required=True)
+    municipality = serializers.CharField(required=False, allow_blank=True, default='')
+    ward_no = serializers.CharField(required=False, allow_blank=True, default='')
+    tole = serializers.CharField(required=False, allow_blank=True, default='')
+    landmark = serializers.CharField(required=False, allow_blank=True, default='')
+    address = serializers.CharField(required=False, allow_blank=True, default='')
+    lalpurja_doc_url = serializers.CharField(required=False, allow_null=True, allow_blank=True, default=None)
+    electricity_bill_url = serializers.CharField(required=False, allow_null=True, allow_blank=True, default=None)
+    verification_status = serializers.CharField(required=False, default='verified')
+
     class Meta:
         model = Property
         fields = (
@@ -224,6 +235,25 @@ class PropertyCreateUpdateSerializer(serializers.ModelSerializer):
         if user and not user.is_verified:
             raise serializers.ValidationError('KYC Verification Required: You must complete identity verification under Settings before creating property listings.')
         return attrs
+
+    def create(self, validated_data):
+        if not validated_data.get('address'):
+            parts = []
+            if validated_data.get('landmark'):
+                parts.append(validated_data['landmark'])
+            if validated_data.get('tole'):
+                parts.append(validated_data['tole'])
+            if validated_data.get('ward_no'):
+                parts.append(f"Ward {validated_data['ward_no']}")
+            if validated_data.get('municipality'):
+                parts.append(validated_data['municipality'])
+            if validated_data.get('district'):
+                parts.append(validated_data['district'])
+            if validated_data.get('province'):
+                parts.append(validated_data['province'])
+            validated_data['address'] = ', '.join(parts)
+        return super().create(validated_data)
+
 
 
 class SavedPropertySerializer(serializers.ModelSerializer):

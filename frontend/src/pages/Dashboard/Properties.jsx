@@ -262,7 +262,20 @@ export default function Properties() {
       await fetchProperties();
     } catch (err) {
       console.error(err);
-      setAddError(err.response?.data?.detail || err.response?.data?.title?.[0] || 'Failed to create property. Please try again.');
+      let errMsg = 'Failed to create property. Please try again.';
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errMsg = err.response.data;
+        } else if (err.response.data.detail) {
+          errMsg = err.response.data.detail;
+        } else if (typeof err.response.data === 'object') {
+          const details = Object.entries(err.response.data).map(
+            ([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`
+          );
+          if (details.length > 0) errMsg = details.join(' | ');
+        }
+      }
+      setAddError(errMsg);
     } finally {
       setAddLoading(false);
     }

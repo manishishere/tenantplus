@@ -66,10 +66,10 @@ class PropertyListCreateView(APIView):
             return Response({'detail': 'Only landlords can create properties.'}, status=status.HTTP_403_FORBIDDEN)
         if not request.user.is_verified:
             return Response({'detail': 'Verification Required: You must complete citizenship/identity KYC verification under Settings before creating property listings.'}, status=status.HTTP_403_FORBIDDEN)
-        serializer = PropertyCreateUpdateSerializer(data=request.data)
+        serializer = PropertyCreateUpdateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         property_obj = serializer.save(landlord=request.user)
-        return Response(PropertyDetailSerializer(property_obj).data, status=status.HTTP_201_CREATED)
+        return Response(PropertyDetailSerializer(property_obj, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 class PropertyDetailView(APIView):
