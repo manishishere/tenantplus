@@ -1067,234 +1067,320 @@
       "name": "Agreements",
       "item": [
         {
-          "name": "Backend API",
-          "description": "Backend-only collection for agreements. In a production setup, frontend tests would live in a separate collection or runner and call the same endpoints through environment variables.",
-          "item": [
-            {
-              "name": "Tenant Flow",
-              "auth": {
-                "type": "bearer",
-                "bearer": [
-                  {
-                    "key": "token",
-                    "value": "{{tenant_access_token}}",
-                    "type": "string"
-                  }
-                ]
-              },
-              "item": [
-                {
-                  "name": "List My Agreements",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                      "raw": "{{base_url}}/api/agreements/",
-                      "host": [
-                        "{{base_url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "agreements"
-                      ]
-                    },
-                    "description": "List agreements visible to the authenticated tenant."
-                  }
-                },
-                {
-                  "name": "Get Agreement Detail",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/",
-                      "host": [
-                        "{{base_url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "agreements",
-                        "{{agreement_id}}"
-                      ]
-                    },
-                    "description": "Retrieve an agreement as the tenant."
-                  }
-                },
-                {
-                  "name": "Acknowledge Agreement",
-                  "request": {
-                    "method": "PATCH",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      }
-                    ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{}"
-                    },
-                    "url": {
-                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/acknowledge/",
-                      "host": [
-                        "{{base_url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "agreements",
-                        "{{agreement_id}}",
-                        "acknowledge"
-                      ]
-                    },
-                    "description": "Mark the agreement acknowledged as the tenant."
-                  }
-                },
-                {
-                  "name": "Terminate Agreement",
-                  "request": {
-                    "method": "PATCH",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      }
-                    ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"termination_reason\": \"Ending tenancy at lease expiry.\"\n}"
-                    },
-                    "url": {
-                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/terminate/",
-                      "host": [
-                        "{{base_url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "agreements",
-                        "{{agreement_id}}",
-                        "terminate"
-                      ]
-                    },
-                    "description": "Terminate an active agreement as the tenant."
-                  }
-                }
+          "name": "List Agreements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                ""
               ]
             },
-            {
-              "name": "Landlord Flow",
-              "auth": {
-                "type": "bearer",
-                "bearer": [
-                  {
-                    "key": "token",
-                    "value": "{{landlord_access_token}}",
-                    "type": "string"
-                  }
-                ]
-              },
-              "item": [
-                {
-                  "name": "List My Agreements",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                      "raw": "{{base_url}}/api/agreements/",
-                      "host": [
-                        "{{base_url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "agreements"
-                      ]
-                    },
-                    "description": "List agreements visible to the authenticated landlord."
-                  }
-                },
-                {
-                  "name": "Get Agreement Detail",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/",
-                      "host": [
-                        "{{base_url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "agreements",
-                        "{{agreement_id}}"
-                      ]
-                    },
-                    "description": "Retrieve an agreement as the landlord."
-                  }
-                },
-                {
-                  "name": "Acknowledge Agreement",
-                  "request": {
-                    "method": "PATCH",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      }
-                    ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{}"
-                    },
-                    "url": {
-                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/acknowledge/",
-                      "host": [
-                        "{{base_url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "agreements",
-                        "{{agreement_id}}",
-                        "acknowledge"
-                      ]
-                    },
-                    "description": "Mark the agreement acknowledged as the landlord."
-                  }
-                },
-                {
-                  "name": "Terminate Agreement",
-                  "request": {
-                    "method": "PATCH",
-                    "header": [
-                      {
-                        "key": "Content-Type",
-                        "value": "application/json",
-                        "type": "text"
-                      }
-                    ],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"termination_reason\": \"Property needs to be listed again.\"\n}"
-                    },
-                    "url": {
-                      "raw": "{{base_url}}/api/agreements/{{agreement_id}}/terminate/",
-                      "host": [
-                        "{{base_url}}"
-                      ],
-                      "path": [
-                        "api",
-                        "agreements",
-                        "{{agreement_id}}",
-                        "terminate"
-                      ]
-                    },
-                    "description": "Terminate an active agreement as the landlord."
-                  }
-                }
+            "description": "Returns list of active, pending_advance, and historical tenancy agreements for authenticated user."
+          }
+        },
+        {
+          "name": "Get Agreement Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/{{agreement_id}}/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                "{{agreement_id}}",
+                ""
               ]
-            }
-          ]
+            },
+            "description": "Returns full agreement object including advance payment status, 24h deadline, and witness information."
+          }
+        },
+        {
+          "name": "Upload Signed Agreement & Witnesses",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_signature_url\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\",\n  \"witness1_name\": \"Hari Prasad Sharma\",\n  \"witness1_citizenship\": \"27-01-78-01234\",\n  \"witness1_phone\": \"9841234567\",\n  \"witness2_name\": \"Sita Devi Karki\",\n  \"witness2_citizenship\": \"27-01-80-05678\",\n  \"witness2_phone\": \"9851098765\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/{{agreement_id}}/upload-signed/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                "{{agreement_id}}",
+                "upload-signed",
+                ""
+              ]
+            },
+            "description": "Upload Base64 e-signature canvas data and Witness 1 & Witness 2 legal details (Nepalese House Rent Act 2075)."
+          }
+        },
+        {
+          "name": "Acknowledge Agreement",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/{{agreement_id}}/acknowledge/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                "{{agreement_id}}",
+                "acknowledge",
+                ""
+              ]
+            },
+            "description": "Approve digital signatures mutually."
+          }
+        },
+        {
+          "name": "Pay Advance via eSewa Gateway (24h Window)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/{{agreement_id}}/pay-advance/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                "{{agreement_id}}",
+                "pay-advance",
+                ""
+              ]
+            },
+            "description": "Initiates 24h advance payment checkout. Returns HMAC-SHA256 signed eSewa form parameters for agreement activation."
+          }
+        },
+        {
+          "name": "Propose Agreement Renewal (0-10% Escalation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"increase_percent\": 5\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/{{agreement_id}}/propose-renewal/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                "{{agreement_id}}",
+                "propose-renewal",
+                ""
+              ]
+            },
+            "description": "Propose 1-year agreement extension with 0-10% rent escalation slider (Nepalese Rent Act 2075 cap)."
+          }
+        },
+        {
+          "name": "Respond to Renewal Proposal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"accept\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/{{agreement_id}}/respond-renewal/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                "{{agreement_id}}",
+                "respond-renewal",
+                ""
+              ]
+            },
+            "description": "Accept or decline proposed lease extension."
+          }
+        },
+        {
+          "name": "Download Legal Agreement PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/{{agreement_id}}/pdf/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                "{{agreement_id}}",
+                "pdf",
+                ""
+              ]
+            },
+            "description": "Downloads auto-generated Nepalese House Rent Act 2075 PDF contract with e-signatures."
+          }
+        },
+        {
+          "name": "Terminate Agreement",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"termination_reason\": \"Mutual consent relocation.\"\n}"
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/agreements/{{agreement_id}}/terminate/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "agreements",
+                "{{agreement_id}}",
+                "terminate",
+                ""
+              ]
+            },
+            "description": "Terminates active agreement and re-opens property availability."
+          }
         }
       ]
     },
@@ -1308,86 +1394,25 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
+                "value": "Bearer {{access_token}}"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/rent-payments/?agreement_id={{agreement_id}}",
+              "raw": "http://127.0.0.1:8000/api/rent-payments/",
+              "protocol": "http",
               "host": [
-                "{{base_url}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
-              "path": [
-                "api",
-                "rent-payments"
-              ],
-              "query": [
-                {
-                  "key": "agreement_id",
-                  "value": "{{agreement_id}}",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "List rent payments for the authenticated tenant or landlord. Optionally filter by agreement_id."
-          }
-        },
-        {
-          "name": "Create Manual Rent Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"payment_month\": \"2026-07-01\",\n  \"amount\": \"15000.00\",\n  \"notes\": \"Paid in cash.\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/rent-payments/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "rent-payments"
-              ]
-            },
-            "description": "Record a manual rent payment. Tenants only."
-          }
-        },
-        {
-          "name": "Get Rent Payment Detail",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/rent-payments/{{rent_payment_id}}/",
-              "host": [
-                "{{base_url}}"
-              ],
+              "port": "8000",
               "path": [
                 "api",
                 "rent-payments",
-                "{{rent_payment_id}}"
+                ""
               ]
-            },
-            "description": "Retrieve a single rent payment record."
+            }
           }
         },
         {
@@ -1397,19 +1422,24 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
+                "value": "Bearer {{access_token}}"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/rent-payments/summary/?agreement_id={{agreement_id}}",
+              "raw": "http://127.0.0.1:8000/api/rent-payments/summary/?agreement_id={{agreement_id}}",
+              "protocol": "http",
               "host": [
-                "{{base_url}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
+              "port": "8000",
               "path": [
                 "api",
                 "rent-payments",
-                "summary"
+                "summary",
+                ""
               ],
               "query": [
                 {
@@ -1417,69 +1447,175 @@
                   "value": "{{agreement_id}}"
                 }
               ]
-            },
-            "description": "Get total paid, late fees, count, and latest payment info for a tenant agreement."
+            }
           }
         },
         {
-          "name": "Initiate eSewa Payment",
+          "name": "Create Rent Payment Record",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{access_token}}",
-                "type": "text"
+                "value": "Bearer {{access_token}}"
               },
               {
                 "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+                "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"payment_month\": \"2026-07-01\",\n  \"amount\": \"15000.00\",\n  \"notes\": \"Initiate eSewa payment.\"\n}"
+              "raw": "{\n  \"agreement\": \"{{agreement_id}}\",\n  \"payment_month\": \"2026-09-01\",\n  \"amount\": \"15000.00\",\n  \"notes\": \"Monthly rent statement payment\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/rent-payments/esewa/initiate/",
+              "raw": "http://127.0.0.1:8000/api/rent-payments/",
+              "protocol": "http",
               "host": [
-                "{{base_url}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
+              "port": "8000",
               "path": [
                 "api",
                 "rent-payments",
-                "esewa",
-                "initiate"
+                ""
               ]
-            },
-            "description": "Create an eSewa payment log and get form data for redirecting to eSewa."
+            }
           }
         },
         {
-          "name": "Verify eSewa Payment",
+          "name": "Initiate eSewa Rent Payment (HMAC Signature)",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment\": \"{{payment_id}}\"\n}"
+            },
             "url": {
-              "raw": "{{base_url}}/api/rent-payments/esewa/verify/?data={{esewa_data}}",
+              "raw": "http://127.0.0.1:8000/api/rent-payments/esewa/initiate/",
+              "protocol": "http",
               "host": [
-                "{{base_url}}"
+                "127",
+                "0",
+                "0",
+                "1"
               ],
+              "port": "8000",
               "path": [
                 "api",
                 "rent-payments",
                 "esewa",
-                "verify"
-              ],
-              "query": [
-                {
-                  "key": "data",
-                  "value": "{{esewa_data}}"
-                }
+                "initiate",
+                ""
               ]
+            }
+          }
+        },
+        {
+          "name": "Verify eSewa Payment Callback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": \"eyJ0cmFuc2FjdGlvbl91dWlkIjoiUEFZLTExMjIiLCJzdGF0dXMiOiJDT01BTEVURSIsInRvdGFsX2Ftb3VudCI6IjE1MDAwLjAwIiwic2lnbmF0dXJlIjoiZXhhbXBsZSJ9\"\n}"
             },
-            "description": "Verify the callback payload returned by eSewa after payment completion."
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/rent-payments/esewa/verify/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "rent-payments",
+                "esewa",
+                "verify",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Apply Late Fee (Rs 500)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/rent-payments/{{payment_id}}/apply-late-fee/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "rent-payments",
+                "{{payment_id}}",
+                "apply-late-fee",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Rent Receipt PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://127.0.0.1:8000/api/rent-payments/{{payment_id}}/receipt/",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8000",
+              "path": [
+                "api",
+                "rent-payments",
+                "{{payment_id}}",
+                "receipt",
+                ""
+              ]
+            }
           }
         }
       ]
