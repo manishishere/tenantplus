@@ -31,7 +31,7 @@ class ApplicationListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ('id', 'property', 'tenant', 'status', 'message', 'rejection_reason', 'created_at')
+        fields = ('id', 'property', 'tenant', 'status', 'message', 'offered_rent_amount', 'rejection_reason', 'created_at')
 
 
 class ApplicationDetailSerializer(serializers.ModelSerializer):
@@ -42,17 +42,18 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ('id', 'property', 'tenant', 'status', 'message', 'rejection_reason', 'created_at', 'updated_at')
+        fields = ('id', 'property', 'tenant', 'status', 'message', 'offered_rent_amount', 'rejection_reason', 'created_at', 'updated_at')
 
 
 class ApplicationCreateSerializer(serializers.ModelSerializer):
     """Writable serializer for new applications."""
 
     property = serializers.PrimaryKeyRelatedField(queryset=Property.objects.all())
+    offered_rent_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
 
     class Meta:
         model = Application
-        fields = ('property', 'message')
+        fields = ('property', 'message', 'offered_rent_amount')
 
     def validate_property(self, value):
         if not value.is_available:

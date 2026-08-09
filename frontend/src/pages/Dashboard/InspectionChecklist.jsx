@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import { 
   ClipboardCheck, 
   CheckCircle2, 
@@ -15,31 +16,87 @@ import {
   Scale,
   Flag,
   HelpCircle,
-  AlertCircle
+  AlertCircle,
+  Building2
 } from 'lucide-react';
 
 export default function InspectionChecklist() {
   const { role } = useAuth();
+  const [properties, setProperties] = useState([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
+  const [loadingProps, setLoadingProps] = useState(true);
   const [inspectionType, setInspectionType] = useState('move_in'); // 'move_in' or 'move_out'
-  const [items, setItems] = useState([
+  const [propertyChecklists, setPropertyChecklists] = useState({});
+
+  const DEFAULT_ITEMS = [
     { id: 1, category: 'Walls & Paint', status: 'good', notes: 'Freshly painted, no cracks or water stains.', photoUrl: null, isContested: false },
     { id: 2, category: 'Plumbing & Taps', status: 'good', notes: 'Water flow normal, bathroom taps leak-free.', photoUrl: null, isContested: false },
     { id: 3, category: 'Electrical & Switches', status: 'good', notes: 'All light switches and sockets working.', photoUrl: null, isContested: false },
     { id: 4, category: 'Doors & Window Locks', status: 'fair', notes: 'Main door lock functional; bedroom window latch stiff.', photoUrl: null, isContested: false },
     { id: 5, category: 'Flooring & Tiles', status: 'good', notes: 'Clean tiles, no broken pieces.', photoUrl: null, isContested: false }
-  ]);
+  ];
+
+  useEffect(() => {
+    fetchUserProperties();
+  }, []);
+
+  const fetchUserProperties = async () => {
+    try {
+      setLoadingProps(true);
+      let list = [];
+      if (role === 'landlord') {
+        const res = await api.get('/properties/my-listings/');
+        list = res.data.results || res.data || [];
+      } else {
+        const agRes = await api.get('/agreements/');
+        const agList = agRes.data.results || agRes.data || [];
+        const map = new Map();
+        agList.forEach(a => {
+          if (a.property && !map.has(a.property.id)) {
+            map.set(a.property.id, a.property);
+          }
+        });
+        list = Array.from(map.values());
+        if (list.length === 0) {
+          const publicRes = await api.get('/properties/');
+          list = publicRes.data.results || publicRes.data || [];
+        }
+      }
+      setProperties(list);
+      if (list.length > 0) {
+        setSelectedPropertyId(list[0].id);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingProps(false);
+    }
+  };
+
+  const activeProperty = properties.find(p => p.id === selectedPropertyId) || properties[0];
+  const items = propertyChecklists[selectedPropertyId] || DEFAULT_ITEMS;
+
+  const updateItems = (newItems) => {
+    setPropertyChecklists(prev => ({
+      ...prev,
+      [selectedPropertyId]: newItems
+    }));
+  };
+
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [showResolutionGuide, setShowResolutionGuide] = useState(true);
 
   const handleStatusChange = (id, newStatus) => {
-    setItems(items.map(item => item.id === id ? { ...item, status: newStatus } : item));
+    const updated = items.map(item => item.id === id ? { ...item, status: newStatus } : item);
+    updateItems(updated);
     setSavedSuccess(false);
     setErrorMsg('');
   };
 
   const handleNotesChange = (id, newNotes) => {
-    setItems(items.map(item => item.id === id ? { ...item, notes: newNotes } : item));
+    const updated = items.map(item => item.id === id ? { ...item, notes: newNotes } : item);
+    updateItems(updated);
     setSavedSuccess(false);
     setErrorMsg('');
   };
@@ -47,13 +104,15 @@ export default function InspectionChecklist() {
   const handlePhotoUpload = (id, file) => {
     if (!file) return;
     const objectUrl = URL.createObjectURL(file);
-    setItems(items.map(item => item.id === id ? { ...item, photoUrl: objectUrl } : item));
+    const updated = items.map(item => item.id === id ? { ...item, photoUrl: objectUrl } : item);
+    updateItems(updated);
     setSavedSuccess(false);
     setErrorMsg('');
   };
 
   const handleContestItem = (id) => {
-    setItems(items.map(item => item.id === id ? { ...item, isContested: !item.isContested } : item));
+    const updated = items.map(item => item.id === id ? { ...item, isContested: !item.isContested } : item);
+    updateItems(updated);
   };
 
   const handleSaveChecklist = () => {
@@ -113,6 +172,41 @@ export default function InspectionChecklist() {
           <Save size={18} /> Save Condition Audit
         </button>
       </div>
+
+      {/* Property Switcher for Multi-Property Landlords & Tenants */}
+      {properties.length > 0 && (
+        <div style={{ background: 'var(--bg-input)', padding: '0.85rem 1.15rem', borderRadius: '0.85rem', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Building2 size={20} color="var(--primary-indigo)" />
+            <div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Selected Inspection Property</div>
+              <strong style={{ fontSize: '1rem', color: 'var(--text-main)' }}>{activeProperty?.title || 'Selected Property'}</strong>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {properties.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedPropertyId(p.id)}
+                style={{
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.825rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: p.id === selectedPropertyId ? '1px solid var(--primary-indigo)' : '1px solid var(--border-color)',
+                  background: p.id === selectedPropertyId ? 'var(--primary-indigo)' : 'var(--bg-card)',
+                  color: p.id === selectedPropertyId ? '#ffffff' : 'var(--text-main)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {p.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* RESOLUTION ARCHITECTURE EXPLANATION BANNER */}
       {showResolutionGuide && (

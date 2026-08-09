@@ -105,6 +105,7 @@ export default function Properties() {
 
   // Application State
   const [applicationMessage, setApplicationMessage] = useState('');
+  const [offeredRent, setOfferedRent] = useState('');
   const [applicationSubmitLoading, setApplicationSubmitLoading] = useState(false);
   const [applicationSuccess, setApplicationSuccess] = useState(false);
   const [applicationError, setApplicationError] = useState(null);
@@ -174,7 +175,13 @@ export default function Properties() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/properties/');
+      let endpoint = '/properties/';
+      if (role === 'landlord') {
+        endpoint = '/properties/my-listings/';
+      } else if (role === 'admin') {
+        endpoint = '/properties/admin/all/';
+      }
+      const response = await api.get(endpoint);
       const dataList = response.data.results || response.data || [];
       setProperties(Array.isArray(dataList) ? dataList : []);
     } catch (err) {
@@ -184,6 +191,7 @@ export default function Properties() {
       setLoading(false);
     }
   };
+
 
   const handleSortChange = (e) => {
     const val = e.target.value;
@@ -421,7 +429,8 @@ export default function Properties() {
     try {
       await api.post('/applications/', {
         property: selectedProperty.id,
-        message: applicationMessage.trim() || 'I am interested in renting this property.'
+        message: applicationMessage.trim() || 'I am interested in renting this property.',
+        offered_rent_amount: offeredRent ? parseFloat(offeredRent) : null
       });
       setApplicationSuccess(true);
       setApplicationMessage('');
@@ -438,10 +447,14 @@ export default function Properties() {
     setShowDetailsModal(true);
     setApplicationSuccess(false);
     setApplicationError(null);
+    setOfferedRent(property.rent_amount ? String(property.rent_amount) : '');
 
     try {
       const response = await api.get(`/properties/${property.id}/`);
       setSelectedProperty(response.data);
+      if (response.data?.rent_amount) {
+        setOfferedRent(String(response.data.rent_amount));
+      }
     } catch (err) {
       console.error(err);
     }
@@ -1126,6 +1139,18 @@ export default function Properties() {
                           </div>
                         )}
                         
+                        <div>
+                          <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '0.2rem' }}>Proposed Rent Offer (Rs.) - Optional Negotiation</label>
+                          <input
+                            type="number"
+                            className="form-input"
+                            placeholder={`Listed Rent: Rs. ${selectedProperty.rent_amount}`}
+                            value={offeredRent}
+                            onChange={(e) => setOfferedRent(e.target.value)}
+                            style={{ fontSize: '0.85rem', padding: '0.55rem' }}
+                          />
+                        </div>
+
                         <textarea 
                           className="form-input" 
                           placeholder="Introduce yourself & specify move-in date..."

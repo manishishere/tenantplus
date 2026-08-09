@@ -247,13 +247,22 @@ def generate_utility_bill_pdf(bill):
         textColor=colors.white
     )
 
+    header_style = ParagraphStyle(
+        'TopHeader',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9,
+        leading=13,
+        textColor=colors.white
+    )
+
     logo_style = ParagraphStyle(
         'LogoBox',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
         fontSize=10,
-        leading=12,
-        alignment=TA_CENTER,
+        leading=13,
+        alignment=TA_RIGHT,
         textColor=colors.white
     )
 
@@ -261,9 +270,10 @@ def generate_utility_bill_pdf(bill):
         'BillTitle',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=24,
-        leading=28,
+        fontSize=22,
+        leading=26,
         alignment=TA_CENTER,
+        textColor=colors.HexColor('#1e40af'),
         spaceAfter=15,
         spaceBefore=15
     )
@@ -272,28 +282,28 @@ def generate_utility_bill_pdf(bill):
         'BillBody',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=10,
-        leading=14
+        fontSize=9.5,
+        leading=13.5
     )
 
     Story = []
 
-    # 1. Dark Header Banner (Navy container)
-    banner_left = Paragraph("inquire@tenantplus.com<br/>Kathmandu, Nepal<br/>+977-1-4444444<br/>tenantplus.com", header_style)
-    banner_right = Paragraph("<br/><b>YOUR<br/>LOGO</b>", logo_style)
+    # 1. Dark Blue Header Banner (Blue Theme #1e40af)
+    banner_left = Paragraph("<b>TENANTPLUS INC.</b><br/>inquire@tenantplus.com<br/>Kathmandu, Nepal &bull; +977-1-4444444<br/>tenantplus.com", header_style)
+    banner_right = Paragraph("<font size=15 color='#ffffff'><b>TENANTPLUS</b></font><br/><font size=8 color='#bfdbfe'>Rental Management Platform</font>", logo_style)
 
-    header_table = Table([[banner_left, banner_right]], colWidths=[380, 150])
+    header_table = Table([[banner_left, banner_right]], colWidths=[370, 160])
     header_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#2b3046')),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1e40af')), # Blue theme
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('PADDING', (0, 0), (-1, -1), 15),
-        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+        ('PADDING', (0, 0), (-1, -1), 14),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
     ]))
     Story.append(header_table)
     Story.append(Spacer(1, 15))
 
     # 2. Main Title
-    Story.append(Paragraph("Utility Bill", title_style))
+    Story.append(Paragraph("Utility & Rent Statement", title_style))
     Story.append(Spacer(1, 10))
 
     # 3. Company & Bill To Metadata
@@ -316,42 +326,95 @@ def generate_utility_bill_pdf(bill):
         f"<b>Email:</b> {tenant_email}<br/>"
         f"<b>Phone:</b> {tenant_phone}<br/><br/>"
         f"<b>Invoice Date:</b> {inv_date}<br/>"
-        f"<b>Due Date:</b> {due_date}"
+        f"<b>Payment Due Date:</b> {due_date}"
     )
     Story.append(Paragraph(meta_text, body_style))
     Story.append(Spacer(1, 15))
 
-    # 4. Itemized Charges Table
+    # 4. Itemized Charges Table (Complete Utility Details)
     total_val = float(bill.total_amount)
+    base_rent = float(agreement.rent_amount)
     
     table_data = [
         [
-            Paragraph("<b>Service Type</b>", body_style),
-            Paragraph("<b>Usage</b>", body_style),
+            Paragraph("<b>Service / Utility Item</b>", body_style),
+            Paragraph("<b>Usage / Readings</b>", body_style),
             Paragraph("<b>Rate (Rs.)</b>", body_style),
             Paragraph("<b>Amount Due (Rs.)</b>", body_style)
         ],
         [
-            Paragraph("General Utility Fee", body_style),
-            Paragraph("1 month", body_style),
-            Paragraph(f"{total_val:,.2f}", body_style),
-            Paragraph(f"{total_val:,.2f}", body_style)
+            Paragraph(f"Base Monthly Rent ({agreement.property.title})", body_style),
+            Paragraph("1 Month Lease", body_style),
+            Paragraph(f"{base_rent:,.2f}", body_style),
+            Paragraph(f"{base_rent:,.2f}", body_style)
         ]
     ]
 
-    item_table = Table(table_data, colWidths=[160, 110, 130, 130])
+    readings = bill.readings.all()
+    if readings.exists():
+        for r in readings:
+            prev = float(r.previous_reading)
+            curr = float(r.current_reading)
+            diff = max(0.0, curr - prev)
+
+            if r.utility_type == 'electricity':
+                rate = 12.0
+                charge = diff * rate
+                table_data.append([
+                    Paragraph("Electricity (NEA Meter Consumption)", body_style),
+                    Paragraph(f"{diff:.1f} kWh ({prev:.1f} &rarr; {curr:.1f})", body_style),
+                    Paragraph(f"{rate:,.2f}/unit", body_style),
+                    Paragraph(f"{charge:,.2f}", body_style)
+                ])
+            elif r.utility_type == 'water':
+                rate = 50.0
+                charge = diff * rate
+                table_data.append([
+                    Paragraph("Water Supply (KUKL Meter Consumption)", body_style),
+                    Paragraph(f"{diff:.1f} Units ({prev:.1f} &rarr; {curr:.1f})", body_style),
+                    Paragraph(f"{rate:,.2f}/unit", body_style),
+                    Paragraph(f"{charge:,.2f}", body_style)
+                ])
+            elif r.utility_type == 'internet':
+                table_data.append([
+                    Paragraph("High-Speed Fiber Internet Connection", body_style),
+                    Paragraph("Fixed Monthly Fee", body_style),
+                    Paragraph(f"{curr:,.2f}", body_style),
+                    Paragraph(f"{curr:,.2f}", body_style)
+                ])
+            elif r.utility_type == 'garbage':
+                table_data.append([
+                    Paragraph("Municipal Waste & Garbage Disposal Fee", body_style),
+                    Paragraph("Fixed Monthly Fee", body_style),
+                    Paragraph(f"{curr:,.2f}", body_style),
+                    Paragraph(f"{curr:,.2f}", body_style)
+                ])
+    else:
+        # Fallback if no individual readings record exists
+        rem = total_val - base_rent
+        if rem > 0:
+            table_data.append([
+                Paragraph("Combined Utility Charges (Electricity, Water, Trash)", body_style),
+                Paragraph("1 Month Statement", body_style),
+                Paragraph(f"{rem:,.2f}", body_style),
+                Paragraph(f"{rem:,.2f}", body_style)
+            ])
+
+    item_table = Table(table_data, colWidths=[170, 130, 110, 120])
     item_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f1f5f9')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')), # Soft blue table header
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
-        ('PADDING', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
+        ('PADDING', (0, 0), (-1, -1), 7),
     ]))
     Story.append(item_table)
     Story.append(Spacer(1, 15))
 
-    # 5. Total Amount Due
-    total_text = f"<b>Total Amount Due: Rs. {total_val:,.2f}</b>"
-    total_style = ParagraphStyle('TotalStyle', parent=body_style, fontName='Helvetica-Bold', fontSize=12, leading=16)
+    # 5. Total Amount Due Callout (Base Rent + Utility Statement Charges)
+    grand_total_statement = base_rent + total_val
+    total_text = f"<b>Total Statement Amount Due: Rs. {grand_total_statement:,.2f}</b>"
+    total_style = ParagraphStyle('TotalStyle', parent=body_style, fontName='Helvetica-Bold', fontSize=12, leading=16, textColor=colors.HexColor('#1e40af'))
     Story.append(Paragraph(total_text, total_style))
     Story.append(Spacer(1, 20))
 
@@ -393,8 +456,8 @@ def generate_receipt_pdf(payment):
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
         fontSize=10,
-        leading=12,
-        alignment=TA_CENTER,
+        leading=13,
+        alignment=TA_RIGHT,
         textColor=colors.white
     )
 
@@ -402,9 +465,10 @@ def generate_receipt_pdf(payment):
         'ReceiptTitle',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=24,
-        leading=28,
+        fontSize=22,
+        leading=26,
         alignment=TA_CENTER,
+        textColor=colors.HexColor('#1e40af'),
         spaceAfter=15,
         spaceBefore=15
     )
@@ -413,21 +477,22 @@ def generate_receipt_pdf(payment):
         'ReceiptBody',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=10,
-        leading=14
+        fontSize=9.5,
+        leading=13.5
     )
 
     Story = []
 
-    # 1. Dark Header Banner (Navy container matching exact reference image)
-    banner_left = Paragraph("inquire@tenantplus.com<br/>Kathmandu, Nepal<br/>+977-1-4444444<br/>tenantplus.com", header_style)
-    banner_right = Paragraph("<br/><b>YOUR<br/>LOGO</b>", logo_style)
+    # 1. Blue Header Banner (#1e40af)
+    banner_left = Paragraph("<b>TENANTPLUS INC.</b><br/>inquire@tenantplus.com<br/>Kathmandu, Nepal &bull; +977-1-4444444<br/>tenantplus.com", header_style)
+    banner_right = Paragraph("<font size=15 color='#ffffff'><b>TENANTPLUS</b></font><br/><font size=8 color='#bfdbfe'>Rental Management Platform</font>", logo_style)
 
-    header_table = Table([[banner_left, banner_right]], colWidths=[380, 150])
+    header_table = Table([[banner_left, banner_right]], colWidths=[370, 160])
     header_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#2b3046')),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#1e40af')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('PADDING', (0, 0), (-1, -1), 15),
+        ('PADDING', (0, 0), (-1, -1), 14),
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
     ]))
     Story.append(header_table)
     Story.append(Spacer(1, 10))
@@ -493,9 +558,10 @@ def generate_receipt_pdf(payment):
 
     item_table = Table(table_data, colWidths=[160, 110, 130, 130])
     item_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f1f5f9')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#dbeafe')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
         ('PADDING', (0, 0), (-1, -1), 8),
     ]))
     Story.append(item_table)
@@ -503,7 +569,7 @@ def generate_receipt_pdf(payment):
 
     # 5. Total Amount Paid Callout
     total_text = f"<b>Total Amount Paid: Rs. {total_paid:,.2f}</b>"
-    total_style = ParagraphStyle('TotalStyle', parent=body_style, fontName='Helvetica-Bold', fontSize=12, leading=16)
+    total_style = ParagraphStyle('TotalStyle', parent=body_style, fontName='Helvetica-Bold', fontSize=12, leading=16, textColor=colors.HexColor('#1e40af'))
     Story.append(Paragraph(total_text, total_style))
     Story.append(Spacer(1, 20))
 

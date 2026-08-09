@@ -12,3 +12,5 @@ venv_win/
 backend/db.sqlite3
 .DS_Store
 .vercel
+.coverage
+htmlcov/

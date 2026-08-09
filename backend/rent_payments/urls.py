@@ -4,6 +4,7 @@ from .views import (
     ApplyLateFeeView,
     EsewaInitiateView,
     EsewaVerifyView,
+    EsewaSimulateSuccessView,
     RentPaymentDetailView,
     RentPaymentListCreateView,
     RentPaymentSummaryView,
@@ -20,4 +21,5 @@ urlpatterns = [
     path('<uuid:id>/', RentPaymentDetailView.as_view()),
     path('<uuid:id>/receipt/', RentPaymentReceiptDownloadView.as_view()),
     path('<uuid:id>/apply-late-fee/', ApplyLateFeeView.as_view()),
+    path('<uuid:id>/simulate-success/', EsewaSimulateSuccessView.as_view()),
 ]

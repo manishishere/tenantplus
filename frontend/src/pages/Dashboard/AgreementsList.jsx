@@ -18,7 +18,8 @@ import {
   Lock,
   ChevronRight,
   Undo2,
-  MessageSquare
+  MessageSquare,
+  CreditCard
 } from 'lucide-react';
 
 export default function AgreementsList() {
@@ -53,6 +54,11 @@ export default function AgreementsList() {
   // Lease Renewal Grace Period & Status State
   const [renewalState, setRenewalState] = useState({});
 
+  // Bug 2 Fix — Renewal modal state variables (were missing, causing ReferenceError crash)
+  const [adjustRentChecked, setAdjustRentChecked] = useState(false);
+  const [rentEscalationPercent, setRentEscalationPercent] = useState(5);
+  const [renewalSubmitting, setRenewalSubmitting] = useState(false);
+
   // Advance payment countdown ticker
   useEffect(() => {
     const tick = setInterval(() => {
@@ -76,74 +82,6 @@ export default function AgreementsList() {
     const m = Math.floor((ms % 3600000) / 60000);
     const s = Math.floor((ms % 60000) / 1000);
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRenewalState((prev) => {
-        let updated = false;
-        const next = { ...prev };
-        Object.keys(next).forEach((id) => {
-          if (next[id]?.status === 'grace') {
-            updated = true;
-            if (next[id].timer > 1) {
-              next[id] = { ...next[id], timer: next[id].timer - 1 };
-            } else {
-              next[id] = { ...next[id], status: 'submitted', timer: 0 };
-            }
-          }
-        });
-        return updated ? next : prev;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleConfirmRenewal = (agreementId) => {
-    setRenewalState((prev) => ({
-      ...prev,
-      [agreementId]: { status: 'grace', timer: 30, requestedBy: role }
-    }));
-    setRenewalSuccess(true);
-  };
-
-  const handleUndoRenewal = (agreementId) => {
-    setRenewalState((prev) => ({
-      ...prev,
-      [agreementId]: { status: 'none', timer: 0, requestedBy: null }
-    }));
-  };
-
-  const handleAcceptRenewal = (agreementId) => {
-    setRenewalState((prev) => ({
-      ...prev,
-      [agreementId]: { status: 'accepted', timer: 0, requestedBy: prev[agreementId]?.requestedBy }
-    }));
-  };
-
-  const handleDeclineRenewal = (agreementId) => {
-    setRenewalState((prev) => ({
-      ...prev,
-      [agreementId]: { status: 'none', timer: 0, requestedBy: null }
-    }));
-  };
-
-  const handleStartChat = async (otherUserId, propertyId) => {
-    if (!otherUserId) {
-      alert('Unable to identify chat recipient.');
-      return;
-    }
-    try {
-      await api.post('/chat/conversations/', {
-        other_user_id: otherUserId,
-        property_id: propertyId
-      });
-      navigate('/dashboard/chat');
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.detail || 'Failed to start chat session.');
-    }
   };
 
   useEffect(() => {
@@ -193,13 +131,18 @@ export default function AgreementsList() {
 
   const handleDownloadPDF = async (agreementId) => {
     try {
+      const ag = agreements.find(a => a.id === agreementId) || activeAgreement;
+      const tName = (ag?.tenant?.full_name || ag?.tenant?.email || 'Tenant').replace(/\s+/g, '_');
+      const pTitle = (ag?.property?.title || 'Property').replace(/\s+/g, '_');
+      const filename = `House_Rent_Agreement_${tName}_${pTitle}.pdf`;
+
       const response = await api.get(`/agreements/${agreementId}/pdf/`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `House_Rent_Agreement_${agreementId}.pdf`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -227,29 +170,35 @@ export default function AgreementsList() {
     await fetchAgreements();
   };
 
-  const handleAcknowledge = async (agreementId, action, reason = '') => {
-    try {
-      await api.patch(`/agreements/${agreementId}/acknowledge/`, {
-        action: action,
-        reason: reason
-      });
-      setActiveRejectId(null);
-      setRejectReason('');
-      await fetchAgreements();
-    } catch (err) {
-      alert(err.response?.data?.detail || `Failed to ${action} agreement.`);
-    }
-  };
-
   const handlePayAdvance = async (agreementId) => {
     setAdvancePayLoading(true);
     setAdvancePayError('');
     try {
-      await api.post(`/agreements/${agreementId}/pay-advance/`);
-      await fetchAgreements();
+      const response = await api.post(`/agreements/${agreementId}/pay-advance/`);
+      const { payment_url, form_data } = response.data;
+
+      if (payment_url && form_data) {
+        // Redirect to eSewa checkout via hidden form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = payment_url;
+
+        Object.entries(form_data).forEach(([key, value]) => {
+          const hiddenField = document.createElement('input');
+          hiddenField.type = 'hidden';
+          hiddenField.name = key;
+          hiddenField.value = value;
+          form.appendChild(hiddenField);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+      } else {
+        // Edge case: already verified
+        await fetchAgreements();
+      }
     } catch (err) {
-      setAdvancePayError(err.response?.data?.detail || 'Failed to process advance payment.');
-    } finally {
+      setAdvancePayError(err.response?.data?.detail || 'Failed to initiate advance payment.');
       setAdvancePayLoading(false);
     }
   };
@@ -263,6 +212,54 @@ export default function AgreementsList() {
       alert(err.response?.data?.detail || 'Failed to apply late fee.');
     } finally {
       setLateFeeLoading(prev => ({ ...prev, [paymentId]: false }));
+    }
+  };
+
+  // Bug 2 Fix: API-backed renewal proposal
+  const handleProposeRenewal = async (agreementId) => {
+    setRenewalSubmitting(true);
+    try {
+      await api.post(`/agreements/${agreementId}/propose-renewal/`, {
+        increase_percent: adjustRentChecked ? rentEscalationPercent : 0
+      });
+      setShowRenewalModal(false);
+      setAdjustRentChecked(false);
+      setRentEscalationPercent(5);
+      await fetchAgreements();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to submit renewal proposal.');
+    } finally {
+      setRenewalSubmitting(false);
+    }
+  };
+
+  // Bug 2 Fix: API-backed renewal response
+  const handleRespondRenewal = async (agreementId, action) => {
+    setRenewalSubmitting(true);
+    try {
+      await api.post(`/agreements/${agreementId}/respond-renewal/`, { action });
+      await fetchAgreements();
+    } catch (err) {
+      alert(err.response?.data?.detail || `Failed to ${action} renewal.`);
+    } finally {
+      setRenewalSubmitting(false);
+    }
+  };
+
+  const handleStartChat = async (otherUserId, propertyId) => {
+    if (!otherUserId) {
+      alert('Unable to identify chat recipient.');
+      return;
+    }
+    try {
+      await api.post('/chat/conversations/', {
+        other_user_id: otherUserId,
+        property_id: propertyId
+      });
+      navigate('/dashboard/chat');
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || 'Failed to start chat session.');
     }
   };
 
@@ -292,7 +289,7 @@ export default function AgreementsList() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-            Tenancy Leases & Signature Hub
+            Tenancy Leases &amp; Signature Hub
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0.15rem 0 0 0' }}>
             Digital contracts signed under Nepalese House Rent Act 2075.
@@ -318,7 +315,7 @@ export default function AgreementsList() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                {ag.property.title} • Tenant: {ag.tenant?.full_name || ag.tenant?.email}
+                {ag.property.title} &bull; Tenant: {ag.tenant?.full_name || ag.tenant?.email}
               </button>
             ))}
           </div>
@@ -394,7 +391,7 @@ export default function AgreementsList() {
                   whiteSpace: 'nowrap'
                 }}
               >
-                {advancePayLoading ? 'Processing...' : `Pay Rs. ${parseFloat(activeAgreement.advance_amount || activeAgreement.rent_amount).toLocaleString()} Advance Now`}
+                {advancePayLoading ? 'Redirecting to eSewa...' : `Pay Rs. ${parseFloat(activeAgreement.advance_amount || activeAgreement.rent_amount).toLocaleString()} via eSewa`}
               </button>
               <span style={{ fontSize: '0.75rem', opacity: 0.8, textAlign: 'right' }}>
                 Deadline: {activeAgreement.advance_payment_deadline ? new Date(activeAgreement.advance_payment_deadline).toLocaleString() : 'N/A'}
@@ -439,7 +436,7 @@ export default function AgreementsList() {
               {/* Status Badge */}
               {activeAgreement.tenant_acknowledged && activeAgreement.landlord_acknowledged ? (
                 <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', padding: '0.3rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <CheckCircle2 size={13} /> Active & Verified
+                  <CheckCircle2 size={13} /> Active &amp; Verified
                 </span>
               ) : activeAgreement.signed_doc_status === 'rejected' ? (
                 <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', padding: '0.3rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
@@ -500,13 +497,13 @@ export default function AgreementsList() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Landlord Signature ({activeAgreement.landlord?.full_name || activeAgreement.landlord?.email || 'Landlord'}):</span>
                 <span style={{ fontWeight: 600, color: activeAgreement.landlord_acknowledged ? '#10b981' : '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                  {activeAgreement.landlord_acknowledged ? <><CheckCircle2 size={13} /> Approved & Signed</> : <><Clock size={13} /> Action Needed</>}
+                  {activeAgreement.landlord_acknowledged ? <><CheckCircle2 size={13} /> Approved &amp; Signed</> : <><Clock size={13} /> Action Needed</>}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Tenant Signature ({activeAgreement.tenant?.full_name || activeAgreement.tenant?.email}):</span>
                 <span style={{ fontWeight: 600, color: activeAgreement.tenant_acknowledged ? '#10b981' : '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                  {activeAgreement.tenant_acknowledged ? <><CheckCircle2 size={13} /> Approved & Signed</> : <><Clock size={13} /> Action Needed</>}
+                  {activeAgreement.tenant_acknowledged ? <><CheckCircle2 size={13} /> Approved &amp; Signed</> : <><Clock size={13} /> Action Needed</>}
                 </span>
               </div>
             </div>
@@ -523,8 +520,8 @@ export default function AgreementsList() {
               fontSize: '0.825rem'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: 700, color: 'var(--primary-indigo)' }}>
-                  👥 Legal Witnesses (Nepal Rent Act 2075):
+                <div style={{ fontWeight: 700, color: 'var(--primary-indigo)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ShieldCheck size={15} /> Legal Witnesses (Nepal Rent Act 2075):
                 </div>
                 <button
                   onClick={() => setShowWitnessModal(true)}
@@ -633,7 +630,7 @@ export default function AgreementsList() {
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Lock size={14} /> Signature Certified & Locked
+                      <Lock size={14} /> Signature Certified &amp; Locked
                     </span>
                     <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
                       <CheckCircle2 size={12} /> Verified
@@ -648,7 +645,9 @@ export default function AgreementsList() {
                       {activeAgreement.landlord_signature_url && activeAgreement.landlord_signature_url.startsWith('data:image') ? (
                         <img src={activeAgreement.landlord_signature_url} alt="Landlord Signature" style={{ maxHeight: '38px', objectFit: 'contain' }} />
                       ) : (
-                        <span style={{ fontSize: '0.725rem', color: '#10b981', fontWeight: 700 }}>✅ Certified</span>
+                        <span style={{ fontSize: '0.725rem', color: activeAgreement.landlord_acknowledged ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                          {activeAgreement.landlord_acknowledged ? 'Certified' : 'Pending'}
+                        </span>
                       )}
                     </div>
 
@@ -660,22 +659,22 @@ export default function AgreementsList() {
                       ) : activeAgreement.signed_document_url && activeAgreement.signed_document_url.startsWith('data:image') ? (
                         <img src={activeAgreement.signed_document_url} alt="Tenant Signature" style={{ maxHeight: '38px', objectFit: 'contain' }} />
                       ) : (
-                        <span style={{ fontSize: '0.725rem', color: '#10b981', fontWeight: 700 }}>✅ Certified</span>
+                        <span style={{ fontSize: '0.725rem', color: activeAgreement.tenant_acknowledged ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                          {activeAgreement.tenant_acknowledged ? 'Certified' : 'Pending'}
+                        </span>
                       )}
                     </div>
                   </div>
 
                   <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-                    Mutual legal signatures locked & binding under House Rent Act 2075.
+                    Mutual legal signatures locked &amp; binding under House Rent Act 2075.
                   </p>
                 </div>
 
                 {/* Primary Action 1: Pay Advance & Activate Lease (For Tenants) */}
                 {role === 'tenant' && activeAgreement.status !== 'active' && (
                   <button 
-                    onClick={() => {
-                      navigate('/dashboard');
-                    }}
+                    onClick={() => { navigate('/dashboard'); }}
                     className="btn-primary btn-emerald"
                     style={{
                       width: '100%',
@@ -689,14 +688,14 @@ export default function AgreementsList() {
                       boxShadow: '0 8px 20px rgba(16, 185, 129, 0.35)'
                     }}
                   >
-                    <CreditCard size={18} /> Pay Advance & Activate Lease ↗
+                    <CreditCard size={18} /> Pay Advance &amp; Activate Lease ↗
                   </button>
                 )}
 
                 {/* Primary Action 2: Download PDF */}
                 <button 
                   onClick={() => handleDownloadPDF(activeAgreement.id)}
-                  className={role === 'tenant' && activeAgreement.status !== 'active' ? "btn-secondary" : "btn-primary"}
+                  className={role === 'tenant' && activeAgreement.status !== 'active' ? 'btn-secondary' : 'btn-primary'}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -710,80 +709,45 @@ export default function AgreementsList() {
                   <Download size={16} /> Download Signed Legal PDF
                 </button>
 
-                {/* Direct Chat Button */}
-                <button
-                  onClick={() => handleStartChat(
-                    role === 'landlord' ? activeAgreement.tenant?.id : activeAgreement.landlord?.id,
-                    activeAgreement.property?.id
-                  )}
-                  style={{
-                    width: '100%',
-                    background: 'var(--pill-bg)',
-                    border: '1px solid var(--pill-border)',
-                    color: 'var(--primary-indigo)',
-                    padding: '0.65rem',
-                    borderRadius: '0.5rem',
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.4rem'
-                  }}
-                >
-                  <MessageSquare size={15} /> Chat with {role === 'landlord' ? activeAgreement.tenant?.full_name || 'Tenant' : activeAgreement.landlord?.full_name || 'Landlord'}
-                </button>
+                {/* Bug 1 Fix: Direct Chat Button — only show when agreement is fully active */}
+                {activeAgreement.status === 'active' && (
+                  <button
+                    onClick={() => handleStartChat(
+                      role === 'landlord' ? activeAgreement.tenant?.id : activeAgreement.landlord?.id,
+                      activeAgreement.property?.id
+                    )}
+                    style={{
+                      width: '100%',
+                      background: 'var(--pill-bg)',
+                      border: '1px solid var(--pill-border)',
+                      color: 'var(--primary-indigo)',
+                      padding: '0.65rem',
+                      borderRadius: '0.5rem',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem'
+                    }}
+                  >
+                    <MessageSquare size={15} /> Chat with {role === 'landlord' ? activeAgreement.tenant?.full_name || 'Tenant' : activeAgreement.landlord?.full_name || 'Landlord'}
+                  </button>
+                )}
 
-                {/* 1-Click Lease Renewal Bilateral Workflow */}
+                {/* 1-Click Lease Renewal Bilateral Workflow with 1-10% Slider */}
                 {(() => {
-                  const info = renewalState[activeAgreement.id] || { status: 'none', timer: 0, requestedBy: null };
+                  if (activeAgreement.renewal_status === 'proposed') {
+                    const isMyRequest = activeAgreement.renewal_proposed_by?.id === user?.id || activeAgreement.renewal_proposed_by === user?.id;
 
-                  // Case 1: Active 30s Grace Period (for user who requested it)
-                  if (info.status === 'grace') {
-                    const isMyRequest = info.requestedBy === role;
-                    if (isMyRequest) {
-                      return (
-                        <div style={{
-                          background: 'rgba(245, 158, 11, 0.12)',
-                          border: '1px solid rgba(245, 158, 11, 0.35)',
-                          color: '#fbbf24',
-                          padding: '0.75rem 0.85rem',
-                          borderRadius: '0.5rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.5rem'
-                        }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                            <Clock size={15} /> {role === 'landlord' ? 'Renewal Offer Sent' : 'Renewal Requested'} ({info.timer}s)
-                          </span>
-                          <button
-                            onClick={() => handleUndoRenewal(activeAgreement.id)}
-                            style={{
-                              background: 'rgba(239, 68, 68, 0.2)',
-                              border: '1px solid #ef4444',
-                              color: '#ef4444',
-                              padding: '0.25rem 0.6rem',
-                              borderRadius: '0.35rem',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}
-                          >
-                            <Undo2 size={12} /> Undo
-                          </button>
-                        </div>
-                      );
-                    }
-                  }
+                    const proposedRentStr = activeAgreement.renewal_proposed_rent 
+                      ? `Rs. ${parseFloat(activeAgreement.renewal_proposed_rent).toLocaleString()}`
+                      : `Rs. ${parseFloat(activeAgreement.rent_amount).toLocaleString()}`;
+                    const increaseStr = activeAgreement.renewal_increase_percent > 0 
+                      ? `(+${activeAgreement.renewal_increase_percent}% Escalation)` 
+                      : '(Same Rent Rate)';
 
-                  // Case 2: Submitted / Pending Approval
-                  if (info.status === 'submitted' || (info.status === 'grace' && info.requestedBy !== role)) {
-                    const isMyRequest = info.requestedBy === role;
                     if (isMyRequest) {
                       return (
                         <div style={{
@@ -800,36 +764,39 @@ export default function AgreementsList() {
                           justifyContent: 'center',
                           gap: '0.35rem'
                         }}>
-                          <Clock size={15} /> {role === 'landlord' ? '📩 Renewal Offer Sent to Tenant (Pending Response)' : '📩 Renewal Request Submitted & Pending Landlord Approval'}
+                          <Clock size={15} /> 1-Year Renewal Proposal Sent ({proposedRentStr} {increaseStr} &bull; Waiting for Response)
                         </div>
                       );
                     } else {
-                      // Other party requested it! Show Approve / Decline buttons!
-                      const requesterName = info.requestedBy === 'landlord' ? 'Landlord' : 'Tenant';
                       return (
                         <div style={{
                           background: 'var(--pill-bg)',
                           border: '1px solid var(--pill-border)',
-                          padding: '0.75rem',
-                          borderRadius: '0.5rem',
+                          padding: '0.85rem',
+                          borderRadius: '0.65rem',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '0.5rem'
+                          gap: '0.6rem'
                         }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary-indigo)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                            <RefreshCw size={14} /> 📩 {requesterName} Requested 1-Year Lease Renewal (+10%)
-                          </span>
+                          <div style={{ fontSize: '0.825rem', fontWeight: 800, color: 'var(--primary-indigo)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <RefreshCw size={15} /> 1-Year Lease Renewal Proposal
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                            Proposed Rent: <strong>{proposedRentStr} / mo</strong> <span style={{ color: '#10b981', fontWeight: 700 }}>{increaseStr}</span>
+                          </div>
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button
-                              onClick={() => handleAcceptRenewal(activeAgreement.id)}
+                              disabled={renewalSubmitting}
+                              onClick={() => handleRespondRenewal(activeAgreement.id, 'accept')}
                               className="btn-primary"
                               style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem', background: '#10b981', borderColor: '#10b981' }}
                             >
                               <CheckCircle2 size={13} /> Accept Renewal
                             </button>
                             <button
-                              onClick={() => handleDeclineRenewal(activeAgreement.id)}
-                              style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-muted)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
+                              disabled={renewalSubmitting}
+                              onClick={() => handleRespondRenewal(activeAgreement.id, 'reject')}
+                              style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 700 }}
                             >
                               Decline
                             </button>
@@ -839,8 +806,7 @@ export default function AgreementsList() {
                     }
                   }
 
-                  // Case 3: Accepted
-                  if (info.status === 'accepted') {
+                  if (activeAgreement.renewal_status === 'accepted') {
                     return (
                       <div style={{
                         background: 'rgba(16, 185, 129, 0.12)',
@@ -856,26 +822,22 @@ export default function AgreementsList() {
                         justifyContent: 'center',
                         gap: '0.35rem'
                       }}>
-                        <CheckCircle2 size={15} /> Lease Renewal Accepted (+10%)
+                        <CheckCircle2 size={15} /> 1-Year Lease Renewal Approved &amp; Active
                       </div>
                     );
                   }
 
-                  // Case 4: No request yet
                   return (
                     <button
-                      onClick={() => {
-                        setRenewalSuccess(false);
-                        setShowRenewalModal(true);
-                      }}
+                      onClick={() => setShowRenewalModal(true)}
                       style={{
                         width: '100%',
-                        background: 'var(--pill-bg)',
-                        border: '1px solid var(--pill-border)',
-                        color: 'var(--primary-indigo)',
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-main)',
                         padding: '0.65rem',
                         borderRadius: '0.5rem',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         fontSize: '0.85rem',
                         cursor: 'pointer',
                         display: 'flex',
@@ -884,7 +846,7 @@ export default function AgreementsList() {
                         gap: '0.4rem'
                       }}
                     >
-                      <RefreshCw size={15} /> Request 1-Year Lease Renewal (+10%)
+                      <RefreshCw size={15} color="var(--primary-indigo)" /> Request / Offer 1-Year Lease Renewal
                     </button>
                   );
                 })()}
@@ -970,64 +932,102 @@ export default function AgreementsList() {
       {/* LEASE RENEWAL REQUEST MODAL */}
       {showRenewalModal && activeAgreement && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(8px)' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '2rem', borderRadius: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '1.75rem', borderRadius: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'var(--pill-bg)', color: 'var(--primary-indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <RefreshCw size={22} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>1-Year Lease Renewal</h3>
-                <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', margin: 0 }}>House Rent Act 2075 Compliance</p>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <RefreshCw size={20} color="var(--primary-indigo)" /> 1-Year Lease Renewal Proposal
+              </h3>
+              <button 
+                onClick={() => setShowRenewalModal(false)}
+                style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                &times;
+              </button>
             </div>
 
-            {renewalSuccess ? (
-              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.5rem 0' }}>
-                <CheckCircle2 size={48} color="#10b981" style={{ margin: '0 auto' }} />
-                <h4 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#10b981' }}>Lease Renewal Submitted!</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-                  Renewal request for <strong>{activeAgreement.property.title}</strong> has been logged. The new escalated monthly rent is <strong>Rs. {(parseFloat(activeAgreement.rent_amount) * 1.1).toLocaleString()}</strong> (+10%).
-                </p>
-                <button onClick={() => setShowRenewalModal(false)} className="btn-primary" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem' }}>
-                  Close Window
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              
+              <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Property Listing:</span>
+                  <strong style={{ color: 'var(--text-main)' }}>{activeAgreement.property?.title}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Current Monthly Rent:</span>
+                  <strong style={{ color: 'var(--text-main)' }}>Rs. {parseFloat(activeAgreement.rent_amount).toLocaleString()} / mo</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Default Extension Term:</span>
+                  <span style={{ color: '#10b981', fontWeight: 700 }}>+1 Year (12 Months)</span>
+                </div>
+              </div>
+
+              {/* Checkbox Toggle to Adjust Rent Rate */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.875rem', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={adjustRentChecked}
+                  onChange={(e) => setAdjustRentChecked(e.target.checked)}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--primary-indigo)', cursor: 'pointer' }}
+                />
+                <span>Adjust Monthly Rent Rate on Renewal</span>
+              </label>
+
+              {/* Interactive 1% - 10% Range Slider */}
+              {adjustRentChecked && (
+                <div style={{ background: 'var(--bg-input)', padding: '1.15rem', borderRadius: '0.85rem', border: '1px solid var(--pill-border)', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 800, fontSize: '0.875rem' }}>
+                    <span>Rent Escalation Percentage:</span>
+                    <span style={{ color: 'var(--primary-indigo)', fontSize: '1.1rem', background: 'var(--pill-bg)', padding: '0.2rem 0.6rem', borderRadius: '0.4rem', border: '1px solid var(--pill-border)' }}>
+                      +{rentEscalationPercent}%
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="1"
+                    value={rentEscalationPercent}
+                    onChange={(e) => setRentEscalationPercent(parseInt(e.target.value))}
+                    style={{ width: '100%', accentColor: 'var(--primary-indigo)', cursor: 'pointer', height: '6px' }}
+                  />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    <span>1% (Min)</span>
+                    <span>5% (Standard)</span>
+                    <span>10% (Max)</span>
+                  </div>
+
+                  <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '0.75rem', fontSize: '0.9rem', fontWeight: 800, color: '#10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Proposed New Rent:</span>
+                    <span style={{ fontSize: '1.1rem' }}>
+                      Rs. {Math.round(parseFloat(activeAgreement.rent_amount) * (1 + rentEscalationPercent / 100)).toLocaleString()} / mo
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  disabled={renewalSubmitting}
+                  onClick={() => handleProposeRenewal(activeAgreement.id)}
+                  className="btn-primary"
+                  style={{ flex: 1, padding: '0.75rem', fontSize: '0.875rem', fontWeight: 800 }}
+                >
+                  {renewalSubmitting ? 'Submitting Proposal...' : 'Submit Renewal Proposal ↗'}
+                </button>
+                <button
+                  onClick={() => setShowRenewalModal(false)}
+                  style={{ padding: '0.75rem 1.25rem', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: '0.5rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Cancel
                 </button>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Property:</span>
-                    <strong style={{ color: 'var(--text-main)' }}>{activeAgreement.property.title}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Current Monthly Rent:</span>
-                    <span style={{ fontWeight: 600 }}>Rs. {parseFloat(activeAgreement.rent_amount).toLocaleString()}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border-color)', paddingTop: '0.5rem' }}>
-                    <span style={{ color: 'var(--primary-indigo)', fontWeight: 700 }}>New Rent (+10% Escalation):</span>
-                    <strong style={{ color: 'var(--primary-indigo)', fontSize: '1rem' }}>Rs. {(parseFloat(activeAgreement.rent_amount) * 1.1).toLocaleString()}</strong>
-                  </div>
-                </div>
 
-                <div style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid var(--pill-border)', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                  Under Nepalese law, standard 1-year tenancy extensions carry a 10% rent adjustment clause unless mutually revised by both parties.
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button onClick={() => setShowRenewalModal(false)} className="btn-primary" style={{ flex: 1, background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={() => handleConfirmRenewal(activeAgreement.id)} 
-                    className="btn-primary" 
-                    style={{ flex: 1 }}
-                  >
-                    Confirm Request
-                  </button>
-                </div>
-              </div>
-            )}
+            </div>
 
           </div>
         </div>

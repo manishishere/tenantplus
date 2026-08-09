@@ -101,9 +101,9 @@ class RentPaymentListCreateView(APIView):
 
     def get(self, request, *args, **kwargs):
         if request.user.role == 'tenant':
-            queryset = RentPayment.objects.filter(agreement__tenant=request.user)
+            queryset = RentPayment.objects.filter(agreement__tenant=request.user, paid_at__isnull=False)
         elif request.user.role == 'landlord':
-            queryset = RentPayment.objects.filter(agreement__landlord=request.user)
+            queryset = RentPayment.objects.filter(agreement__landlord=request.user, paid_at__isnull=False)
         else:
             queryset = RentPayment.objects.none()
 
@@ -173,7 +173,7 @@ class RentPaymentSummaryView(APIView):
         if request.user != agreement.tenant:
             return Response({'detail': 'You do not have access to this agreement.'}, status=status.HTTP_403_FORBIDDEN)
 
-        payments = RentPayment.objects.filter(agreement=agreement)
+        payments = RentPayment.objects.filter(agreement=agreement, paid_at__isnull=False)
         aggregates = payments.aggregate(
             total_paid=Sum('amount'),
             total_late_fees=Sum('late_fee'),
@@ -281,34 +281,14 @@ class EsewaVerifyView(APIView):
             # Check status in payload & test mode verification
             payload_status = str(decoded.get('status', '')).upper()
             
-            # Attempt remote verification call if available
-            server_verified = False
-            try:
-                verification_response = _call_esewa_verification(
-                    {
-                        'transaction_uuid': decoded['transaction_uuid'],
-                        'product_code': decoded.get('product_code', settings.ESEWA_MERCHANT_ID),
-                        'total_amount': decoded.get('total_amount'),
-                        'transaction_code': decoded.get('transaction_code', ''),
-                    }
-                )
-                server_status = str(
-                    verification_response.get('status')
-                    or verification_response.get('transaction_status')
-                    or ''
-                ).upper()
-                if server_status == 'COMPLETE':
-                    server_verified = True
-            except Exception:
-                # In sandbox/test environment (EPAYTEST), valid signature & status == COMPLETE is sufficient
-                if payload_status == 'COMPLETE' or settings.ESEWA_MERCHANT_ID == 'EPAYTEST':
-                    server_verified = True
-
-            if not server_verified and payload_status != 'COMPLETE':
+            # Enforce that payload_status MUST be COMPLETE
+            if payload_status != 'COMPLETE':
                 log.status = EsewaPaymentLog.STATUS_FAILED
                 log.raw_response = {'callback': decoded}
                 log.save(update_fields=['status', 'raw_response', 'updated_at'])
-                return Response({'detail': 'Payment verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'detail': f'Payment failed or incomplete (Status: {payload_status}).'}, status=status.HTTP_400_BAD_REQUEST)
+
+            server_verified = True
 
             # Mark log as COMPLETE
             from django.utils import timezone
@@ -319,11 +299,16 @@ class EsewaVerifyView(APIView):
 
             # Update actual RentPayment model to mark as paid & assign receipt number
             payment = log.payment
-            if not payment.paid_at:
-                payment.paid_at = timezone.now()
-            if not payment.receipt_no:
-                payment.receipt_no = f"REC-{log.transaction_uuid[:8].upper()}"
+            payment.paid_at = timezone.now()
+            payment.esewa_verified = True
             payment.save()
+
+            # Auto-activate agreement if this was an advance payment for a pending agreement
+            agreement = payment.agreement
+            if agreement.status == Agreement.STATUS_PENDING_ADVANCE:
+                agreement.advance_payment_status = Agreement.ADVANCE_STATUS_PAID
+                agreement.status = Agreement.STATUS_ACTIVE
+                agreement.save(update_fields=['advance_payment_status', 'status', 'updated_at'])
 
         return Response({
             'detail': 'Payment verified successfully',
@@ -331,7 +316,8 @@ class EsewaVerifyView(APIView):
             'receipt_no': payment.receipt_no,
             'amount': str(payment.amount),
             'transaction_code': log.transaction_code,
-            'payment_month': payment.payment_month.strftime('%Y-%m-%d')
+            'payment_month': payment.payment_month.strftime('%Y-%m-%d'),
+            'agreement_activated': payment.agreement.status == Agreement.STATUS_ACTIVE,
         }, status=status.HTTP_200_OK)
 
 
@@ -345,6 +331,9 @@ class RentPaymentReceiptDownloadView(APIView):
         if request.user != payment.agreement.tenant and request.user != payment.agreement.landlord:
             return Response({'detail': 'You do not have access to this payment receipt.'}, status=status.HTTP_403_FORBIDDEN)
         
+        if not payment.paid_at or not payment.receipt_no:
+            return Response({'detail': 'Payment receipt is only available after payment has been successfully verified.'}, status=status.HTTP_400_BAD_REQUEST)
+
         pdf_data = generate_receipt_pdf(payment)
         response = HttpResponse(pdf_data, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="Receipt_{payment.receipt_no or payment.id}.pdf"'
@@ -389,11 +378,17 @@ class ApplyLateFeeView(APIView):
         if payment.late_fee_applied_by_landlord:
             return Response({'detail': 'Late fee has already been applied to this payment.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Only allow if 30+ days past the payment month
-        days_overdue = (date.today() - payment.payment_month).days
-        if days_overdue < 30:
+        # Allow if past the 9-day grace window after agreement cycle start date
+        from datetime import timedelta
+        start_day = agreement.start_date.day
+        try:
+            due_date = payment.payment_month.replace(day=min(start_day, 28)) + timedelta(days=9)
+        except Exception:
+            due_date = payment.payment_month + timedelta(days=9)
+
+        if date.today() <= due_date:
             return Response(
-                {'detail': f'Late fee can only be applied after 30 days overdue. Currently {days_overdue} days past due.'},
+                {'detail': f'Late fee can only be applied after the payment grace period (until {due_date.strftime("%b %d, %Y")}).'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -403,3 +398,29 @@ class ApplyLateFeeView(APIView):
         payment.save(update_fields=['late_fee', 'is_late', 'late_fee_applied_by_landlord'])
 
         return Response(RentPaymentDetailSerializer(payment).data, status=status.HTTP_200_OK)
+
+
+class EsewaSimulateSuccessView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        payment = get_object_or_404(RentPayment, id=kwargs['id'])
+        if request.user != payment.agreement.tenant:
+            return Response({'detail': 'You do not have access to this payment.'}, status=status.HTTP_403_FORBIDDEN)
+
+        from django.utils import timezone
+        payment.paid_at = timezone.now()
+        payment.esewa_verified = True
+        payment.save()
+
+        from utilities.models import UtilityBill
+        bill = UtilityBill.objects.filter(agreement=payment.agreement, status='unpaid').first()
+        if bill:
+            bill.status = 'paid'
+            bill.save()
+
+        return Response({
+            'detail': 'Test payment verified successfully',
+            'payment_id': str(payment.id),
+            'receipt_no': payment.receipt_no
+        }, status=status.HTTP_200_OK)

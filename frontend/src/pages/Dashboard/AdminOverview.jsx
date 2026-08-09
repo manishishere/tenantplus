@@ -50,10 +50,16 @@ export default function AdminOverview() {
 
   const [systemAnnouncement, setSystemAnnouncement] = useState('');
   const [activeBroadcast, setActiveBroadcast] = useState('');
-  const [announcementMsg, setAnnouncementMsg] = useState({ type: '', text: '' });
+  const [announcementMsg, setAnnouncementMsg] = useState(null);
   const [announcementLoading, setAnnouncementLoading] = useState(false);
 
-  const [actionMsg, setActionMsg] = useState({ type: '', text: '' });
+  const [actionMsg, setActionMsg] = useState(null);
+
+  const [agreementsList, setAgreementsList] = useState([]);
+  const [loadingAgreements, setLoadingAgreements] = useState(false);
+
+  const [maintenanceList, setMaintenanceList] = useState([]);
+  const [loadingMaintenance, setLoadingMaintenance] = useState(false);
 
   useEffect(() => {
     fetchMetrics();
@@ -69,7 +75,35 @@ export default function AdminOverview() {
     if (activeTab === 'properties') fetchProperties();
     if (activeTab === 'rent') fetchRentPayments();
     if (activeTab === 'disputes') fetchDisputes();
+    if (activeTab === 'agreements') fetchAgreementsList();
+    if (activeTab === 'maintenance') fetchMaintenanceList();
   }, [activeTab, kycFilter, userRoleFilter, userSearchQuery, propSearchQuery]);
+
+  const fetchAgreementsList = async () => {
+    setLoadingAgreements(true);
+    try {
+      const res = await api.get('/agreements/admin/all/');
+      const items = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      setAgreementsList(items);
+    } catch (err) {
+      console.error('Failed to fetch admin agreements:', err);
+    } finally {
+      setLoadingAgreements(false);
+    }
+  };
+
+  const fetchMaintenanceList = async () => {
+    setLoadingMaintenance(true);
+    try {
+      const res = await api.get('/maintenance/');
+      const items = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      setMaintenanceList(items);
+    } catch (err) {
+      console.error('Failed to fetch maintenance list:', err);
+    } finally {
+      setLoadingMaintenance(false);
+    }
+  };
 
   const fetchMetrics = async () => {
     try {
@@ -316,12 +350,17 @@ export default function AdminOverview() {
   };
 
   const filteredKycDocs = kycDocs.filter(d => kycFilter === 'all' || d.status === kycFilter);
-  const filteredProperties = propertiesList.filter(p => 
-    !propSearchQuery || 
-    p.title?.toLowerCase().includes(propSearchQuery.toLowerCase()) || 
-    p.district?.toLowerCase().includes(propSearchQuery.toLowerCase()) ||
-    p.landlord_email?.toLowerCase().includes(propSearchQuery.toLowerCase())
-  );
+  const filteredProperties = propertiesList.filter(p => {
+    if (!propSearchQuery) return true;
+    const q = propSearchQuery.toLowerCase();
+    return (
+      (p.title && p.title.toLowerCase().includes(q)) ||
+      (p.district && p.district.toLowerCase().includes(q)) ||
+      (p.landlord_email && p.landlord_email.toLowerCase().includes(q)) ||
+      (p.landlord_name && p.landlord_name.toLowerCase().includes(q)) ||
+      (typeof p.landlord === 'object' && p.landlord?.email && p.landlord.email.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -410,8 +449,8 @@ export default function AdminOverview() {
         </div>
       )}
 
-      {/* Action Toast Notice */}
-      {actionMsg && (
+      {/* Action Toast Notice — Bug 5 Fix: only render if actionMsg and text exist */}
+      {actionMsg && actionMsg.text && (
         <div style={{
           background: actionMsg.type === 'success' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
           border: `1px solid ${actionMsg.type === 'success' ? '#10b981' : '#ef4444'}`,
@@ -419,7 +458,7 @@ export default function AdminOverview() {
           padding: '0.95rem 1.25rem',
           borderRadius: '0.75rem',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
           fontWeight: 600
         }}>
@@ -505,6 +544,8 @@ export default function AdminOverview() {
               { id: 'kyc', label: `KYC Review Queue (${pendingKycCount})`, icon: ShieldCheck },
               { id: 'users', label: 'User Directory', icon: Users },
               { id: 'properties', label: 'Property Moderation', icon: Building2 },
+              { id: 'agreements', label: 'Lease Agreements', icon: FileText },
+              { id: 'maintenance', label: 'Maintenance Oversight', icon: Zap },
               { id: 'rent', label: 'Escrow Rent Ledger', icon: DollarSign },
               { id: 'disputes', label: 'Dispute Resolution', icon: AlertTriangle },
             ].map(tab => (
@@ -693,7 +734,7 @@ export default function AdminOverview() {
               </div>
             )}
 
-            {announcementMsg.text && (
+            {announcementMsg && announcementMsg.text && (
               <div style={{
                 padding: '0.75rem 1rem',
                 borderRadius: '0.5rem',
@@ -1291,6 +1332,146 @@ export default function AdminOverview() {
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.5rem 0' }}>{d.description}</p>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Lease Agreements Oversight — Bug 7 Fix */}
+      {activeTab === 'agreements' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800 }}>Tenancy Lease Agreements Oversight</h2>
+              <p style={{ color: 'var(--text-muted)', margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>
+                Full executive audit of all active, pending, and expired digital tenancy contracts under House Rent Act 2075.
+              </p>
+            </div>
+            <button 
+              onClick={() => exportToCSV('tenantplus_lease_agreements', agreementsList, ['id', 'status', 'start_date', 'end_date', 'rent_amount'])}
+              className="btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+            >
+              <Download size={15} /> Export CSV
+            </button>
+          </div>
+
+          {loadingAgreements ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading active tenancy agreements...</div>
+          ) : agreementsList.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No lease agreements registered.</div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.825rem', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '0.85rem' }}>Property</th>
+                    <th style={{ padding: '0.85rem' }}>Tenant</th>
+                    <th style={{ padding: '0.85rem' }}>Landlord</th>
+                    <th style={{ padding: '0.85rem' }}>Monthly Rent</th>
+                    <th style={{ padding: '0.85rem' }}>Status</th>
+                    <th style={{ padding: '0.85rem' }}>Term Period</th>
+                    <th style={{ padding: '0.85rem', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agreementsList.map(ag => (
+                    <tr key={ag.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '0.85rem', fontWeight: 700 }}>{ag.property?.title || 'Rental Property'}</td>
+                      <td style={{ padding: '0.85rem' }}>{ag.tenant?.full_name || ag.tenant?.email}</td>
+                      <td style={{ padding: '0.85rem' }}>{ag.landlord?.full_name || ag.landlord?.email}</td>
+                      <td style={{ padding: '0.85rem', fontWeight: 800, color: 'var(--primary-indigo)' }}>Rs. {parseFloat(ag.rent_amount).toLocaleString()}</td>
+                      <td style={{ padding: '0.85rem' }}>
+                        <span style={{ padding: '0.2rem 0.6rem', borderRadius: '1rem', background: ag.status === 'active' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: ag.status === 'active' ? '#10b981' : '#f59e0b', fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase' }}>
+                          {ag.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.85rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {ag.start_date} to {ag.end_date}
+                      </td>
+                      <td style={{ padding: '0.85rem', textAlign: 'right' }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await api.get(`/agreements/${ag.id}/pdf/`, { responseType: 'blob' });
+                              const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `Agreement_${ag.id.slice(0, 8)}.pdf`;
+                              a.click();
+                            } catch (e) { alert('Failed to download PDF'); }
+                          }}
+                          style={{ padding: '0.35rem 0.75rem', borderRadius: '0.375rem', fontSize: '0.775rem', fontWeight: 700, background: 'var(--pill-bg)', color: 'var(--primary-indigo)', border: '1px solid var(--pill-border)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                        >
+                          <Download size={13} /> PDF
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Maintenance Requests Oversight — Bug 8 Fix */}
+      {activeTab === 'maintenance' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800 }}>Platform Maintenance Oversight</h2>
+              <p style={{ color: 'var(--text-muted)', margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>
+                Track repair issues, urgency levels, and landlord resolution status across registered units.
+              </p>
+            </div>
+            <button 
+              onClick={() => exportToCSV('tenantplus_maintenance_requests', maintenanceList, ['id', 'title', 'category', 'priority', 'status', 'created_at'])}
+              className="btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+            >
+              <Download size={15} /> Export CSV
+            </button>
+          </div>
+
+          {loadingMaintenance ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading maintenance requests...</div>
+          ) : maintenanceList.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No maintenance requests logged.</div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.825rem', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '0.85rem' }}>Ticket Title</th>
+                    <th style={{ padding: '0.85rem' }}>Category</th>
+                    <th style={{ padding: '0.85rem' }}>Priority</th>
+                    <th style={{ padding: '0.85rem' }}>Status</th>
+                    <th style={{ padding: '0.85rem' }}>Logged Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {maintenanceList.map(m => (
+                    <tr key={m.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '0.85rem', fontWeight: 700 }}>{m.title}</td>
+                      <td style={{ padding: '0.85rem', textTransform: 'capitalize' }}>{m.category || 'General'}</td>
+                      <td style={{ padding: '0.85rem' }}>
+                        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '0.4rem', background: m.priority === 'urgent' ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: m.priority === 'urgent' ? '#ef4444' : '#3b82f6', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                          {m.priority}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.85rem' }}>
+                        <span style={{ padding: '0.2rem 0.6rem', borderRadius: '1rem', background: m.status === 'completed' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: m.status === 'completed' ? '#10b981' : '#f59e0b', fontWeight: 800, fontSize: '0.78rem', textTransform: 'uppercase' }}>
+                          {m.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.85rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {m.created_at ? new Date(m.created_at).toLocaleDateString() : 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

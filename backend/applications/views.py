@@ -118,6 +118,7 @@ class ApplicationStatusUpdateView(APIView):
                 from django.utils import timezone
                 from datetime import timedelta
 
+                agreed_rent = application.offered_rent_amount or application.property.rent_amount
                 advance_deadline = timezone.now() + timedelta(hours=24)
 
                 Agreement.objects.create(
@@ -125,8 +126,8 @@ class ApplicationStatusUpdateView(APIView):
                     landlord=application.property.landlord,
                     property=application.property,
                     application=application,
-                    rent_amount=application.property.rent_amount,
-                    advance_amount=application.property.rent_amount,  # 1 month advance
+                    rent_amount=agreed_rent,
+                    advance_amount=agreed_rent,  # 1 month advance
                     status=Agreement.STATUS_PENDING_ADVANCE,
                     advance_payment_status=Agreement.ADVANCE_STATUS_PENDING,
                     advance_payment_deadline=advance_deadline,

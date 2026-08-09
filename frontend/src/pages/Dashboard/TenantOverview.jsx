@@ -25,9 +25,28 @@ export default function TenantOverview() {
   const [error, setError] = useState('');
   const [paying, setPaying] = useState(false);
 
+  const [pendingAdvanceAgreements, setPendingAdvanceAgreements] = useState([]);
+  const [advanceCountdowns, setAdvanceCountdowns] = useState({});
+  const [utilityBills, setUtilityBills] = useState([]);
+
   useEffect(() => {
     fetchTenantData();
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const nextCountdowns = {};
+      pendingAdvanceAgreements.forEach(ag => {
+        if (ag.advance_payment_deadline) {
+          const diff = new Date(ag.advance_payment_deadline) - now;
+          nextCountdowns[ag.id] = diff > 0 ? diff : 0;
+        }
+      });
+      setAdvanceCountdowns(nextCountdowns);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [pendingAdvanceAgreements]);
 
   const fetchTenantData = async () => {
     try {
@@ -37,21 +56,70 @@ export default function TenantOverview() {
       const agreementsResponse = await api.get('/agreements/');
       const agreementsList = agreementsResponse.data.results || agreementsResponse.data || [];
       const active = agreementsList.find(a => a.status === 'active');
+      const pendingAdvance = agreementsList.filter(a => a.status === 'pending_advance');
       
-      if (active) {
-        setAgreement(active);
+      setPendingAdvanceAgreements(pendingAdvance);
+
+      const targetAgreement = active || pendingAdvance[0] || agreementsList[0];
+      
+      if (targetAgreement) {
+        setAgreement(targetAgreement);
         
-        const summaryResponse = await api.get(`/rent-payments/summary/?agreement_id=${active.id}`);
-        setSummary(summaryResponse.data);
-        
-        const paymentsResponse = await api.get(`/rent-payments/?agreement_id=${active.id}`);
-        setPayments(paymentsResponse.data.results || paymentsResponse.data || []);
+        if (targetAgreement.status === 'active') {
+          const summaryResponse = await api.get(`/rent-payments/summary/?agreement_id=${targetAgreement.id}`);
+          setSummary(summaryResponse.data);
+          
+          const paymentsResponse = await api.get(`/rent-payments/?agreement_id=${targetAgreement.id}`);
+          setPayments(paymentsResponse.data.results || paymentsResponse.data || []);
+
+          try {
+            const billsRes = await api.get('/utilities/bills/');
+            const billsList = billsRes.data.results || billsRes.data || [];
+            setUtilityBills(billsList.filter(b => b.agreement === targetAgreement.id || b.agreement?.id === targetAgreement.id));
+          } catch (e) {
+            console.error(e);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
       setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePayAdvanceDirect = async (agreementId) => {
+    try {
+      setPaying(true);
+      setError('');
+      const response = await api.post(`/agreements/${agreementId}/pay-advance/`);
+      const { payment_url, form_data } = response.data;
+
+      if (payment_url && form_data) {
+        // Redirect to eSewa checkout via hidden form
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = payment_url;
+
+        Object.entries(form_data).forEach(([key, value]) => {
+          const hiddenField = document.createElement('input');
+          hiddenField.type = 'hidden';
+          hiddenField.name = key;
+          hiddenField.value = value;
+          form.appendChild(hiddenField);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+      } else {
+        // Edge case: payment was already verified — backend returned agreement data
+        await fetchTenantData();
+        alert('Advance payment already verified! Tenancy agreement is now ACTIVE.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to initiate advance payment.');
+      setPaying(false);
     }
   };
 
@@ -67,6 +135,10 @@ export default function TenantOverview() {
   const calculateNextDue = () => {
     if (!agreement) return null;
     
+    // Only show due when landlord has generated an unpaid utility bill
+    const unpaidBill = utilityBills.find(b => b.status === 'unpaid' || b.status === 'overdue');
+    if (!unpaidBill) return null;
+
     let dueMonthDate;
     if (summary && summary.last_payment_month) {
       const lastMonth = new Date(summary.last_payment_month);
@@ -77,11 +149,11 @@ export default function TenantOverview() {
     }
 
     const today = new Date();
-    const gracePeriodLimit = new Date(dueMonthDate.getFullYear(), dueMonthDate.getMonth(), 7);
+    const gracePeriodLimit = new Date(unpaidBill.due_date);
     const isLate = today > gracePeriodLimit;
     const lateFee = isLate ? 500 : 0;
-    const baseRent = parseFloat(agreement.rent_amount);
-    const totalDue = baseRent + lateFee;
+    const statementAmount = parseFloat(unpaidBill.total_amount || 0);
+    const totalDue = statementAmount + lateFee;
 
     const formattedMonth = dueMonthDate.toLocaleDateString('en-US', {
       year: 'numeric',
@@ -93,10 +165,12 @@ export default function TenantOverview() {
     return {
       monthString,
       formattedMonth,
-      baseRent,
+      unpaidBill,
+      statementAmount,
       lateFee,
       totalDue,
-      isLate
+      isLate,
+      gracePeriodLimit
     };
   };
 
@@ -145,22 +219,13 @@ export default function TenantOverview() {
       setPaying(true);
       setError('');
 
-      const existingPayment = payments.find(
-        p => p.payment_month.substring(0, 7) === nextDue.monthString.substring(0, 7)
-      );
-
-      let paymentId;
-      if (existingPayment) {
-        paymentId = existingPayment.id;
-      } else {
-        const createResponse = await api.post('/rent-payments/', {
-          agreement: agreement.id,
-          payment_month: nextDue.monthString,
-          amount: nextDue.baseRent,
-          notes: 'Rent payment initiated via eSewa checkout'
-        });
-        paymentId = createResponse.data.id;
-      }
+      const createResponse = await api.post('/rent-payments/', {
+        agreement: agreement.id,
+        payment_month: nextDue.monthString,
+        amount: nextDue.totalDue,
+        notes: 'Rent payment initiated via eSewa checkout'
+      });
+      const paymentId = createResponse.data.id;
 
       const initiateResponse = await api.post('/rent-payments/esewa/initiate/', {
         payment: paymentId
@@ -190,6 +255,8 @@ export default function TenantOverview() {
     }
   };
 
+
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -212,7 +279,7 @@ export default function TenantOverview() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       
-      {/* 1. HERO WELCOME HEADER (WARM MINIMAL) */}
+      {/* 1. HERO WELCOME HEADER */}
       <div className="glass-panel" style={{ 
         padding: '2.25rem', 
         backgroundColor: 'var(--bg-card)',
@@ -258,7 +325,6 @@ export default function TenantOverview() {
             </p>
           </div>
 
-          {/* Quick Stat Pill Widget */}
           {agreement && (
             <div style={{
               display: 'flex',
@@ -312,6 +378,44 @@ export default function TenantOverview() {
         </div>
       ) : (
         <>
+          {/* Advance Payment Banner */}
+          {pendingAdvanceAgreements.length > 0 && (
+            <div style={{
+              background: 'linear-gradient(135deg, #b45309 0%, #92400e 100%)',
+              color: '#ffffff',
+              padding: '1.25rem 1.5rem',
+              borderRadius: '1rem',
+              boxShadow: '0 8px 24px rgba(180, 83, 9, 0.3)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.25rem' }}>
+                  ⚠️ Advance Payment Required to Activate Tenancy
+                </div>
+                <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>
+                  Property: <strong>{pendingAdvanceAgreements[0].property?.title}</strong> &bull; Advance Rent: <strong>Rs. {parseFloat(pendingAdvanceAgreements[0].advance_amount || pendingAdvanceAgreements[0].rent_amount).toLocaleString()}</strong>
+                </div>
+                {advanceCountdowns[pendingAdvanceAgreements[0].id] !== undefined && (
+                  <div style={{ marginTop: '0.4rem', fontWeight: 800, fontSize: '1.2rem', fontFamily: 'monospace' }}>
+                    Countdown: {Math.floor(advanceCountdowns[pendingAdvanceAgreements[0].id] / 3600000)}h {Math.floor((advanceCountdowns[pendingAdvanceAgreements[0].id] % 3600000) / 60000)}m {Math.floor((advanceCountdowns[pendingAdvanceAgreements[0].id] % 60000) / 1000)}s remaining
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => handlePayAdvanceDirect(pendingAdvanceAgreements[0].id)}
+                disabled={paying}
+                className="btn-primary"
+                style={{ background: '#ffffff', color: '#b45309', border: 'none', fontWeight: 800, padding: '0.75rem 1.35rem' }}
+              >
+                {paying ? 'Redirecting to eSewa...' : 'Pay Advance via eSewa ↗'}
+              </button>
+            </div>
+          )}
+
           {/* 2. CARDS GRID */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
             
@@ -362,8 +466,8 @@ export default function TenantOverview() {
               </button>
             </div>
 
-            {/* Next Rent Due Card */}
-            {nextDue && (
+            {/* Rent Due Card */}
+            {nextDue ? (
               <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '280px' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
@@ -377,15 +481,17 @@ export default function TenantOverview() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.925rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Base Monthly Rent</span>
-                      <span style={{ fontWeight: 600 }}>Rs. {nextDue.baseRent.toLocaleString()}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)', padding: '0.55rem 0.75rem', borderRadius: '0.5rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+                        <Receipt size={16} /> Landlord Utility &amp; Rent Statement
+                      </span>
+                      <span style={{ fontWeight: 800 }}>Rs. {nextDue.statementAmount.toLocaleString()}</span>
                     </div>
-                    
+
                     {nextDue.isLate && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '0.4rem 0.65rem', borderRadius: '0.5rem' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
-                          <AlertCircle size={15} /> Late Charge (Past 7th)
+                          <AlertCircle size={15} /> Late Fee (Past Grace Window)
                         </span>
                         <span style={{ fontWeight: 700 }}>+ Rs. {nextDue.lateFee}</span>
                       </div>
@@ -404,20 +510,32 @@ export default function TenantOverview() {
                   onClick={handlePayEsewa} 
                   disabled={paying}
                   className="btn-primary btn-emerald" 
-                  style={{ 
-                    width: '100%', 
-                    display: 'flex', 
-                    gap: '0.5rem', 
-                    marginTop: '1.5rem',
-                    justify: 'center'
-                  }}
+                  style={{ width: '100%', display: 'flex', gap: '0.5rem', marginTop: '1.5rem', justifyContent: 'center' }}
                 >
                   <ArrowRight size={18} />
                   {paying ? 'Redirecting to eSewa...' : `Pay Rs. ${nextDue.totalDue.toLocaleString()} via eSewa`}
                 </button>
               </div>
+            ) : (
+              <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '280px', textAlign: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: '56px', height: '56px',
+                  borderRadius: '50%',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <CheckCircle2 size={28} color="#10B981" />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '0.4rem' }}>Rent Due Status</span>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0 0 0.4rem 0' }}>No Payment Due</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0, lineHeight: 1.55, maxWidth: '260px' }}>
+                    Your landlord hasn't generated a utility bill yet. You'll be notified here once a statement is ready.
+                  </p>
+                </div>
+              </div>
             )}
-            
           </div>
 
           {/* 3. ESCROW PROTECTION SAFETY BANNER */}
@@ -492,11 +610,11 @@ export default function TenantOverview() {
                 Recent Rent Payment Ledger
               </h3>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                {payments.length} Payment Record(s)
+                {payments.filter(p => p.paid_at && p.receipt_no).length} Verified Payment(s)
               </span>
             </div>
             
-            {payments.length === 0 ? (
+            {payments.filter(p => p.paid_at && p.receipt_no).length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2.5rem 0', color: 'var(--text-muted)' }}>
                 <Receipt size={36} color="var(--text-muted)" style={{ opacity: 0.35, marginBottom: '0.5rem' }} />
                 <p style={{ margin: 0, fontSize: '0.9rem' }}>No payment records logged for this lease agreement yet.</p>
@@ -508,7 +626,7 @@ export default function TenantOverview() {
                     <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.825rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       <th style={{ padding: '0.85rem 0.5rem' }}>Payment Month</th>
                       <th style={{ padding: '0.85rem 0.5rem' }}>Receipt No</th>
-                      <th style={{ padding: '0.85rem 0.5rem' }}>Rent Paid</th>
+                      <th style={{ padding: '0.85rem 0.5rem' }}>Statement Amount</th>
                       <th style={{ padding: '0.85rem 0.5rem' }}>Late Fee</th>
                       <th style={{ padding: '0.85rem 0.5rem' }}>Status</th>
                       <th style={{ padding: '0.85rem 0.5rem' }}>Paid Date</th>
@@ -516,7 +634,7 @@ export default function TenantOverview() {
                     </tr>
                   </thead>
                   <tbody>
-                    {payments.map((pmt) => {
+                    {payments.filter(p => p.paid_at && p.receipt_no).map((pmt) => {
                       const amount = parseFloat(pmt.amount);
                       const lateFee = parseFloat(pmt.late_fee || 0);
                       const formattedMonth = new Date(pmt.payment_month).toLocaleDateString('en-US', {
@@ -528,7 +646,7 @@ export default function TenantOverview() {
                         <tr key={pmt.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                           <td style={{ padding: '0.95rem 0.5rem', fontWeight: 700 }}>{formattedMonth}</td>
                           <td style={{ padding: '0.95rem 0.5rem', color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                            {pmt.receipt_no || 'Pending'}
+                            {pmt.receipt_no}
                           </td>
                           <td style={{ padding: '0.95rem 0.5rem', fontWeight: 700, color: 'var(--accent-amber)' }}>
                             Rs. {amount.toLocaleString()}

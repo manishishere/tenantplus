@@ -285,7 +285,14 @@ export default function ApplicationsList() {
                         </div>
                       </td>
                       <td style={{ padding: '1rem', fontWeight: 600 }}>{app.property?.title}</td>
-                      <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--primary-indigo)' }}>Rs. {parseFloat(app.property?.rent_amount || 0).toLocaleString()}</td>
+                      <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--primary-indigo)' }}>
+                        Rs. {parseFloat(app.offered_rent_amount || app.property?.rent_amount || 0).toLocaleString()}
+                        {app.offered_rent_amount && parseFloat(app.offered_rent_amount) !== parseFloat(app.property?.rent_amount || 0) && (
+                          <span style={{ display: 'block', fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700 }}>
+                            (Negotiated Offer)
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                           <Calendar size={14} />
@@ -411,8 +418,8 @@ export default function ApplicationsList() {
                               )}
                             </div>
                           ) : (
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '0.5rem' }}>
-                              Processed
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '0.5rem', textTransform: 'capitalize' }}>
+                              {app.status}
                             </span>
                           )}
                         </div>

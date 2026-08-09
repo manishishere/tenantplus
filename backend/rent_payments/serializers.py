@@ -51,6 +51,7 @@ class RentPaymentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = RentPayment
         fields = ('agreement', 'payment_month', 'amount', 'notes')
+        validators = []
 
     def validate_agreement(self, value):
         request = self.context.get('request')
@@ -73,18 +74,30 @@ class RentPaymentCreateSerializer(serializers.ModelSerializer):
         agreement = attrs.get('agreement')
         payment_month = attrs.get('payment_month')
         if agreement and payment_month:
-            if RentPayment.objects.filter(agreement=agreement, payment_month=payment_month).exists():
-                raise serializers.ValidationError('A payment has already been recorded for this month.')
-            
+            existing = RentPayment.objects.filter(agreement=agreement, payment_month=payment_month).first()
+            if existing:
+                if existing.paid_at:
+                    raise serializers.ValidationError('A payment has already been recorded and verified for this month.')
+                self.context['existing_payment'] = existing
+
             start_month = agreement.start_date.replace(day=1)
             if payment_month < start_month:
                 raise serializers.ValidationError('Cannot record payment for a month before the lease start date.')
-            
+
             end_month = agreement.end_date.replace(day=1)
             if payment_month > end_month:
                 raise serializers.ValidationError('Cannot record payment for a month past the lease expiration date.')
 
         return attrs
+
+    def create(self, validated_data):
+        existing = self.context.get('existing_payment')
+        if existing:
+            existing.amount = validated_data.get('amount', existing.amount)
+            existing.notes = validated_data.get('notes', existing.notes)
+            existing.save()
+            return existing
+        return super().create(validated_data)
 
 
 class EsewaInitiateSerializer(serializers.ModelSerializer):

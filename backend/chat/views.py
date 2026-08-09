@@ -43,6 +43,26 @@ class ConversationListCreateView(generics.ListCreateAPIView):
             landlord = request.user
             tenant = other_user
 
+        # Restrict Chat Creation: Must have an accepted application or active agreement
+        if request.user.role != 'admin' and other_user.role != 'admin':
+            from applications.models import Application
+            from agreements.models import Agreement
+            has_accepted_app = Application.objects.filter(
+                tenant=tenant,
+                property__landlord=landlord,
+                status=Application.STATUS_ACCEPTED
+            ).exists()
+            has_active_agreement = Agreement.objects.filter(
+                tenant=tenant,
+                landlord=landlord,
+                status=Agreement.STATUS_ACTIVE
+            ).exists()
+            if not has_accepted_app and not has_active_agreement:
+                return Response(
+                    {'detail': 'Direct chat can only be initiated after a rental application has been accepted or an active agreement exists.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         prop_obj = None
         if property_id:
             try:

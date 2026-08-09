@@ -18,6 +18,13 @@ class AgreementListSerializer(serializers.ModelSerializer):
             return TenantSummarySerializer(l_user).data
         return None
 
+    renewal_proposed_by = serializers.SerializerMethodField()
+
+    def get_renewal_proposed_by(self, obj):
+        if obj.renewal_proposed_by:
+            return TenantSummarySerializer(obj.renewal_proposed_by).data
+        return None
+
     class Meta:
         model = Agreement
         fields = (
@@ -45,6 +52,10 @@ class AgreementListSerializer(serializers.ModelSerializer):
             'witness2_phone',
             'signed_doc_status', 
             'rejection_reason', 
+            'renewal_status',
+            'renewal_proposed_by',
+            'renewal_proposed_rent',
+            'renewal_increase_percent',
             'created_at'
         )
 
@@ -57,6 +68,7 @@ class AgreementDetailSerializer(serializers.ModelSerializer):
     landlord = TenantSummarySerializer(read_only=True)
     is_expired = serializers.SerializerMethodField()
     proposed_rent_increase = serializers.SerializerMethodField()
+    renewal_proposed_by = serializers.SerializerMethodField()
 
     class Meta:
         model = Agreement
@@ -85,6 +97,10 @@ class AgreementDetailSerializer(serializers.ModelSerializer):
             'witness2_phone',
             'signed_doc_status',
             'rejection_reason',
+            'renewal_status',
+            'renewal_proposed_by',
+            'renewal_proposed_rent',
+            'renewal_increase_percent',
             'created_at',
             'updated_at',
             'is_expired',
@@ -96,6 +112,11 @@ class AgreementDetailSerializer(serializers.ModelSerializer):
 
     def get_proposed_rent_increase(self, obj):
         return obj.proposed_rent_increase()
+
+    def get_renewal_proposed_by(self, obj):
+        if obj.renewal_proposed_by:
+            return TenantSummarySerializer(obj.renewal_proposed_by).data
+        return None
 
 
 class AgreementAcknowledgeSerializer(serializers.Serializer):

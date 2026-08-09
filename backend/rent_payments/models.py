@@ -15,8 +15,8 @@ class RentPayment(models.Model):
     agreement = models.ForeignKey('agreements.Agreement', on_delete=models.CASCADE, related_name='rent_payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_month = models.DateField()
-    paid_at = models.DateTimeField(auto_now_add=True)
-    receipt_no = models.CharField(max_length=50, unique=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True, default=None)
+    receipt_no = models.CharField(max_length=50, blank=True, default='')
     is_late = models.BooleanField(default=False)
     late_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     late_fee_applied_by_landlord = models.BooleanField(default=False)  # Landlord must manually trigger
@@ -30,17 +30,25 @@ class RentPayment(models.Model):
         unique_together = ('agreement', 'payment_month')
 
     def __str__(self):
-        return f"{self.agreement.tenant.email} — {self.payment_month.strftime('%B %Y')} — Receipt: {self.receipt_no}"
+        return f"{self.agreement.tenant.email} — {self.payment_month.strftime('%B %Y')} — Receipt: {self.receipt_no or 'Pending'}"
 
     def generate_receipt_no(self):
         count = RentPayment.objects.filter(
             payment_month__year=self.payment_month.year,
             payment_month__month=self.payment_month.month,
+            paid_at__isnull=False,
         ).count()
         return f"TP-{self.payment_month.strftime('%Y%m')}-{count + 1:04d}"
 
     def calculate_late_fee(self):
-        due_date = self.payment_month.replace(day=7)
+        from datetime import timedelta
+        # Calculate monthly due date based on agreement start date day-of-month
+        start_day = self.agreement.start_date.day
+        try:
+            due_date = self.payment_month.replace(day=min(start_day, 28)) + timedelta(days=9)
+        except Exception:
+            due_date = self.payment_month + timedelta(days=9)
+
         if date.today() > due_date:
             self.is_late = True
             self.late_fee = Decimal('500.00')
@@ -49,7 +57,7 @@ class RentPayment(models.Model):
             self.late_fee = Decimal('0.00')
 
     def save(self, *args, **kwargs):
-        if not self.receipt_no:
+        if self.paid_at and not self.receipt_no:
             self.receipt_no = self.generate_receipt_no()
         super().save(*args, **kwargs)
 

@@ -16,7 +16,8 @@ import {
   Mail,
   Award,
   CheckCircle2,
-  PlusCircle
+  PlusCircle,
+  DollarSign
 } from 'lucide-react';
 
 export default function LandlordOverview() {
@@ -74,6 +75,14 @@ export default function LandlordOverview() {
   const activeTenanciesCount = activeAgreements.length;
   const pendingApps = applications.filter(app => app.status === 'pending');
   const pendingAppsCount = pendingApps.length;
+
+  const activeTenanciesNeedingUtilityBill = activeAgreements.filter(ag => {
+    if (!ag.start_date) return false;
+    const start = new Date(ag.start_date);
+    const now = new Date();
+    const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+    return diffDays >= 30;
+  });
 
   const isRentOverdue = (agreement) => {
     const today = new Date();
@@ -228,6 +237,56 @@ export default function LandlordOverview() {
         <div style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <AlertCircle size={20} />
           <span style={{ fontWeight: 600 }}>{error}</span>
+        </div>
+      )}
+
+      {/* 1-Month Completed Utility Bill Notification Alert */}
+      {activeTenanciesNeedingUtilityBill.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+          border: '1px solid #6366f1',
+          borderRadius: '0.85rem',
+          padding: '1.25rem',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          boxShadow: '0 8px 25px rgba(99, 102, 241, 0.25)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: '1 1 300px' }}>
+            <div style={{ background: 'rgba(99, 102, 241, 0.3)', padding: '0.6rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <DollarSign size={24} color="#a5b4fc" />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                1-Month Utility Billing Alert
+              </div>
+              <strong style={{ fontSize: '1rem', color: '#ffffff' }}>
+                {activeTenanciesNeedingUtilityBill.length} Tenanc{activeTenanciesNeedingUtilityBill.length === 1 ? 'y Has' : 'ies Have'} Completed 1 Month!
+              </strong>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', opacity: 0.9 }}>
+                Time to issue the monthly Electricity/Water utility bill for {activeTenanciesNeedingUtilityBill.map(a => a.tenant?.full_name || a.tenant?.email).join(', ')}.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/dashboard/utilities')}
+            style={{
+              background: '#ffffff',
+              color: '#312e81',
+              border: 'none',
+              padding: '0.65rem 1.25rem',
+              borderRadius: '0.5rem',
+              fontWeight: 800,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+            }}
+          >
+            Generate Utility Bill Now ↗
+          </button>
         </div>
       )}
 

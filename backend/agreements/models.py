@@ -91,6 +91,24 @@ class Agreement(models.Model):
     advance_payment_deadline = models.DateTimeField(null=True, blank=True)
     advance_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
+    # Renewal Proposal Fields
+    RENEWAL_STATUS_CHOICES = (
+        ('none', 'None'),
+        ('proposed', 'Renewal Proposed'),
+        ('accepted', 'Renewal Accepted'),
+        ('rejected', 'Renewal Rejected'),
+    )
+    renewal_status = models.CharField(max_length=20, choices=RENEWAL_STATUS_CHOICES, default='none')
+    renewal_proposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='proposed_renewals'
+    )
+    renewal_proposed_rent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    renewal_increase_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+
     history = HistoricalRecords()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

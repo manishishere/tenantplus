@@ -39,6 +39,8 @@ class MaintenanceListCreateView(APIView):
             queryset = MaintenanceRequest.objects.filter(tenant=request.user)
         elif request.user.role == 'landlord':
             queryset = MaintenanceRequest.objects.filter(property__landlord=request.user)
+        elif request.user.role == 'admin':
+            queryset = MaintenanceRequest.objects.all()
         else:
             queryset = MaintenanceRequest.objects.none()
 
